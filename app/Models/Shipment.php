@@ -604,6 +604,22 @@ public function agency()
 }
 
 /**
+ * Get the associated doorstep pickup request
+ */
+public function pickupRequest()
+{
+    return $this->hasOne(PickupRequest::class, 'shipment_id');
+}
+
+/**
+ * Get all associated doorstep pickup requests
+ */
+public function pickupRequests()
+{
+    return $this->hasMany(PickupRequest::class, 'shipment_id');
+}
+
+/**
  * Scope for manifested shipments
  */
 public function scopeManifested($query)

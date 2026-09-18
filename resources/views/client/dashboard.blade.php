@@ -22,11 +22,16 @@
                     Manage pickup inquiries, calculate real-time courier tariffs, track live consignments via GPS radar, and view proof-of-delivery receipts.
                 </p>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2.5 flex-wrap">
+                <a href="{{ route('shipments.create') }}" 
+                   class="px-4 py-2.5 bg-gradient-to-r from-teal-400 to-emerald-400 hover:from-teal-300 hover:to-emerald-300 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition flex items-center gap-2">
+                    <i class="fas fa-box-archive"></i>
+                    <span>Create Shipment</span>
+                </a>
                 <a href="{{ route('client.inquiries') }}" 
-                   class="px-4 py-2 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-sm transition flex items-center gap-2">
-                    <i class="fas fa-plus"></i>
-                    <span>New Shipment Inquiry</span>
+                   class="px-4 py-2.5 bg-slate-800/90 hover:bg-slate-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl border border-slate-700/80 transition flex items-center gap-2">
+                    <i class="fas fa-truck-pickup text-teal-400"></i>
+                    <span>Request Pickup</span>
                 </a>
             </div>
         </div>
@@ -73,52 +78,64 @@
         <a href="{{ route('client.inquiries') }}" class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-4 hover:border-amber-500/40 transition block">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Active Inquiries</p>
+                    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Active Pickups</p>
                     <p class="text-2xl font-black text-amber-600 mt-1">{{ number_format($pendingInquiries) }}</p>
                 </div>
                 <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-lg">
-                    <i class="fas fa-truck-ramp-box"></i>
+                    <i class="fas fa-truck-pickup"></i>
                 </div>
             </div>
         </a>
     </div>
 
-    <!-- 3 Direct Action Shortcuts -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <a href="{{ route('rates.inquiry') }}" 
-           class="p-4 rounded-2xl bg-white border border-slate-200/80 hover:border-amber-500/50 hover:shadow-md transition flex items-center gap-4 group">
-            <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl group-hover:scale-110 transition flex-shrink-0">
-                <i class="fas fa-calculator"></i>
+    <!-- 4 Direct Action Shortcuts -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <a href="{{ route('shipments.create') }}" 
+           class="p-4 rounded-2xl bg-white border border-slate-200/80 hover:border-teal-500/50 hover:shadow-md transition flex items-center gap-3.5 group">
+            <div class="w-11 h-11 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center text-lg group-hover:scale-110 transition flex-shrink-0">
+                <i class="fas fa-box-archive"></i>
             </div>
             <div class="min-w-0">
-                <h3 class="text-sm font-bold text-slate-900 group-hover:text-amber-700 transition">Rate Calculator</h3>
-                <p class="text-xs text-slate-500 mt-0.5 truncate">Instant freight quotes for domestic & international</p>
+                <h3 class="text-xs font-bold text-slate-900 group-hover:text-teal-700 transition">Create Shipment</h3>
+                <p class="text-[11px] text-slate-500 mt-0.5 truncate">Book full domestic / intl consignment</p>
             </div>
-            <i class="fas fa-arrow-right text-slate-300 group-hover:text-amber-600 group-hover:translate-x-1 transition ml-auto"></i>
+            <i class="fas fa-arrow-right text-slate-300 group-hover:text-teal-600 group-hover:translate-x-1 transition ml-auto text-xs"></i>
         </a>
 
         <a href="{{ route('client.inquiries') }}" 
-           class="p-4 rounded-2xl bg-white border border-slate-200/80 hover:border-teal-500/50 hover:shadow-md transition flex items-center gap-4 group">
-            <div class="w-12 h-12 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center text-xl group-hover:scale-110 transition flex-shrink-0">
-                <i class="fas fa-truck-ramp-box"></i>
+           class="p-4 rounded-2xl bg-white border border-slate-200/80 hover:border-sky-500/50 hover:shadow-md transition flex items-center gap-3.5 group">
+            <div class="w-11 h-11 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center text-lg group-hover:scale-110 transition flex-shrink-0">
+                <i class="fas fa-truck-pickup"></i>
             </div>
             <div class="min-w-0">
-                <h3 class="text-sm font-bold text-slate-900 group-hover:text-teal-700 transition">Shipment Inquiries</h3>
-                <p class="text-xs text-slate-500 mt-0.5 truncate">Book doorstep courier collection & track requests</p>
+                <h3 class="text-xs font-bold text-slate-900 group-hover:text-sky-700 transition">Request Pickup</h3>
+                <p class="text-[11px] text-slate-500 mt-0.5 truncate">Doorstep courier collection desk</p>
             </div>
-            <i class="fas fa-arrow-right text-slate-300 group-hover:text-teal-600 group-hover:translate-x-1 transition ml-auto"></i>
+            <i class="fas fa-arrow-right text-slate-300 group-hover:text-sky-600 group-hover:translate-x-1 transition ml-auto text-xs"></i>
+        </a>
+
+        <a href="{{ route('rates.inquiry') }}" 
+           class="p-4 rounded-2xl bg-white border border-slate-200/80 hover:border-amber-500/50 hover:shadow-md transition flex items-center gap-3.5 group">
+            <div class="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-lg group-hover:scale-110 transition flex-shrink-0">
+                <i class="fas fa-calculator"></i>
+            </div>
+            <div class="min-w-0">
+                <h3 class="text-xs font-bold text-slate-900 group-hover:text-amber-700 transition">Rate Calculator</h3>
+                <p class="text-[11px] text-slate-500 mt-0.5 truncate">Instant freight quote & tariff check</p>
+            </div>
+            <i class="fas fa-arrow-right text-slate-300 group-hover:text-amber-600 group-hover:translate-x-1 transition ml-auto text-xs"></i>
         </a>
 
         <a href="{{ route('client.history') }}" 
-           class="p-4 rounded-2xl bg-white border border-slate-200/80 hover:border-emerald-500/50 hover:shadow-md transition flex items-center gap-4 group">
-            <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl group-hover:scale-110 transition flex-shrink-0">
+           class="p-4 rounded-2xl bg-white border border-slate-200/80 hover:border-emerald-500/50 hover:shadow-md transition flex items-center gap-3.5 group">
+            <div class="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg group-hover:scale-110 transition flex-shrink-0">
                 <i class="fas fa-clock-rotate-left"></i>
             </div>
             <div class="min-w-0">
-                <h3 class="text-sm font-bold text-slate-900 group-hover:text-emerald-700 transition">History & Tracking</h3>
-                <p class="text-xs text-slate-500 mt-0.5 truncate">Access HAWB copies & live radar tracking</p>
+                <h3 class="text-xs font-bold text-slate-900 group-hover:text-emerald-700 transition">History & Radar</h3>
+                <p class="text-[11px] text-slate-500 mt-0.5 truncate">Live tracking & HAWB copies</p>
             </div>
-            <i class="fas fa-arrow-right text-slate-300 group-hover:text-emerald-600 group-hover:translate-x-1 transition ml-auto"></i>
+            <i class="fas fa-arrow-right text-slate-300 group-hover:text-emerald-600 group-hover:translate-x-1 transition ml-auto text-xs"></i>
         </a>
     </div>
 

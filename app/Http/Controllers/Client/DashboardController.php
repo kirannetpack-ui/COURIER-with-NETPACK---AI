@@ -91,6 +91,9 @@ class DashboardController extends Controller
             ->orderBy('sort_order')
             ->get();
 
+        // User's saved addresses for rapid re-use
+        $savedAddresses = $user ? $user->savedAddresses()->orderByDesc('is_default')->orderByDesc('last_used_at')->get() : collect();
+
         $statusCounts = [
             'all' => PickupRequest::where('seller_id', $user->id)->count(),
             'pending' => PickupRequest::where('seller_id', $user->id)->where('status', 'pending')->count(),
@@ -100,56 +103,111 @@ class DashboardController extends Controller
             'delivered' => PickupRequest::where('seller_id', $user->id)->where('status', 'delivered')->count(),
         ];
 
-        return view('client.inquiries', compact('inquiries', 'services', 'statusCounts'));
+        return view('client.inquiries', compact('inquiries', 'services', 'statusCounts', 'savedAddresses'));
     }
 
     /**
-     * Store new shipment inquiry / doorstep pickup request.
+     * Store new dedicated doorstep pickup request.
+     * Destination is strictly OPTIONAL for on-demand intake.
      */
     public function storeInquiry(Request $request)
     {
         $user = Auth::user();
 
         $validated = $request->validate([
-            'pickup_address' => 'required|string|max:255',
+            'contact_person_name' => 'nullable|string|max:150',
             'contact_phone' => 'required|string|max:30',
+            'pickup_address' => 'required|string|max:255',
+            'pickup_landmark' => 'nullable|string|max:255',
+            'pickup_city' => 'nullable|string|max:100',
             'destination_scope' => 'required|in:inside_valley,outside_valley,international',
-            'delivery_address' => 'required|string|max:255',
-            'delivery_city' => 'required|string|max:100',
-            'recipient_name' => 'required|string|max:150',
-            'recipient_phone' => 'required|string|max:30',
+            // Destination fields are strictly optional
+            'delivery_address' => 'nullable|string|max:255',
+            'delivery_city' => 'nullable|string|max:100',
+            'recipient_name' => 'nullable|string|max:150',
+            'recipient_phone' => 'nullable|string|max:30',
             'package_type' => 'required|string|max:80',
             'estimated_weight_kg' => 'required|numeric|min:0.1|max:1000',
             'service_tier' => 'nullable|string|max:50',
             'scheduled_pickup_time' => 'nullable|date',
             'pickup_slot' => 'nullable|string|max:50',
             'instructions' => 'nullable|string|max:500',
+            'save_address' => 'nullable|boolean',
+            'address_label' => 'nullable|string|max:100',
         ]);
+
+        $contactPersonName = !empty($validated['contact_person_name'])
+            ? $validated['contact_person_name']
+            : ($user?->name ?? 'Client Representative');
+
+        // Default Inside Valley to E-Commerce Instant Dispatch / Flash
+        $serviceTier = $validated['service_tier'] ?? null;
+        if ($validated['destination_scope'] === 'inside_valley') {
+            if (empty($serviceTier) || in_array($serviceTier, ['standard', 'flash', 'ecommerce_instant'])) {
+                $serviceTier = 'flash'; // E-Commerce Instant Dispatch / Flash SLA
+            }
+        } elseif ($validated['destination_scope'] === 'outside_valley') {
+            $serviceTier = $serviceTier ?: 'express';
+        } else {
+            $serviceTier = $serviceTier ?: 'priority_express';
+        }
 
         $scheduledTime = !empty($validated['scheduled_pickup_time'])
             ? Carbon::parse($validated['scheduled_pickup_time'])
             : now()->addHours(2);
 
+        $fullPickupAddress = trim($validated['pickup_address'] . (!empty($validated['pickup_landmark']) ? ', ' . $validated['pickup_landmark'] : ''));
+
+        // Auto-save address for future client re-use
+        if ($request->boolean('save_address', true) && $user) {
+            $savedAddress = \App\Models\SavedAddress::firstOrNew([
+                'user_id' => $user->id,
+                'address' => $validated['pickup_address'],
+            ]);
+            $savedAddress->contact_person_name = $contactPersonName;
+            $savedAddress->contact_person_phone = $validated['contact_phone'];
+            $savedAddress->landmark = $validated['pickup_landmark'] ?? null;
+            $savedAddress->city = $validated['pickup_city'] ?? 'Kathmandu';
+            if (!empty($validated['address_label'])) {
+                $savedAddress->label = $validated['address_label'];
+            } elseif (empty($savedAddress->label)) {
+                $addressCount = $user->savedAddresses()->count();
+                $savedAddress->label = $addressCount === 0 ? 'Main Office' : 'Pickup Location #' . ($addressCount + 1);
+            }
+            if (!$savedAddress->exists && $user->savedAddresses()->count() === 0) {
+                $savedAddress->is_default = true;
+            }
+            $savedAddress->recordUsage();
+        }
+
+        // Optional destination processing
+        $deliveryAddress = !empty($validated['delivery_address']) ? $validated['delivery_address'] : null;
+        $deliveryCity = !empty($validated['delivery_city']) 
+            ? $validated['delivery_city'] 
+            : ($validated['destination_scope'] === 'inside_valley' ? 'Kathmandu Valley' : 'Open Destination / Hub Intake');
+        $recipientName = !empty($validated['recipient_name']) ? $validated['recipient_name'] : null;
+        $recipientPhone = !empty($validated['recipient_phone']) ? $validated['recipient_phone'] : null;
+
         $pickup = PickupRequest::create([
             'seller_id' => $user->id,
-            'pickup_address' => $validated['pickup_address'],
-            'pickup_city' => 'Kathmandu Valley',
-            'contact_person_name' => $user->name,
+            'pickup_address' => $fullPickupAddress,
+            'pickup_city' => $validated['pickup_city'] ?? 'Kathmandu Valley',
+            'contact_person_name' => $contactPersonName,
             'contact_person_phone' => $validated['contact_phone'],
-            'delivery_address' => $validated['delivery_address'],
-            'delivery_city' => $validated['delivery_city'],
-            'customer_name' => $validated['recipient_name'],
-            'customer_phone' => $validated['recipient_phone'],
+            'delivery_address' => $deliveryAddress,
+            'delivery_city' => $deliveryCity,
+            'customer_name' => $recipientName,
+            'customer_phone' => $recipientPhone,
             'items_description' => $validated['package_type'] . (!empty($validated['instructions']) ? ' (' . $validated['instructions'] . ')' : ''),
             'estimated_weight_kg' => $validated['estimated_weight_kg'],
-            'service_tier' => $validated['service_tier'] ?? 'standard',
+            'service_tier' => $serviceTier,
             'scheduled_pickup_time' => $scheduledTime,
             'status' => 'pending',
-            'status_notes' => 'Shipment inquiry submitted via Client Portal: ' . ucfirst(str_replace('_', ' ', $validated['destination_scope'])),
+            'status_notes' => 'Doorstep pickup requested: ' . ucfirst(str_replace('_', ' ', $validated['destination_scope'])) . ($deliveryAddress ? '' : ' [Open Destination]'),
         ]);
 
         return redirect()->route('client.inquiries')
-            ->with('success', "Shipment inquiry logged successfully! Consignment Reference: {$pickup->tracking_number}. Our dispatch desk will coordinate collection.");
+            ->with('success', "Doorstep pickup scheduled successfully! Pickup Consignment Reference: {$pickup->tracking_number}. Assigned courier dispatched shortly.");
     }
 
     /**

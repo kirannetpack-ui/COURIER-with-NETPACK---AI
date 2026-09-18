@@ -575,4 +575,13 @@ class User extends Authenticatable
         }
         return $this->metadata['contact_person'] ?? null;
     }
+
+    /**
+     * Saved addresses for client/user address book.
+     */
+    public function savedAddresses()
+    {
+        return $this->hasMany(\App\Models\SavedAddress::class);
+    }
 }
+

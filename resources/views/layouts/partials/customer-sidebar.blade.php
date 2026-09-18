@@ -31,26 +31,51 @@
             <span>Dashboard</span>
         </a>
 
-        <!-- 2. Rate Calculator & Tariff Inquiry -->
+        <!-- 2. Unified Ship & Pickup Operating Console -->
+        <div class="rounded-xl border border-slate-700/60 bg-slate-800/40 p-2 space-y-1 my-1">
+            <div class="px-2 py-1 flex items-center justify-between">
+                <span class="text-[10px] font-black uppercase tracking-wider text-teal-300 flex items-center gap-1.5">
+                    <i class="fas fa-boxes-packing text-teal-400"></i> Ship & Pickup Console
+                </span>
+                @php
+                    $pendingInq = auth()->check() ? \App\Models\PickupRequest::where('seller_id', auth()->id())->whereIn('status', ['pending', 'assigned'])->count() : 0;
+                @endphp
+                @if($pendingInq > 0)
+                    <span class="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded">
+                        {{ $pendingInq }} Active
+                    </span>
+                @endif
+            </div>
+
+            <!-- Create Shipment (Main Consignment Creation) -->
+            <a href="{{ route('shipments.create') }}" 
+               class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition {{ request()->routeIs('shipments.create') ? 'bg-teal-600 text-white font-bold shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+                <i class="fas fa-box-archive w-4 text-center {{ request()->routeIs('shipments.create') ? 'text-white' : 'text-teal-300' }}"></i>
+                <span class="font-semibold">Create Shipment</span>
+                <span class="ml-auto text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                    Console
+                </span>
+            </a>
+
+            <!-- Dedicated Doorstep Pickup Component -->
+            <a href="{{ route('client.inquiries') }}" 
+               class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition {{ request()->routeIs('client.inquiries*') ? 'bg-teal-600 text-white font-bold shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+                <i class="fas fa-truck-pickup w-4 text-center {{ request()->routeIs('client.inquiries*') ? 'text-white' : 'text-sky-400' }}"></i>
+                <span class="font-semibold">Request Pickup</span>
+                <span class="sr-only">Shipment Inquiries</span>
+                @if($pendingInq > 0)
+                    <span class="ml-auto bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded">
+                        {{ $pendingInq }}
+                    </span>
+                @endif
+            </a>
+        </div>
+
+        <!-- 4. Rate Calculator & Tariff Inquiry -->
         <a href="{{ route('rates.inquiry') }}" 
            class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition {{ request()->routeIs('rates.inquiry*') || request()->routeIs('client.rates*') ? 'bg-teal-600 text-white font-bold shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
             <i class="fas fa-calculator w-4 text-center {{ request()->routeIs('rates.inquiry*') ? 'text-white' : 'text-amber-400' }}"></i>
             <span>Rate Calculator</span>
-        </a>
-
-        <!-- 3. Shipment Inquiries & Pickup Booking -->
-        <a href="{{ route('client.inquiries') }}" 
-           class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition {{ request()->routeIs('client.inquiries*') ? 'bg-teal-600 text-white font-bold shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
-            <i class="fas fa-truck-ramp-box w-4 text-center {{ request()->routeIs('client.inquiries*') ? 'text-white' : 'text-sky-400' }}"></i>
-            <span>Shipment Inquiries</span>
-            @php
-                $pendingInq = auth()->check() ? \App\Models\PickupRequest::where('seller_id', auth()->id())->whereIn('status', ['pending', 'assigned'])->count() : 0;
-            @endphp
-            @if($pendingInq > 0)
-                <span class="ml-auto bg-teal-500/20 text-teal-300 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded">
-                    {{ $pendingInq }}
-                </span>
-            @endif
         </a>
 
         <!-- 4. Shipment History & Scoped Tracking -->

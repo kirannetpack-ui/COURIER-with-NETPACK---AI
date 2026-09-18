@@ -111,10 +111,12 @@ class ShipmentController extends Controller
 
 
     /**
-     * Show the form for creating a new shipment.
+     * Show the form for creating a new shipment / Unified Operating Console.
      */
-    public function create()
+    public function create(Request $request = null)
     {
+        $request = $request ?? request();
+        $user = Auth::user();
         $hubs = OverseasHub::active()->with('agencies')->orderBy('sort_order')->get();
         $agencies = Agency::where('is_active', true)->get();
         $carriers = LastMileCarrier::active()->orderBy('sort_order')->get();
@@ -127,7 +129,36 @@ class ShipmentController extends Controller
             ->get();
         $domesticServices = \App\Models\DomesticRate::getServiceTypeOptions();
 
-        return view('shipments.create', compact('hubs', 'agencies', 'carriers', 'domesticZones', 'domesticServices'));
+        // Saved addresses and recent pickup inquiries for rapid prefill
+        $savedAddresses = $user ? $user->savedAddresses()->orderByDesc('is_default')->orderByDesc('last_used_at')->get() : collect();
+        $recentPickups = $user ? PickupRequest::where('seller_id', $user->id)->latest()->take(10)->get() : collect();
+
+        // Status counts for active pickups & queue tracking
+        $pickupStatusCounts = [
+            'all' => $user ? PickupRequest::where('seller_id', $user->id)->count() : 0,
+            'pending' => $user ? PickupRequest::where('seller_id', $user->id)->where('status', 'pending')->count() : 0,
+            'assigned' => $user ? PickupRequest::where('seller_id', $user->id)->where('status', 'assigned')->count() : 0,
+            'picked_up' => $user ? PickupRequest::where('seller_id', $user->id)->where('status', 'picked_up')->count() : 0,
+            'in_transit' => $user ? PickupRequest::where('seller_id', $user->id)->where('status', 'in_transit')->count() : 0,
+            'delivered' => $user ? PickupRequest::where('seller_id', $user->id)->where('status', 'delivered')->count() : 0,
+        ];
+
+        // Active dispatches queue for unified console split-pane
+        $activePickups = $user ? PickupRequest::where('seller_id', $user->id)->with(['rider', 'partner'])->latest()->take(25)->get() : collect();
+        $activeShipments = $user ? Shipment::where('customer_id', $user->id)->orWhere('seller_id', $user->id)->latest()->take(25)->get() : collect();
+
+        // Convert existing pickup request into full consignment pre-fill
+        $convertPickup = null;
+        $convertPickupId = $request ? $request->input('convert_pickup_id') : request('convert_pickup_id');
+        if ($convertPickupId && $user) {
+            $convertPickup = PickupRequest::where('seller_id', $user->id)->find($convertPickupId)
+                ?? PickupRequest::find($convertPickupId);
+        }
+
+        return view('shipments.create', compact(
+            'hubs', 'agencies', 'carriers', 'domesticZones', 'domesticServices',
+            'savedAddresses', 'recentPickups', 'pickupStatusCounts', 'activePickups', 'activeShipments', 'convertPickup'
+        ));
     }
 
     /**
@@ -146,8 +177,8 @@ class ShipmentController extends Controller
             'pickup_address.*' => 'required|string',
             'weight' => 'required|numeric|min:0.1',
             'description' => 'nullable|string',
-            'origin_zone_id' => 'required_if:shipment_type,domestic|nullable|exists:delivery_zones,id',
-            'destination_zone_id' => 'required_if:shipment_type,domestic|nullable|different:origin_zone_id|exists:delivery_zones,id',
+            'origin_zone_id' => 'nullable|exists:delivery_zones,id',
+            'destination_zone_id' => 'nullable|exists:delivery_zones,id',
         ]);
 
         // International specific validation
@@ -189,21 +220,46 @@ class ShipmentController extends Controller
             ? $this->generateHAWBNumber($request->receiver_country)
             : null;
 
+        // Auto-resolve origin and destination zones if omitted by client
+        $originZoneId = $request->origin_zone_id;
+        $destinationZoneId = $request->destination_zone_id;
+
+        if (!$originZoneId) {
+            $originZoneId = DeliveryZone::where('is_active', true)
+                ->where(function ($q) {
+                    $q->where('approval_status', 'approved')->orWhereNull('approval_status');
+                })
+                ->where(function ($q) {
+                    $q->where('zone_name', 'like', '%Kathmandu%')->orWhere('district', 'like', '%Kathmandu%');
+                })
+                ->value('id')
+                ?? DeliveryZone::where('is_active', true)->value('id');
+        }
+
+        if (!$destinationZoneId && $originZoneId) {
+            $destinationZoneId = DeliveryZone::where('is_active', true)
+                ->where(function ($q) {
+                    $q->where('approval_status', 'approved')->orWhereNull('approval_status');
+                })
+                ->where('id', '!=', $originZoneId)
+                ->value('id');
+        }
+
         $domesticPlan = null;
-        if ($request->shipment_type === 'domestic') {
+        if ($request->shipment_type === 'domestic' && $originZoneId && $destinationZoneId) {
             $domesticPlan = app(DomesticRateQuoteService::class)->quote(
-                (int) $request->origin_zone_id,
-                (int) $request->destination_zone_id,
+                (int) $originZoneId,
+                (int) $destinationZoneId,
                 (string) $request->service_type,
                 (float) $request->weight,
                 null,
                 $request->boolean('is_cod')
             );
-        } elseif ($request->shipment_type === 'international' && $request->filled(['origin_zone_id', 'destination_zone_id'])) {
+        } elseif ($request->shipment_type === 'international' && $originZoneId && $destinationZoneId) {
             // International bookings include the domestic first-mile movement to the selected gateway.
             $domesticPlan = app(DomesticRateQuoteService::class)->quote(
-                (int) $request->origin_zone_id,
-                (int) $request->destination_zone_id,
+                (int) $originZoneId,
+                (int) $destinationZoneId,
                 'standard',
                 (float) $request->weight
             );
@@ -253,27 +309,34 @@ class ShipmentController extends Controller
                           $request->receiver_country;
             $shipment->receiver_address = $fullAddress;
             
-            // Delivery points (single)
-            $shipment->delivery_points = [
-                [
-                    'name' => $request->receiver_name,
-                    'phone' => $request->receiver_phone ?? 'N/A',
-                    'address' => $fullAddress,
-                    'city' => $request->receiver_city,
-                    'state' => $request->receiver_state,
-                    'postal_code' => $request->receiver_postal_code,
-                    'country' => $request->receiver_country,
-                ]
-            ];
-            
-            // Pickup points (single for international)
-            $shipment->pickup_points = [
-                [
-                    'name' => $firstPickup,
-                    'phone' => $firstPickupPhone,
-                    'address' => $firstPickupAddress,
-                ]
-            ];
+            // Multiple delivery points for international (if provided) or single 5-line format
+            if (is_array($request->delivery_name) && count($request->delivery_name) > 0 && !empty($request->delivery_name[0])) {
+                $deliveryPoints = [];
+                for ($i = 0; $i < count($request->delivery_name); $i++) {
+                    $deliveryPoints[] = [
+                        'name' => $request->delivery_name[$i],
+                        'phone' => $request->delivery_phone[$i] ?? 'N/A',
+                        'address' => $request->delivery_address[$i] ?? '',
+                        'city' => $request->receiver_city ?? '',
+                        'country' => $request->receiver_country ?? '',
+                        'lat' => $request->delivery_lat[$i] ?? null,
+                        'lng' => $request->delivery_lng[$i] ?? null,
+                    ];
+                }
+                $shipment->delivery_points = $deliveryPoints;
+            } else {
+                $shipment->delivery_points = [
+                    [
+                        'name' => $request->receiver_name,
+                        'phone' => $request->receiver_phone ?? 'N/A',
+                        'address' => $fullAddress,
+                        'city' => $request->receiver_city,
+                        'state' => $request->receiver_state,
+                        'postal_code' => $request->receiver_postal_code,
+                        'country' => $request->receiver_country,
+                    ]
+                ];
+            }
             
         } else {
             // Domestic/E-commerce: Multiple delivery points
@@ -290,17 +353,6 @@ class ShipmentController extends Controller
             $shipment->receiver_state = $firstDeliveryProvince ?: ($request->receiver_state ?? 'Bagmati');
             $shipment->receiver_country = $request->receiver_country ?? 'Nepal';
 
-            // Multiple pickup points
-            $pickupPoints = [];
-            for ($i = 0; $i < count($request->pickup_name); $i++) {
-                $pickupPoints[] = [
-                    'name' => $request->pickup_name[$i],
-                    'phone' => $request->pickup_phone[$i],
-                    'address' => $request->pickup_address[$i],
-                ];
-            }
-            $shipment->pickup_points = $pickupPoints;
-
             // Multiple delivery points
             $deliveryPoints = [];
             for ($i = 0; $i < count($request->delivery_name); $i++) {
@@ -308,9 +360,55 @@ class ShipmentController extends Controller
                     'name' => $request->delivery_name[$i],
                     'phone' => $request->delivery_phone[$i],
                     'address' => $request->delivery_address[$i],
+                    'district' => is_array($request->delivery_district) ? ($request->delivery_district[$i] ?? null) : null,
+                    'province' => is_array($request->delivery_province) ? ($request->delivery_province[$i] ?? null) : null,
+                    'lat' => $request->delivery_lat[$i] ?? null,
+                    'lng' => $request->delivery_lng[$i] ?? null,
                 ];
             }
             $shipment->delivery_points = $deliveryPoints;
+        }
+
+        // Multiple pickup points for ALL shipment types (Domestic, International, E-Commerce)
+        $pickupPoints = [];
+        if (is_array($request->pickup_name)) {
+            for ($i = 0; $i < count($request->pickup_name); $i++) {
+                if (!empty($request->pickup_name[$i]) || !empty($request->pickup_address[$i])) {
+                    $pickupPoints[] = [
+                        'name' => $request->pickup_name[$i] ?? $firstPickup,
+                        'phone' => $request->pickup_phone[$i] ?? $firstPickupPhone,
+                        'address' => $request->pickup_address[$i] ?? $firstPickupAddress,
+                        'lat' => $request->pickup_lat[$i] ?? null,
+                        'lng' => $request->pickup_lng[$i] ?? null,
+                    ];
+                }
+            }
+        }
+        if (empty($pickupPoints) && $firstPickup) {
+            $pickupPoints[] = [
+                'name' => $firstPickup,
+                'phone' => $firstPickupPhone,
+                'address' => $firstPickupAddress,
+            ];
+        }
+        $shipment->pickup_points = $pickupPoints;
+
+        // Auto-save newly entered pickup addresses to user's address book
+        if ($request->boolean('save_pickup_addresses', true) && $user) {
+            foreach ($pickupPoints as $pPoint) {
+                if (!empty($pPoint['address'])) {
+                    $sAddr = \App\Models\SavedAddress::firstOrNew([
+                        'user_id' => $user->id,
+                        'address' => $pPoint['address'],
+                    ]);
+                    $sAddr->contact_person_name = $pPoint['name'] ?? $user->name;
+                    $sAddr->contact_person_phone = $pPoint['phone'] ?? ($user->phone ?? '9800000000');
+                    if (empty($sAddr->label)) {
+                        $sAddr->label = 'Pickup Location #' . ($user->savedAddresses()->count() + 1);
+                    }
+                    $sAddr->recordUsage();
+                }
+            }
         }
 
         // Package details & precision air cargo weight calculation
@@ -388,14 +486,57 @@ class ShipmentController extends Controller
             Auth::user()
         );
 
+        // Link or create doorstep pickup request if requested
+        $createdPickup = null;
+        if ($request->filled('convert_pickup_id') && $user) {
+            $existingPickup = PickupRequest::where('seller_id', $user->id)->find($request->convert_pickup_id);
+            if ($existingPickup) {
+                $existingPickup->shipment_id = $shipment->id;
+                $existingPickup->status_notes = ($existingPickup->status_notes ? $existingPickup->status_notes . ' | ' : '') . 'Upgraded to Consignment ' . ($shipment->hawb_number ?: $shipment->tracking_number);
+                $existingPickup->save();
+            }
+        } elseif ($request->boolean('schedule_doorstep_pickup') && $user) {
+            $pickupTime = $request->filled('scheduled_pickup_time')
+                ? \Carbon\Carbon::parse($request->scheduled_pickup_time)
+                : now()->addHours(2);
+
+            $primaryPickup = $pickupPoints[0] ?? [
+                'name' => $firstPickup,
+                'phone' => $firstPickupPhone,
+                'address' => $firstPickupAddress,
+            ];
+
+            $createdPickup = PickupRequest::create([
+                'seller_id' => $user->id,
+                'shipment_id' => $shipment->id,
+                'contact_person_name' => $primaryPickup['name'] ?? $user->name,
+                'contact_person_phone' => $primaryPickup['phone'] ?? ($user->phone ?? '9800000000'),
+                'pickup_address' => $primaryPickup['address'] ?? ($user->address ?? 'Kathmandu'),
+                'pickup_city' => $shipment->sender_city ?? 'Kathmandu Valley',
+                'pickup_latitude' => $primaryPickup['lat'] ?? null,
+                'pickup_longitude' => $primaryPickup['lng'] ?? null,
+                'delivery_address' => $shipment->receiver_address,
+                'delivery_city' => $shipment->receiver_city ?? 'Destination',
+                'customer_name' => $shipment->receiver_name,
+                'customer_phone' => $shipment->receiver_phone,
+                'items_description' => 'Doorstep Collection for Consignment ' . ($shipment->hawb_number ?: $shipment->tracking_number) . ' (' . $shipment->package_type . ')',
+                'estimated_weight_kg' => $shipment->chargeable_weight ?: $shipment->actual_weight,
+                'service_tier' => $shipment->service_type ?: 'standard',
+                'scheduled_pickup_time' => $pickupTime,
+                'status' => 'pending',
+                'status_notes' => 'Doorstep collection scheduled with Consignment ' . ($shipment->hawb_number ?: $shipment->tracking_number),
+            ]);
+        }
+
         if ($domesticPlan) {
             $this->persistDomesticPlan($shipment, $domesticPlan, $request);
         }
 
         DB::commit();
 
+        $pickupNote = $createdPickup ? " & Doorstep Pickup Scheduled (Ref: {$createdPickup->tracking_number})" : "";
         return redirect()->route('tracking.show', $shipment->tracking_number)
-            ->with('success', 'Shipment created successfully! Tracking number: ' . $shipment->tracking_number);
+            ->with('success', 'Shipment created successfully! Tracking number: ' . $shipment->tracking_number . $pickupNote);
         } catch (\Throwable $exception) {
             DB::rollBack();
             report($exception);
