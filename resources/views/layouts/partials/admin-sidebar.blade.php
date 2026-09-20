@@ -45,10 +45,25 @@
 
             <!-- Global Consignment Registry & Audit -->
             <a href="{{ route('admin.shipments.index') }}" 
-               class="flex items-center gap-3 px-3 py-2 rounded-lg transition {{ request()->routeIs('admin.shipments*') ? 'bg-purple-600/30 text-purple-200 border border-purple-500/30 font-semibold' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+               class="flex items-center gap-3 px-3 py-2 rounded-lg transition {{ request()->routeIs('admin.shipments.index') || request()->routeIs('admin.shipments.show') ? 'bg-purple-600/30 text-purple-200 border border-purple-500/30 font-semibold' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
                 <i class="fas fa-boxes-stacked w-4 text-center text-blue-400"></i>
                 <span>Master Consignments</span>
                 <span class="ml-auto bg-blue-500/20 text-blue-300 text-[10px] font-mono px-1.5 py-0.5 rounded">{{ \App\Models\Shipment::count() }}</span>
+            </a>
+
+            <!-- Tracking & MAWB Dispatch Console -->
+            <a href="{{ route('admin.tracking.index') }}" 
+               class="flex items-center gap-3 px-3 py-2 rounded-lg transition {{ request()->routeIs('admin.tracking*') || request()->routeIs('admin.shipments.tracking*') ? 'bg-purple-600 text-white font-bold shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+                <i class="fas fa-satellite-dish w-4 text-center {{ request()->routeIs('admin.tracking*') ? 'text-white' : 'text-indigo-400' }}"></i>
+                <span>Tracking & MAWB Console</span>
+                @php
+                    $pendingMawbCount = \App\Models\Shipment::whereNull('mawb_number')->whereNotIn('status', ['delivered', 'cancelled'])->count();
+                @endphp
+                @if($pendingMawbCount > 0)
+                    <span class="ml-auto bg-amber-500/30 text-amber-300 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded" title="{{ $pendingMawbCount }} shipments need MAWB">
+                        {{ $pendingMawbCount }}
+                    </span>
+                @endif
             </a>
 
             <!-- Rider GPS Fleet Radar -->

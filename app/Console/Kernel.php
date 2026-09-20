@@ -18,6 +18,7 @@ class Kernel extends ConsoleKernel
         \App\Console\Commands\CleanupReminders::class,
         \App\Console\Commands\ProductionReadinessCheck::class,
         \App\Console\Commands\CreateInitialAdmin::class,
+        \App\Console\Commands\SyncAutomatedTrackingCommand::class,
     ];
 
     /**
@@ -25,6 +26,9 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
+        // Automated tracking synchronization for active MAWBs and last-mile delivery carriers
+        $schedule->command('tracking:sync-all')->everyFifteenMinutes();
+
         // Run every 10 minutes to check for pending reminders
         $schedule->command('reminders:process')->everyTenMinutes();
         

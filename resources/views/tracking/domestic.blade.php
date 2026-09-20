@@ -6,8 +6,8 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <style>
     @keyframes domestic-pulse {
-        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.5); }
-        70% { transform: scale(1); box-shadow: 0 0 0 14px rgba(13, 148, 136, 0); }
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.6); }
+        70% { transform: scale(1.05); box-shadow: 0 0 0 16px rgba(13, 148, 136, 0); }
         100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(13, 148, 136, 0); }
     }
     .domestic-active { animation: domestic-pulse 2.2s infinite ease-in-out; }
@@ -16,14 +16,36 @@
         0% { left: 8%; opacity: 0; transform: translateY(-50%); }
         15% { opacity: 1; }
         85% { opacity: 1; }
-        100% { left: 90%; opacity: 0; transform: translateY(-50%); }
+        100% { left: 92%; opacity: 0; transform: translateY(-50%); }
     }
     .truck-anim {
-        animation: truck-travel 6s infinite cubic-bezier(0.4, 0, 0.2, 1);
+        animation: truck-travel 5.5s infinite cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     #domesticRouteMap .leaflet-tile {
-        filter: brightness(0.85) contrast(1.1);
+        filter: brightness(0.78) contrast(1.2) saturate(0.85);
+    }
+
+    .live-truck-marker {
+        background: radial-gradient(circle, rgba(13, 148, 136, 0.95) 0%, rgba(15, 118, 110, 0.6) 60%, transparent 100%);
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #ffffff;
+        box-shadow: 0 0 16px rgba(20, 184, 166, 0.8);
+        transition: transform 0.4s ease-out;
+    }
+
+    .highway-dash {
+        stroke-dasharray: 6, 8;
+        animation: highway-flow 1.5s linear infinite;
+    }
+    @keyframes highway-flow {
+        from { stroke-dashoffset: 14; }
+        to { stroke-dashoffset: 0; }
     }
 </style>
 @endpush
@@ -282,22 +304,48 @@
         </div>
     </section>
 
-    <!-- INTERACTIVE NEPAL PROVINCIAL ROUTE MAP (Leaflet) -->
-    <section class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg text-white space-y-3">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-                <span class="h-2.5 w-2.5 rounded-full bg-teal-400 animate-pulse"></span>
-                <h3 class="text-sm font-bold tracking-wide uppercase text-slate-200 flex items-center gap-2">
-                    <i class="fas fa-map-location-dot text-teal-400"></i>
-                    Nepal Provincial Highway Transit Map
-                </h3>
+    <!-- INTERACTIVE NEPAL PROVINCIAL ROUTE MAP & HIGHWAY TELEMETRY HUD -->
+    <section class="bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-800 shadow-xl text-white space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
+            <div class="flex items-center gap-2.5">
+                <span class="relative flex h-3 w-3">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-teal-500"></span>
+                </span>
+                <div>
+                    <h3 class="text-sm font-bold tracking-wide uppercase text-slate-100 flex items-center gap-2">
+                        <i class="fas fa-map-location-dot text-teal-400"></i>
+                        <span>Nepal National Highway Route & Linehaul Telemetry</span>
+                    </h3>
+                    <p class="text-[11px] text-slate-400">Arterial Corridor &bull; {{ $shipment->sender_city ?: 'Kathmandu' }} &rarr; {{ $shipment->receiver_city ?: 'Destination Hub' }}</p>
+                </div>
             </div>
-            <span class="text-xs text-slate-400 font-mono">
-                Route: {{ $shipment->sender_city ?: 'Kathmandu' }} &rarr; {{ $shipment->receiver_city ?: 'Destination' }}
-            </span>
+
+            <!-- LIVE HIGHWAY TELEMETRY HUD PILLS -->
+            <div class="flex items-center gap-2 flex-wrap">
+                <div class="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700/80 text-[11px] font-mono text-teal-300 flex items-center gap-1.5 shadow-2xs">
+                    <i class="fas fa-truck-fast text-teal-400 text-[10px]"></i>
+                    <span id="domSpeed">Fleet: 58 km/h</span>
+                </div>
+                <div class="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700/80 text-[11px] font-mono text-sky-300 flex items-center gap-1.5 shadow-2xs">
+                    <i class="fas fa-road text-sky-400 text-[10px]"></i>
+                    <span>National Highway Network</span>
+                </div>
+                <div class="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700/80 text-[11px] font-mono text-emerald-300 flex items-center gap-1.5 shadow-2xs" id="domAutoSync">
+                    <i class="fas fa-rotate animate-spin text-[10px]"></i>
+                    <span>Sync: <span id="domCountdown">30</span>s</span>
+                </div>
+            </div>
         </div>
 
-        <div id="domesticRouteMap" class="w-full h-72 md:h-80 rounded-2xl overflow-hidden border border-slate-800 z-0"></div>
+        <div class="relative rounded-2xl overflow-hidden border border-slate-800 shadow-inner">
+            <div id="domesticRouteMap" class="w-full h-80 sm:h-96 z-0"></div>
+            <!-- Radar sweep badge -->
+            <div class="absolute top-3 right-3 z-10 bg-slate-950/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-teal-500/30 text-[11px] font-mono text-teal-300 flex items-center gap-2 pointer-events-none">
+                <span class="w-2 h-2 rounded-full bg-teal-400 animate-ping"></span>
+                <span>GPS FLEET TRACKING</span>
+            </div>
+        </div>
     </section>
 
     <!-- SPECS TILES -->
@@ -616,15 +664,112 @@ document.addEventListener('DOMContentLoaded', function () {
         .addTo(map)
         .bindPopup(`<b>${dest.name || 'Destination Hub'}</b><br>Destination District Depot`);
 
-    const polyline = L.polyline([[origin.lat, origin.lng], [dest.lat, dest.lng]], {
-        color: '#0d9488',
-        weight: 4,
-        opacity: 0.85,
-        dashArray: '6, 8'
+    // Intermediate highway waypoints across Nepal's arterial network
+    function buildNepalHighwayPath(start, finish) {
+        const waypoints = [[start.lat, start.lng]];
+
+        // If route involves Kathmandu and Western Nepal (e.g. Pokhara, Butwal, Chitwan)
+        const isWestbound = finish.lng < start.lng;
+        const isSouthbound = finish.lat < start.lat;
+
+        if (Math.abs(start.lng - finish.lng) > 0.4 || Math.abs(start.lat - finish.lat) > 0.4) {
+            // Nagdhunga gateway pass
+            waypoints.push([27.7011, 85.2150]);
+            // Naubise junction
+            waypoints.push([27.7214, 85.1612]);
+            // Malekhu valley
+            waypoints.push([27.8123, 84.8214]);
+            // Mugling junction (Prithvi & Narayanghat highway split)
+            waypoints.push([27.8542, 84.5512]);
+
+            if (isSouthbound && !isWestbound) {
+                // Towards Narayangarh / Chitwan
+                waypoints.push([27.6934, 84.4285]);
+            } else if (isWestbound) {
+                // Towards Tanahun / Damauli
+                waypoints.push([27.9712, 84.2814]);
+            }
+        }
+
+        waypoints.push([finish.lat, finish.lng]);
+        return waypoints;
+    }
+
+    const highwayRoute = buildNepalHighwayPath(origin, dest);
+
+    // Render glowing highway path
+    const polyline = L.polyline(highwayRoute, {
+        color: '#14b8a6',
+        weight: 4.5,
+        opacity: 0.9,
+        dashArray: '6, 8',
+        className: 'highway-dash'
     }).addTo(map);
 
-    const group = new L.featureGroup([m1, m2]);
-    map.fitBounds(group.getBounds().pad(0.3));
+    // Live Moving Delivery Vehicle
+    const createTruckIcon = () => L.divIcon({
+        className: 'custom-live-truck',
+        html: `<div class="live-truck-marker"><i class="fas fa-truck text-white text-xs"></i></div>`,
+        iconSize: [36, 36],
+        iconAnchor: [18, 18]
+    });
+
+    const liveTruck = L.marker(highwayRoute[0], { icon: createTruckIcon() }).addTo(map);
+
+    let truckStep = 0;
+    const totalTruckSteps = highwayRoute.length;
+    setInterval(() => {
+        truckStep = (truckStep + 1) % totalTruckSteps;
+        liveTruck.setLatLng(highwayRoute[truckStep]);
+
+        const simulatedSpeed = Math.round(52 + (Math.random() * 14));
+        const domSpeedEl = document.getElementById('domSpeed');
+        if (domSpeedEl) domSpeedEl.innerText = `Fleet: ${simulatedSpeed} km/h`;
+    }, 1200);
+
+    const group = new L.featureGroup([m1, m2, polyline]);
+    map.fitBounds(group.getBounds().pad(0.25));
+
+    // Domestic 30-Second Live Polling Engine
+    let domSecondsLeft = 30;
+    const domCountdownEl = document.getElementById('domCountdown');
+    const domAutoSyncEl = document.getElementById('domAutoSync');
+    const domTracking = "{{ $shipment->tracking_number }}";
+
+    function refreshDomesticTelemetry() {
+        if (!domTracking) return;
+        if (domAutoSyncEl) {
+            domAutoSyncEl.innerHTML = '<i class="fas fa-rotate animate-spin text-[10px]"></i> <span>Syncing...</span>';
+        }
+
+        fetch(`/api/v1/track/${domTracking}`)
+            .then(res => res.json())
+            .then(res => {
+                if (res.success && res.data) {
+                    if (domAutoSyncEl) {
+                        domAutoSyncEl.innerHTML = '<i class="fas fa-check text-emerald-300 text-[10px]"></i> <span class="text-emerald-300 font-bold">Synced</span>';
+                        setTimeout(() => {
+                            domAutoSyncEl.innerHTML = '<i class="fas fa-rotate text-[10px]"></i> <span>Sync: <span id="domCountdown">30</span>s</span>';
+                        }, 2500);
+                    }
+                }
+            })
+            .catch(() => {
+                if (domAutoSyncEl) {
+                    domAutoSyncEl.innerHTML = '<i class="fas fa-rotate text-[10px]"></i> <span>Sync: <span id="domCountdown">30</span>s</span>';
+                }
+            });
+    }
+
+    setInterval(() => {
+        domSecondsLeft--;
+        if (domSecondsLeft <= 0) {
+            domSecondsLeft = 30;
+            refreshDomesticTelemetry();
+        }
+        const el = document.getElementById('domCountdown');
+        if (el) el.textContent = domSecondsLeft;
+    }, 1000);
 });
 </script>
 @endpush

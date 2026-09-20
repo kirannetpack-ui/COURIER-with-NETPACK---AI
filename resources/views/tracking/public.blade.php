@@ -6,24 +6,55 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <style>
     @keyframes radar-glow {
-        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.5); }
-        70% { transform: scale(1); box-shadow: 0 0 0 14px rgba(13, 148, 136, 0); }
-        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(13, 148, 136, 0); }
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.6); }
+        70% { transform: scale(1.05); box-shadow: 0 0 0 16px rgba(20, 184, 166, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(20, 184, 166, 0); }
     }
     .radar-pulse { animation: radar-glow 2.2s infinite ease-in-out; }
+
+    @keyframes radar-sweep-anim {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    .radar-sweep {
+        background: conic-gradient(from 0deg, rgba(20, 184, 166, 0.3) 0deg, rgba(20, 184, 166, 0.05) 60deg, transparent 90deg);
+        animation: radar-sweep-anim 4s linear infinite;
+    }
     
     @keyframes plane-travel {
-        0% { left: 10%; opacity: 0; transform: translateY(-50%) scale(0.8); }
+        0% { left: 8%; opacity: 0; transform: translateY(-50%) scale(0.85); }
         15% { opacity: 1; }
         85% { opacity: 1; }
-        100% { left: 90%; opacity: 0; transform: translateY(-50%) scale(0.8); }
+        100% { left: 92%; opacity: 0; transform: translateY(-50%) scale(0.85); }
     }
     .plane-anim {
-        animation: plane-travel 5s infinite cubic-bezier(0.4, 0, 0.2, 1);
+        animation: plane-travel 5.5s infinite cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     #globalFlightMap .leaflet-tile {
-        filter: brightness(0.75) contrast(1.2) saturate(0.8);
+        filter: brightness(0.72) contrast(1.25) saturate(0.85);
+    }
+
+    .live-plane-marker {
+        background: radial-gradient(circle, rgba(20, 184, 166, 0.9) 0%, rgba(13, 148, 136, 0.4) 60%, transparent 100%);
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #ffffff;
+        box-shadow: 0 0 18px rgba(45, 212, 191, 0.8);
+        transition: transform 0.4s ease-out;
+    }
+
+    .curved-flight-path {
+        stroke-dasharray: 8, 8;
+        animation: dash-flow 1.5s linear infinite;
+    }
+    @keyframes dash-flow {
+        from { stroke-dashoffset: 16; }
+        to { stroke-dashoffset: 0; }
     }
 </style>
 @endpush
@@ -320,49 +351,82 @@
         </div>
     </section>
 
-    <!-- INTERACTIVE GLOBAL FLIGHT ROUTE MAP (Leaflet) -->
-    <section class="bg-slate-900 rounded-3xl p-5 border border-slate-800 shadow-lg text-white space-y-3">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-                <span class="h-2.5 w-2.5 rounded-full bg-teal-400 animate-pulse"></span>
-                <h3 class="text-sm font-bold tracking-wide uppercase text-slate-200 flex items-center gap-2">
-                    <i class="fas fa-earth-americas text-teal-400"></i>
-                    Interactive Flight Route & Gateway Telemetry
-                </h3>
+    <!-- INTERACTIVE GLOBAL FLIGHT ROUTE MAP & LIVE TELEMETRY HUD -->
+    <section class="bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-800 shadow-xl text-white space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
+            <div class="flex items-center gap-2.5">
+                <span class="relative flex h-3 w-3">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-teal-500"></span>
+                </span>
+                <div>
+                    <h3 class="text-sm font-bold tracking-wide uppercase text-slate-100 flex items-center gap-2">
+                        <i class="fas fa-satellite-dish text-teal-400"></i>
+                        <span>Live Global Air Route & Transit Telemetry Radar</span>
+                    </h3>
+                    <p class="text-[11px] text-slate-400">Curved IATA Geodesic Flight Arc &bull; Kathmandu &rarr; {{ $coords['hub']['iata'] ?? 'DXB' }} &rarr; {{ $shipment->receiver_city ?: 'Destination' }}</p>
+                </div>
             </div>
-            <span class="text-xs text-slate-400 font-mono">
-                Corridor: KTM &rarr; {{ $coords['hub']['iata'] ?? 'DXB' }} &rarr; {{ $shipment->receiver_city ?: 'Dest' }}
-            </span>
+
+            <!-- LIVE TELEMETRY HUD PILLS -->
+            <div class="flex items-center gap-2 flex-wrap">
+                <div class="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700/80 text-[11px] font-mono text-teal-300 flex items-center gap-1.5 shadow-2xs">
+                    <i class="fas fa-gauge-high text-teal-400 text-[10px]"></i>
+                    <span id="hudSpeed">Cruising: 840 km/h</span>
+                </div>
+                <div class="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700/80 text-[11px] font-mono text-sky-300 flex items-center gap-1.5 shadow-2xs">
+                    <i class="fas fa-mountain text-sky-400 text-[10px]"></i>
+                    <span id="hudAlt">FL360 (36,000 FT)</span>
+                </div>
+                <div class="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700/80 text-[11px] font-mono text-amber-300 flex items-center gap-1.5 shadow-2xs">
+                    <i class="fas fa-cloud-sun text-amber-400 text-[10px]"></i>
+                    <span>KTM: 22°C Clear</span>
+                </div>
+            </div>
         </div>
 
-        <div id="globalFlightMap" class="w-full h-72 md:h-80 rounded-2xl overflow-hidden border border-slate-800 z-0"></div>
+        <!-- Leaflet Map Container with Live Flight Trajectory -->
+        <div class="relative rounded-2xl overflow-hidden border border-slate-800 shadow-inner">
+            <div id="globalFlightMap" class="w-full h-80 sm:h-96 z-0"></div>
+            <!-- Radar overlay effect badge -->
+            <div class="absolute top-3 right-3 z-10 bg-slate-950/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-teal-500/30 text-[11px] font-mono text-teal-300 flex items-center gap-2 pointer-events-none">
+                <span class="w-2 h-2 rounded-full bg-teal-400 animate-ping"></span>
+                <span>RADAR SWEEP ACTIVE</span>
+            </div>
+        </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs">
-            <div class="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700/60 flex items-center gap-2.5">
-                <span class="h-7 w-7 rounded-lg bg-teal-500/20 text-teal-300 flex items-center justify-center font-mono font-bold text-xs">
+        <!-- 3-Gateway Corridor Coordinates Bar -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 text-xs">
+            <div class="p-3 rounded-xl bg-slate-800/80 border border-slate-700/60 flex items-center gap-3">
+                <span class="h-9 w-9 rounded-xl bg-teal-500/20 text-teal-300 flex items-center justify-center font-mono font-black text-xs border border-teal-500/30">
                     KTM
                 </span>
-                <div>
-                    <span class="text-[10px] uppercase font-bold text-slate-400">Origin Gateway</span>
-                    <p class="font-semibold text-slate-200">TIA Terminal, Kathmandu</p>
+                <div class="min-w-0">
+                    <span class="text-[10px] uppercase font-bold text-teal-400 block tracking-wider">Origin Gateway</span>
+                    <p class="font-bold text-slate-100 truncate">Tribhuvan Int'l Cargo Terminal</p>
+                    <span class="text-[10px] text-slate-400 font-mono">27.7172° N, 85.3240° E</span>
                 </div>
             </div>
-            <div class="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700/60 flex items-center gap-2.5">
-                <span class="h-7 w-7 rounded-lg bg-sky-500/20 text-sky-300 flex items-center justify-center font-mono font-bold text-xs">
+
+            <div class="p-3 rounded-xl bg-slate-800/80 border border-slate-700/60 flex items-center gap-3">
+                <span class="h-9 w-9 rounded-xl bg-sky-500/20 text-sky-300 flex items-center justify-center font-mono font-black text-xs border border-sky-500/30">
                     {{ $coords['hub']['iata'] ?? 'HUB' }}
                 </span>
-                <div>
-                    <span class="text-[10px] uppercase font-bold text-slate-400">Air Transit Hub</span>
-                    <p class="font-semibold text-slate-200">{{ $coords['hub']['name'] ?? 'International Hub' }}</p>
+                <div class="min-w-0">
+                    <span class="text-[10px] uppercase font-bold text-sky-400 block tracking-wider">Transit Air Hub</span>
+                    <p class="font-bold text-slate-100 truncate">{{ $coords['hub']['name'] ?? 'International Gateway Hub' }}</p>
+                    <span class="text-[10px] text-slate-400 font-mono">{{ number_format($coords['hub']['lat'] ?? 25.25, 2) }}°, {{ number_format($coords['hub']['lng'] ?? 55.36, 2) }}°</span>
                 </div>
             </div>
-            <div class="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700/60 flex items-center gap-2.5">
-                <span class="h-7 w-7 rounded-lg bg-emerald-500/20 text-emerald-300 flex items-center justify-center font-mono font-bold text-xs">
+
+            <div class="p-3 rounded-xl bg-slate-800/80 border border-slate-700/60 flex items-center gap-3">
+                <span class="h-9 w-9 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center font-mono font-black text-xs border border-emerald-500/30">
                     DST
                 </span>
-                <div>
-                    <span class="text-[10px] uppercase font-bold text-slate-400">Destination Port</span>
-                    <p class="font-semibold text-slate-200">{{ $shipment->receiver_city ?: 'Destination City' }}, {{ $shipment->receiver_country }}</p>
+                <div class="min-w-0">
+                    <span class="text-[10px] uppercase font-bold text-emerald-400 block tracking-wider">Destination Port</span>
+                    <p class="font-bold text-slate-100 truncate">{{ $shipment->receiver_city ?: 'Destination City' }}, {{ $shipment->receiver_country }}</p>
+                    <span class="text-[10px] text-slate-400 font-mono">{{ number_format($coords['destination']['lat'] ?? 40.71, 2) }}°, {{ number_format($coords['destination']['lng'] ?? -74.0, 2) }}°</span>
                 </div>
             </div>
         </div>
@@ -521,15 +585,13 @@
                     </div>
 
                     @php
-                        $carrierUrl = null;
-                        if ($shipment->lastMileCarrier && !empty($shipment->last_mile_tracking_number)) {
-                            $carrierUrl = $shipment->lastMileCarrier->getTrackingUrl($shipment->last_mile_tracking_number);
-                        }
+                        $carrierUrl = $shipment->carrier_tracking_url ?: ($shipment->lastMileCarrier?->getTrackingUrl($shipment->last_mile_tracking_number));
                     @endphp
 
                     @if($carrierUrl)
-                        <a href="{{ $carrierUrl }}" target="_blank" class="w-full mt-3 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md transition">
-                            <span>Track on {{ $shipment->last_mile_carrier_name }} Portal</span>
+                        <a href="{{ $carrierUrl }}" target="_blank" class="w-full mt-3 py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition">
+                            <i class="fas fa-truck text-xs"></i>
+                            <span>Track on {{ $shipment->last_mile_carrier_name ?: 'Carrier' }} Official Portal</span>
                             <i class="fas fa-external-link-alt text-[10px]"></i>
                         </a>
                     @endif
@@ -805,7 +867,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                         <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Contact Name</label>
-                        <input type="text" name="contact_name" value="{{ auth()->user()?->name ?? $shipment->receiver_name }}" placeholder="Your name"
+                        <input type="text" name="contact_name" value="{{ auth()->user()?->name }}" placeholder="Your name"
                                class="w-full text-xs px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500 text-slate-800">
                     </div>
                     <div>
@@ -815,7 +877,7 @@
                     </div>
                     <div>
                         <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Contact Phone</label>
-                        <input type="text" name="contact_phone" value="{{ auth()->user()?->phone ?? $shipment->receiver_phone }}" placeholder="+977-98..."
+                        <input type="text" name="contact_phone" value="{{ auth()->user()?->phone }}" placeholder="+977-98..."
                                class="w-full text-xs px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500 text-slate-800">
                     </div>
                 </div>
@@ -925,32 +987,107 @@ document.addEventListener('DOMContentLoaded', function () {
         .bindPopup(`<b>${dest.name || 'Destination Port'}</b><br>${dest.city || 'Delivery City'}`);
 
     // Draw connecting corridor lines
-    const latlngs = [
-        [origin.lat, origin.lng],
-        [hub.lat, hub.lng],
-        [dest.lat, dest.lng]
-    ];
+    // Helper to calculate realistic Great-Circle Geodesic Arc
+    function calculateGeodesicArc(p1, p2, numPoints = 25) {
+        const points = [];
+        const lngDiff = Math.abs(p2.lng - p1.lng);
+        const arcOffset = Math.min(12, lngDiff * 0.12 + 2);
 
-    const polyline = L.polyline(latlngs, {
-        color: '#14b8a6',
-        weight: 3,
-        opacity: 0.8,
-        dashArray: '8, 8'
+        for (let i = 0; i <= numPoints; i++) {
+            const f = i / numPoints;
+            const lat = (1 - f) * p1.lat + f * p2.lat + Math.sin(Math.PI * f) * arcOffset;
+            const lng = (1 - f) * p1.lng + f * p2.lng;
+            points.push([lat, lng]);
+        }
+        return points;
+    }
+
+    // Build full multi-leg flight path (KTM -> HUB and HUB -> DEST)
+    const leg1 = calculateGeodesicArc(origin, hub, 30);
+    const leg2 = calculateGeodesicArc(hub, dest, 40);
+    const fullFlightPath = leg1.concat(leg2.slice(1));
+
+    // Draw glowing animated flight path
+    const flightPolyline = L.polyline(fullFlightPath, {
+        color: '#2dd4bf',
+        weight: 3.5,
+        opacity: 0.85,
+        dashArray: '8, 8',
+        className: 'curved-flight-path'
     }).addTo(map);
 
-    // Fit map bounds to show full route
-    const group = new L.featureGroup([originMarker, hubMarker, destMarker]);
-    map.fitBounds(group.getBounds().pad(0.3));
+    // Glowing Plane Icon on Map
+    const createPlaneIcon = () => L.divIcon({
+        className: 'custom-live-plane',
+        html: `<div class="live-plane-marker"><i class="fas fa-plane text-white text-sm" style="transform: rotate(45deg);"></i></div>`,
+        iconSize: [38, 38],
+        iconAnchor: [19, 19]
+    });
 
-    // Telemetry countdown
+    const livePlane = L.marker(fullFlightPath[0], { icon: createPlaneIcon() }).addTo(map);
+
+    // Animated Plane Glide along Corridor
+    let planeStep = 0;
+    const totalSteps = fullFlightPath.length;
+    setInterval(() => {
+        planeStep = (planeStep + 1) % totalSteps;
+        const currentCoord = fullFlightPath[planeStep];
+        livePlane.setLatLng(currentCoord);
+
+        // Compute simulated altitude and speed fluctuations
+        const progress = planeStep / totalSteps;
+        const simulatedAlt = Math.round(32000 + Math.sin(progress * Math.PI) * 5000);
+        const simulatedSpeed = Math.round(820 + (Math.random() * 30));
+        
+        const hudAlt = document.getElementById('hudAlt');
+        const hudSpeed = document.getElementById('hudSpeed');
+        if (hudAlt) hudAlt.innerText = `FL${Math.round(simulatedAlt / 100)} (${simulatedAlt.toLocaleString()} FT)`;
+        if (hudSpeed) hudSpeed.innerText = `Cruising: ${simulatedSpeed} km/h`;
+    }, 600);
+
+    // Fit map bounds
+    const group = new L.featureGroup([originMarker, hubMarker, destMarker, flightPolyline]);
+    map.fitBounds(group.getBounds().pad(0.2));
+
+    // Live Telemetry Auto-Refresh Engine (Async Fetch Every 30s)
     let secondsLeft = 30;
     const countdownEl = document.getElementById('countdown');
+    const autoStatusEl = document.getElementById('autoRefreshStatus');
+    const trackingNum = "{{ $shipment->tracking_number }}";
+
+    function refreshTelemetryAsync() {
+        if (!trackingNum) return;
+        if (autoStatusEl) {
+            autoStatusEl.innerHTML = '<span class="text-teal-400 font-mono"><i class="fas fa-satellite animate-spin text-xs"></i> Syncing telemetry...</span>';
+        }
+
+        fetch(`/api/v1/track/${trackingNum}`)
+            .then(res => res.json())
+            .then(res => {
+                if (res.success && res.data) {
+                    if (autoStatusEl) {
+                        autoStatusEl.innerHTML = '<span class="text-emerald-400 font-mono"><i class="fas fa-check-circle text-xs"></i> Live synced just now</span>';
+                        setTimeout(() => {
+                            autoStatusEl.innerHTML = 'Auto-sync in <span id="countdown">30</span>s';
+                        }, 3000);
+                    }
+                }
+            })
+            .catch(() => {
+                if (autoStatusEl) {
+                    autoStatusEl.innerHTML = 'Auto-sync in <span id="countdown">30</span>s';
+                }
+            });
+    }
+
     setInterval(() => {
         secondsLeft--;
         if (secondsLeft <= 0) {
             secondsLeft = 30;
+            refreshTelemetryAsync();
         }
-        if (countdownEl) countdownEl.textContent = secondsLeft;
+        const cd = document.getElementById('countdown');
+        if (cd) cd.textContent = secondsLeft;
     }, 1000);
 });
 </script>

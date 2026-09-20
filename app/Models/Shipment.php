@@ -218,6 +218,20 @@ class Shipment extends Model
         return $value ?: ($this->receiver_country ?? 'Nepal');
     }
 
+    /**
+     * Resolve direct portal link for last-mile delivery carrier
+     */
+    public function getCarrierTrackingUrlAttribute(): ?string
+    {
+        if (empty($this->last_mile_tracking_number)) {
+            return null;
+        }
+        return app(\App\Services\Tracking\CarrierTrackingGateway::class)->getCarrierUrl(
+            $this->last_mile_carrier_name,
+            $this->last_mile_tracking_number
+        );
+    }
+
     public function issues()
     {
         return $this->hasMany(ShipmentIssue::class);

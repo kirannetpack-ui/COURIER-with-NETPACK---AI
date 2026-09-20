@@ -62,7 +62,7 @@ class PublicTrackingApiController extends Controller
                         'last_mile' => [
                             'carrier' => $shipment->last_mile_carrier_name ?: $shipment->lastMileCarrier?->name,
                             'waybill' => $shipment->last_mile_tracking_number,
-                            'tracking_url' => $shipment->lastMileCarrier?->getTrackingUrl($shipment->last_mile_tracking_number),
+                            'tracking_url' => $shipment->carrier_tracking_url ?: ($shipment->lastMileCarrier?->getTrackingUrl($shipment->last_mile_tracking_number)),
                         ],
                     ],
                     'events' => array_reverse($shipment->tracking_history ?: []),

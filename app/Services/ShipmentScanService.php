@@ -219,9 +219,11 @@ class ShipmentScanService
             return 'domestic';
         }
 
-        return ($shipment instanceof Shipment && $shipment->shipment_type === 'international')
-            ? 'international'
-            : 'domestic';
+        if ($shipment instanceof Shipment) {
+            return $shipment->shipment_type === 'domestic' ? 'domestic' : 'international';
+        }
+
+        return 'domestic';
     }
 
     /**

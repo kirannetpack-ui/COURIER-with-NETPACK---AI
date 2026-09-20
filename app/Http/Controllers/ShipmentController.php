@@ -471,12 +471,33 @@ class ShipmentController extends Controller
         $shipment->status = 'pending';
         $shipment->payment_status = 'pending';
 
-        // Tracking timeline
+        // Tracking timeline & structured history
         $shipment->tracking_timeline = [
             [
                 'status' => 'pending',
                 'note' => 'Shipment created',
                 'timestamp' => now()->toDateTimeString()
+            ]
+        ];
+
+        $originCity = $request->sender_city ?: 'Kathmandu';
+        $serviceLabel = strtoupper($request->service_type ?? 'STANDARD');
+        $shipment->tracking_history = [
+            [
+                'event_code' => 'booking_confirmed',
+                'status' => 'confirmed',
+                'status_label' => 'Booking Confirmed',
+                'icon' => 'fa-circle-check',
+                'description' => "Consignment booking registered in system. Scheduled for {$serviceLabel} logistics corridor.",
+                'location' => $originCity . ', Nepal',
+                'time' => now()->toIso8601String(),
+                'scan_source' => 'booking_creation_automation',
+                'scanned_by_user_id' => $user?->id ?? 1,
+                'scanned_by_role' => $user?->user_type ?? 'client',
+                'meta' => [
+                    'weight' => $grossWeight,
+                    'service' => $request->service_type ?? 'standard',
+                ],
             ]
         ];
 

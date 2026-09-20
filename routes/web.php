@@ -502,6 +502,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:super_admin,ad
     Route::get('/pickups', [AdminPickupController::class, 'index'])->name('pickups');
     Route::get('/shipments', [AdminShipmentController::class, 'index'])->name('shipments.index');
     Route::get('/shipments/{id}', [AdminShipmentController::class, 'show'])->whereNumber('id')->name('shipments.show');
+    Route::get('/tracking', [AdminShipmentController::class, 'trackingDashboard'])->name('tracking.index');
+    Route::get('/shipments/{id}/tracking', [AdminShipmentController::class, 'trackingEntry'])->whereNumber('id')->name('shipments.tracking');
+    Route::post('/shipments/{id}/tracking', [AdminShipmentController::class, 'updateTracking'])->whereNumber('id')->name('shipments.update-tracking');
+    Route::post('/shipments/{id}/sync-carrier', [AdminShipmentController::class, 'syncCarrierNow'])->whereNumber('id')->name('shipments.sync-carrier');
+    Route::post('/shipments/{id}/sync-mawb', [AdminShipmentController::class, 'syncMawbNow'])->whereNumber('id')->name('shipments.sync-mawb');
     Route::get('/analytics', [\App\Http\Controllers\Admin\AnalyticsController::class, 'index'])->name('analytics');
     Route::get('/settlements', function () {
         return view('admin.settlements');

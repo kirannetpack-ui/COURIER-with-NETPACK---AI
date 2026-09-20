@@ -18,6 +18,10 @@
             </div>
             <div class="mt-3 md:mt-0 flex gap-2">
                 @if(in_array(auth()->user()->user_type, ['super_admin', 'admin', 'staff'], true))
+                <a href="{{ route('admin.shipments.tracking', $shipment->id) }}" 
+                   class="bg-indigo-700 hover:bg-indigo-800 text-white px-4 py-2 rounded-lg transition flex items-center gap-2 font-bold shadow-sm">
+                    <i class="fas fa-satellite-dish"></i> Tracking & MAWB Console
+                </a>
                 <button onclick="openTrackingModal('{{ $shipment->id }}', '{{ $shipment->tracking_number }}')" 
                         class="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition flex items-center gap-2">
                     <i class="fas fa-sync-alt"></i> Update Tracking
