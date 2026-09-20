@@ -116,8 +116,25 @@
 
             <!-- Print HAWB Copy Button -->
             <a href="{{ route('tracking.hawb.print', $shipment->tracking_number) }}" target="_blank" class="px-3.5 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold flex items-center gap-1.5 transition shadow-2xs" title="Print Official House Air Waybill">
-                <i class="fas fa-print"></i> <span>Print HAWB</span>
+                <i class="fas fa-print"></i> <span>HAWB</span>
             </a>
+
+            <!-- Commercial Invoice -->
+            <a href="{{ route('shipments.invoice', $shipment->id) }}" target="_blank" class="px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 text-xs font-bold flex items-center gap-1.5 transition shadow-2xs" title="View & Print Official Commercial Invoice">
+                <i class="fas fa-file-invoice-dollar text-teal-600"></i> <span>Invoice</span>
+            </a>
+
+            <!-- Packing List -->
+            <a href="{{ route('shipments.packing-list', $shipment->id) }}" target="_blank" class="px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 text-xs font-bold flex items-center gap-1.5 transition shadow-2xs" title="View & Print Box Breakdown Packing List">
+                <i class="fas fa-boxes-stacked text-teal-600"></i> <span>Packing List</span>
+            </a>
+
+            @if($shipment->seller_bill_file)
+                <!-- Attached Tax Bill -->
+                <a href="{{ route('shipments.seller-bill', $shipment->id) }}" target="_blank" class="px-3.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold flex items-center gap-1.5 transition" title="View Attached Tax Invoice / Bill">
+                    <i class="fas fa-paperclip text-amber-600"></i> <span>Tax Bill</span>
+                </a>
+            @endif
 
             <!-- Print Status -->
             <button type="button" onclick="window.print()" class="px-3.5 py-1.5 rounded-xl border border-slate-200 hover:border-slate-800 text-slate-700 hover:text-slate-900 text-xs font-semibold flex items-center gap-1.5 transition">
@@ -128,6 +145,11 @@
             <a href="https://wa.me/97715970123?text=Inquiry%20about%20shipment%20{{ $shipment->tracking_number }}" target="_blank" class="px-3.5 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold flex items-center gap-1.5 transition shadow-2xs">
                 <i class="fab fa-whatsapp text-sm"></i> <span>Live Help</span>
             </a>
+
+            <!-- Report Issue / Situation Button -->
+            <button type="button" onclick="openIssueModal()" class="px-3.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold flex items-center gap-1.5 transition shadow-2xs cursor-pointer" title="Report any situation, damage, delay, or issue">
+                <i class="fas fa-triangle-exclamation text-rose-600"></i> <span>Report Issue</span>
+            </button>
         </div>
     </div>
 
@@ -617,6 +639,26 @@
                     </a>
                 </div>
             </section>
+
+            <!-- Report Issue / Situation Desk Card -->
+            <section class="bg-rose-50/80 border border-rose-200/90 rounded-3xl p-5 space-y-3 shadow-2xs">
+                <div class="flex items-center gap-2 text-rose-900">
+                    <span class="w-7 h-7 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center text-xs">
+                        <i class="fas fa-triangle-exclamation"></i>
+                    </span>
+                    <div>
+                        <h4 class="text-xs font-black uppercase tracking-wider">Report an Issue / Situation</h4>
+                        <p class="text-[10px] text-rose-600">Client dispute & telemetry resolution</p>
+                    </div>
+                </div>
+                <p class="text-xs text-rose-800 leading-relaxed">
+                    Come up with any issue (package damage, transit delay, customs hold, discrepancy, or courier conduct)? Provide details anytime.
+                </p>
+                <button type="button" onclick="openIssueModal()" class="w-full py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition shadow-xs cursor-pointer">
+                    <i class="fas fa-bullhorn"></i>
+                    <span>Provide Situation Details</span>
+                </button>
+            </section>
         </aside>
     </div>
 </div>
@@ -665,6 +707,153 @@
     </div>
 </div>
 
+<!-- SHIPMENT ISSUE & SITUATION REPORTING MODAL -->
+<div id="issueModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-xl w-full shadow-2xl border border-slate-200 max-h-[90vh] flex flex-col overflow-hidden">
+        <!-- Modal Header -->
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+            <div class="flex items-center gap-2.5">
+                <span class="h-9 w-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center text-sm font-bold">
+                    <i class="fas fa-triangle-exclamation"></i>
+                </span>
+                <div>
+                    <h3 class="font-extrabold text-slate-900 text-sm">Report Shipment Issue / Situation</h3>
+                    <p class="text-[11px] text-slate-500">
+                        Consignment: <span class="font-mono font-bold text-slate-800">{{ $shipment->tracking_number }}</span>
+                    </p>
+                </div>
+            </div>
+            <button type="button" onclick="closeIssueModal()" class="text-slate-400 hover:text-slate-600 text-lg p-1 cursor-pointer">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Modal Body Scrollable -->
+        <div class="p-6 overflow-y-auto space-y-5 text-xs text-slate-700">
+            <!-- Informational Banner -->
+            <div class="p-3.5 rounded-xl bg-teal-50/70 border border-teal-200/70 text-[11px] text-teal-900 flex items-start gap-2.5">
+                <i class="fas fa-headset text-teal-600 text-sm mt-0.5"></i>
+                <div>
+                    <span class="font-bold block">Universal Client Telemetry & Situation Desk</span>
+                    <span>Whatever situation you might come up with—damage, transit delay, customs clarification, lost cargo, or general inquiries—our operations team will prioritize and log the resolution directly to this consignment's telemetry.</span>
+                </div>
+            </div>
+
+            <!-- Existing Issues for this Consignment -->
+            @if(isset($shipment->issues) && $shipment->issues->count() > 0)
+                <div class="space-y-2 border-b border-slate-200 pb-4">
+                    <span class="text-[10px] font-black uppercase tracking-wider text-slate-500 block">Previously Reported Issues ({{ $shipment->issues->count() }})</span>
+                    <div class="space-y-2 max-h-36 overflow-y-auto pr-1">
+                        @foreach($shipment->issues as $iss)
+                            @php
+                                $badgeClass = match($iss->status) {
+                                    'resolved' => 'bg-emerald-100 text-emerald-800 border-emerald-200',
+                                    'in_review' => 'bg-blue-100 text-blue-800 border-blue-200',
+                                    'rejected' => 'bg-rose-100 text-rose-800 border-rose-200',
+                                    default => 'bg-amber-100 text-amber-800 border-amber-200',
+                                };
+                            @endphp
+                            <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-mono font-bold text-[11px] text-slate-900">{{ $iss->issue_number }} &middot; {{ ucwords(str_replace('_', ' ', $iss->issue_type)) }}</span>
+                                    <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase border {{ $badgeClass }}">{{ $iss->status }}</span>
+                                </div>
+                                <p class="text-[11px] text-slate-600 line-clamp-2">{{ $iss->situation_description }}</p>
+                                @if($iss->resolution_notes)
+                                    <p class="text-[10px] text-emerald-800 bg-emerald-50 p-1.5 rounded mt-1">
+                                        <i class="fas fa-check-circle mr-1"></i><strong>Resolution:</strong> {{ $iss->resolution_notes }}
+                                    </p>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
+            <!-- Submission Form -->
+            <form method="POST" action="{{ route('shipments.issues.store', $shipment->tracking_number) }}" enctype="multipart/form-data" class="space-y-4">
+                @csrf
+
+                <!-- Issue / Situation Category -->
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                        Situation Category <span class="text-rose-500">*</span>
+                    </label>
+                    <select name="issue_type" required class="w-full text-xs font-semibold px-3 py-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-500 text-slate-800">
+                        <option value="damage">📦 Damaged Package or Broken Contents</option>
+                        <option value="delay">⏱️ Excessive Transit Delay / Missed Delivery SLA</option>
+                        <option value="lost_item">❓ Missing Items / Lost Parcel</option>
+                        <option value="customs_hold">🛂 Customs Clearance Hold / Document Required</option>
+                        <option value="billing_discrepancy">💵 Billing, Invoice or Tariff Discrepancy</option>
+                        <option value="return_request">🔄 Return to Origin (RTO) Request</option>
+                        <option value="rider_conduct">🛵 Courier / Rider Conduct Feedback</option>
+                        <option value="general_inquiry">💬 General Inquiry / Other Situation</option>
+                    </select>
+                </div>
+
+                <!-- Detailed Narrative / Situation -->
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                        Details of Situation / Issue <span class="text-rose-500">*</span>
+                    </label>
+                    <textarea name="situation_description" rows="4" required minlength="8"
+                              placeholder="Please provide complete details of the situation you have come up with (e.g. what occurred, condition of package, timestamps, or requests)..."
+                              class="w-full text-xs px-3 py-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-500 text-slate-900"></textarea>
+                </div>
+
+                <!-- Contact & Claim Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Contact Name</label>
+                        <input type="text" name="contact_name" value="{{ auth()->user()?->name ?? $shipment->receiver_name }}" placeholder="Your name"
+                               class="w-full text-xs px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500 text-slate-800">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Contact Email</label>
+                        <input type="email" name="contact_email" value="{{ auth()->user()?->email }}" placeholder="email@example.com"
+                               class="w-full text-xs px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500 text-slate-800">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Contact Phone</label>
+                        <input type="text" name="contact_phone" value="{{ auth()->user()?->phone ?? $shipment->receiver_phone }}" placeholder="+977-98..."
+                               class="w-full text-xs px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500 text-slate-800">
+                    </div>
+                </div>
+
+                <!-- Optional Claim Amount & Proof Attachment -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Claim Amount (Optional)</label>
+                        <div class="flex items-center gap-1">
+                            <select name="claimed_currency" class="text-xs font-bold px-2 py-1.5 bg-slate-100 border border-slate-300 rounded-lg">
+                                <option value="NPR">NPR (Rs.)</option>
+                                <option value="USD">USD ($)</option>
+                            </select>
+                            <input type="number" step="0.01" min="0" name="claimed_amount" placeholder="0.00"
+                                   class="w-full text-xs font-mono font-bold px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500 text-slate-900">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Photo / Proof Attachment</label>
+                        <input type="file" name="attachment" accept="image/*,.pdf"
+                               class="w-full text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-rose-50 file:text-rose-700 hover:file:bg-rose-100 text-slate-600 border border-slate-300 rounded-lg">
+                    </div>
+                </div>
+
+                <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+                    <button type="button" onclick="closeIssueModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-md transition cursor-pointer">
+                        <i class="fas fa-paper-plane"></i>
+                        <span>Submit Situation Report</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @push('scripts')
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
@@ -683,6 +872,14 @@ function openSubscribeModal() {
 
 function closeSubscribeModal() {
     document.getElementById('subscribeModal').classList.add('hidden');
+}
+
+function openIssueModal() {
+    document.getElementById('issueModal').classList.remove('hidden');
+}
+
+function closeIssueModal() {
+    document.getElementById('issueModal').classList.add('hidden');
 }
 
 // Initialize Interactive Global Flight Route Map

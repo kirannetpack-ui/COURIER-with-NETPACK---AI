@@ -26,12 +26,7 @@
                 <a href="{{ route('shipments.create') }}" 
                    class="px-4 py-2.5 bg-gradient-to-r from-teal-400 to-emerald-400 hover:from-teal-300 hover:to-emerald-300 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition flex items-center gap-2">
                     <i class="fas fa-box-archive"></i>
-                    <span>Create Shipment</span>
-                </a>
-                <a href="{{ route('client.inquiries') }}" 
-                   class="px-4 py-2.5 bg-slate-800/90 hover:bg-slate-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl border border-slate-700/80 transition flex items-center gap-2">
-                    <i class="fas fa-truck-pickup text-teal-400"></i>
-                    <span>Request Pickup</span>
+                    <span>Create Shipment & Pickup</span>
                 </a>
             </div>
         </div>
@@ -75,7 +70,7 @@
             </div>
         </a>
 
-        <a href="{{ route('client.inquiries') }}" class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-4 hover:border-amber-500/40 transition block">
+        <a href="{{ route('shipments.create', ['tab' => 'queue']) }}" class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-4 hover:border-amber-500/40 transition block">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Active Pickups</p>
@@ -102,14 +97,14 @@
             <i class="fas fa-arrow-right text-slate-300 group-hover:text-teal-600 group-hover:translate-x-1 transition ml-auto text-xs"></i>
         </a>
 
-        <a href="{{ route('client.inquiries') }}" 
+        <a href="{{ route('shipments.create', ['tab' => 'queue']) }}" 
            class="p-4 rounded-2xl bg-white border border-slate-200/80 hover:border-sky-500/50 hover:shadow-md transition flex items-center gap-3.5 group">
             <div class="w-11 h-11 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center text-lg group-hover:scale-110 transition flex-shrink-0">
-                <i class="fas fa-truck-pickup"></i>
+                <i class="fas fa-boxes-packing"></i>
             </div>
             <div class="min-w-0">
-                <h3 class="text-xs font-bold text-slate-900 group-hover:text-sky-700 transition">Request Pickup</h3>
-                <p class="text-[11px] text-slate-500 mt-0.5 truncate">Doorstep courier collection desk</p>
+                <h3 class="text-xs font-bold text-slate-900 group-hover:text-sky-700 transition">Dispatches Queue & Shipment Inquiries</h3>
+                <p class="text-[11px] text-slate-500 mt-0.5 truncate">Live courier pickups & intake status</p>
             </div>
             <i class="fas fa-arrow-right text-slate-300 group-hover:text-sky-600 group-hover:translate-x-1 transition ml-auto text-xs"></i>
         </a>
@@ -169,7 +164,7 @@
                     <i class="fas fa-arrow-right text-[11px]"></i>
                 </a>
             @else
-                <a href="{{ route('client.inquiries') }}" 
+                <a href="{{ route('shipments.create') }}" 
                    class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs uppercase tracking-wider transition flex-shrink-0">
                     <i class="fas fa-plus"></i>
                     <span>Book New Consignment</span>
@@ -349,10 +344,10 @@
                     </p>
                 </div>
                 <div class="flex items-center justify-center gap-3 pt-2">
-                    <a href="{{ route('client.inquiries') }}" 
+                    <a href="{{ route('shipments.create') }}" 
                        class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5">
                         <i class="fas fa-plus"></i>
-                        <span>Book Pickup</span>
+                        <span>Book Shipment & Pickup</span>
                     </a>
                     <a href="{{ route('client.history', ['filter' => 'delivered']) }}" 
                        class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">

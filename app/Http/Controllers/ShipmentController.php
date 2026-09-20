@@ -166,20 +166,38 @@ class ShipmentController extends Controller
      */
     public function store(Request $request)
     {
+        $isDoorstep = $request->has('schedule_doorstep_pickup')
+            ? $request->boolean('schedule_doorstep_pickup')
+            : true;
+
         $validator = Validator::make($request->all(), [
             'shipment_type' => 'required|in:domestic,international,ecommerce',
             'service_type' => 'required_if:shipment_type,domestic',
-            'pickup_name' => 'required|array',
-            'pickup_name.*' => 'required|string|max:255',
-            'pickup_phone' => 'required|array',
-            'pickup_phone.*' => 'required|string|max:20',
-            'pickup_address' => 'required|array',
-            'pickup_address.*' => 'required|string',
+            'pickup_name' => 'nullable|array',
+            'pickup_name.*' => 'nullable|string|max:255',
+            'pickup_phone' => 'nullable|array',
+            'pickup_phone.*' => 'nullable|string|max:20',
+            'pickup_address' => 'nullable|array',
+            'pickup_address.*' => 'nullable|string',
             'weight' => 'required|numeric|min:0.1',
             'description' => 'nullable|string',
             'origin_zone_id' => 'nullable|exists:delivery_zones,id',
             'destination_zone_id' => 'nullable|exists:delivery_zones,id',
+            'seller_bill_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
+            'seller_bill_type' => 'nullable|string|max:50',
+            'seller_bill_number' => 'nullable|string|max:100',
+            'invoice_data_json' => 'nullable|string',
+            'packing_list_data_json' => 'nullable|string',
+            'acquisition_source' => 'nullable|string|max:100',
+            'cost_amount' => 'nullable|numeric|min:0',
         ]);
+
+        if ($isDoorstep) {
+            $validator->addRules([
+                'pickup_address' => 'required|array',
+                'pickup_address.0' => 'required|string',
+            ]);
+        }
 
         // International specific validation
         if ($request->shipment_type === 'international') {
@@ -209,10 +227,11 @@ class ShipmentController extends Controller
                 ->withInput();
         }
 
-        // Get the first pickup for main fields
-        $firstPickup = $request->pickup_name[0] ?? '';
-        $firstPickupPhone = $request->pickup_phone[0] ?? '';
-        $firstPickupAddress = $request->pickup_address[0] ?? '';
+        // Get the first pickup / sender for main fields
+        $user = Auth::user();
+        $firstPickup = $request->input('pickup_name.0') ?: ($request->input('sender_name') ?: ($user->name ?? 'Sender'));
+        $firstPickupPhone = $request->input('pickup_phone.0') ?: ($request->input('sender_phone') ?: ($user->phone ?? 'N/A'));
+        $firstPickupAddress = $request->input('pickup_address.0') ?: ($request->input('sender_address') ?: ($user->permanent_address ?? ($user->address ?? 'Netpack Station Drop-off')));
 
         // Generate tracking and HAWB numbers
         $trackingNumber = $this->generateTrackingNumber($request->service_type, $request->shipment_type);
@@ -396,7 +415,7 @@ class ShipmentController extends Controller
         // Auto-save newly entered pickup addresses to user's address book
         if ($request->boolean('save_pickup_addresses', true) && $user) {
             foreach ($pickupPoints as $pPoint) {
-                if (!empty($pPoint['address'])) {
+                if (!empty($pPoint['address']) && !str_contains(strtolower($pPoint['address']), 'station drop-off')) {
                     $sAddr = \App\Models\SavedAddress::firstOrNew([
                         'user_id' => $user->id,
                         'address' => $pPoint['address'],
@@ -476,6 +495,183 @@ class ShipmentController extends Controller
         } else {
             $shipment->estimated_delivery = now()->addDays(3);
         }
+
+        // Process Seller Bill / VAT / PAN Document Upload (Nepal Government Compliance)
+        if ($request->hasFile('seller_bill_file')) {
+            $billFile = $request->file('seller_bill_file');
+            $billPath = $billFile->store('shipment_documents', 'public');
+            $shipment->seller_bill_file = $billPath;
+        }
+
+        // Process Commercial Invoice Data
+        $invoiceData = null;
+        if ($request->filled('invoice_data_json')) {
+            $decoded = json_decode($request->input('invoice_data_json'), true);
+            if (is_array($decoded)) {
+                $invoiceData = $decoded;
+            }
+        }
+        if (!$invoiceData && ($request->filled('invoice_number') || $request->has('items_description'))) {
+            $invoiceData = [
+                'invoice_number' => $request->input('invoice_number'),
+                'invoice_date' => $request->input('invoice_date', date('Y-m-d')),
+                'currency' => $request->input('invoice_currency', $request->shipment_type === 'international' ? 'USD' : 'NPR'),
+                'incoterm' => $request->input('incoterm', 'DAP'),
+                'export_reason' => $request->input('reason_for_export', 'Commercial Sale / Export'),
+                'shipper_pan_vat' => $request->input('exporter_pan_vat', $user->pan_vat_number ?? $user->pan_number ?? ''),
+                'shipper_exim_code' => $request->input('exporter_exim_code', $user->exim_code ?? ''),
+                'consignee_tax_id' => $request->input('consignee_tax_id', $shipment->receiver_tax_id ?? ''),
+                'items' => [],
+            ];
+            if (is_array($request->input('items_description'))) {
+                foreach ($request->input('items_description') as $idx => $desc) {
+                    $qty = (float) ($request->input("items_qty.{$idx}") ?? 1);
+                    $price = (float) ($request->input("items_price.{$idx}") ?? 0);
+                    $invoiceData['items'][] = [
+                        'description' => $desc,
+                        'hs_code' => $request->input("items_hs_code.{$idx}") ?? '',
+                        'origin_country' => 'Nepal',
+                        'quantity' => $qty,
+                        'uom' => $request->input("items_uom.{$idx}") ?? 'PCS',
+                        'unit_value' => $price,
+                        'total_value' => $qty * $price,
+                    ];
+                }
+            }
+        }
+        if ($invoiceData) {
+            if ($request->filled('seller_bill_type')) {
+                $invoiceData['seller_bill_type'] = $request->input('seller_bill_type');
+            }
+            if ($request->filled('seller_bill_number')) {
+                $invoiceData['seller_bill_number'] = $request->input('seller_bill_number');
+            }
+            $shipment->invoice_data = $invoiceData;
+        }
+
+        // Process Packing List Data & Box Specifications
+        $packingListData = null;
+        if ($request->filled('packing_list_data_json')) {
+            $decodedP = json_decode($request->input('packing_list_data_json'), true);
+            if (is_array($decodedP)) {
+                $packingListData = $decodedP;
+            }
+        }
+        if ($packingListData) {
+            // Strict Validation: Items packed across boxes must not exceed total quantity entered in invoice
+            if (!empty($packingListData['boxes']) && $invoiceData && !empty($invoiceData['items'])) {
+                $declaredItems = $invoiceData['items'];
+                $packedTotals = [];
+
+                foreach ($packingListData['boxes'] as $b) {
+                    $bItems = $b['items'] ?? [];
+                    foreach ($bItems as $bItem) {
+                        $pQty = (float) ($bItem['quantity'] ?? ($bItem['qty'] ?? 0));
+                        if ($pQty <= 0) {
+                            continue;
+                        }
+
+                        $matchedIdx = null;
+                        if (isset($bItem['item_index']) && isset($declaredItems[$bItem['item_index']])) {
+                            $matchedIdx = (int) $bItem['item_index'];
+                        } else {
+                            $bName = trim(strtolower($bItem['item_name'] ?? ($bItem['description'] ?? '')));
+                            $bHs = trim($bItem['hs_code'] ?? '');
+                            foreach ($declaredItems as $dIdx => $dItem) {
+                                $dName = trim(strtolower($dItem['description'] ?? ($dItem['name'] ?? '')));
+                                $dHs = trim($dItem['hs_code'] ?? '');
+                                if (($bHs !== '' && $bHs === $dHs) || ($bName !== '' && $bName === $dName)) {
+                                    $matchedIdx = $dIdx;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if ($matchedIdx !== null) {
+                            $packedTotals[$matchedIdx] = ($packedTotals[$matchedIdx] ?? 0) + $pQty;
+                        }
+                    }
+                }
+
+                foreach ($declaredItems as $dIdx => $dItem) {
+                    $declaredQty = (float) ($dItem['quantity'] ?? ($dItem['qty'] ?? 0));
+                    $packedQty = (float) ($packedTotals[$dIdx] ?? 0);
+                    $itemName = $dItem['description'] ?? ($dItem['name'] ?? 'Item #' . ($dIdx + 1));
+
+                    if ($packedQty > ($declaredQty + 0.0001)) {
+                        DB::rollBack();
+                        $errMsg = "The packing list quantity for '{$itemName}' ({$packedQty}) exceeds the total quantity entered in the invoice ({$declaredQty}). Total items packed cannot exceed entered quantity.";
+                        if ($request->expectsJson()) {
+                            return response()->json([
+                                'success' => false,
+                                'message' => $errMsg,
+                            ], 422);
+                        }
+                        return redirect()->back()
+                            ->withErrors(['packing_list_data_json' => $errMsg])
+                            ->withInput();
+                    }
+                }
+            }
+
+            $shipment->packing_list_data = $packingListData;
+            $shipment->boxes = $packingListData['boxes'] ?? [];
+            
+            // If multiple boxes provided, recalculate gross & volumetric weight across all boxes
+            if (!empty($packingListData['boxes']) && count($packingListData['boxes']) > 1) {
+                $multiGross = 0;
+                $multiVol = 0;
+                foreach ($packingListData['boxes'] as $b) {
+                    $bg = (float) ($b['weight_kg'] ?? ($b['gross_weight'] ?? 0));
+                    $bl = (float) ($b['length_cm'] ?? ($b['length'] ?? 0));
+                    $bw = (float) ($b['width_cm'] ?? ($b['width'] ?? 0));
+                    $bh = (float) ($b['height_cm'] ?? ($b['height'] ?? 0));
+                    $multiGross += $bg;
+                    $multiVol += ($bl * $bw * $bh) / 5000;
+                }
+                if ($multiGross > 0) {
+                    $shipment->actual_weight = round($multiGross, 2);
+                }
+                if ($multiVol > 0) {
+                    $shipment->volumetric_weight = round($multiVol, 2);
+                    $shipment->chargeable_weight = max($shipment->actual_weight, $shipment->volumetric_weight);
+                }
+            }
+        }
+
+        // Operational Intelligence Telemetry (18 Core Tracking Parameters)
+        $shipment->destination_country = $shipment->receiver_country;
+        $shipment->acquisition_source = $request->input('acquisition_source', 'direct_portal');
+        $shipment->price_quoted = (float) $rate;
+        $shipment->price_sold = (float) $shipment->total_amount;
+        
+        // Vendor & Fulfillment Cost
+        $costAmount = $request->filled('cost_amount') 
+            ? (float) $request->cost_amount 
+            : round(((float)$shipment->total_amount) * 0.65, 2);
+        $shipment->cost_amount = $costAmount;
+        $shipment->gross_margin = round($shipment->price_sold - $costAmount, 2);
+        $shipment->gross_margin_percentage = $shipment->price_sold > 0 
+            ? round(($shipment->gross_margin / $shipment->price_sold) * 100, 2) 
+            : 0;
+
+        // Vendor / Carrier Assignment
+        $shipment->vendor_name = $request->input('vendor_name') 
+            ?: ($shipment->shipment_type === 'international' ? 'International Air Cargo Network' : 'Netpack Ground Fleet');
+        $shipment->vendor_id = $request->input('vendor_id');
+
+        // Customer Retention & Repeat Sequence Tracking
+        $priorCount = Shipment::where('customer_id', $shipment->customer_id)->count();
+        $shipment->is_repeat_customer = ($priorCount > 0);
+        $shipment->customer_shipment_sequence = $priorCount + 1;
+
+        // Performance & Incident Defaults
+        $shipment->is_delayed = false;
+        $shipment->delay_hours = 0;
+        $shipment->is_returned = false;
+        $shipment->is_damaged = false;
+        $shipment->has_complaint = false;
+        $shipment->complaint_count = 0;
 
         $shipment->save();
 
@@ -673,7 +869,13 @@ class ShipmentController extends Controller
         $shipment->tracking_timeline = $timeline;
 
         if ($newStatus === 'delivered') {
-            $shipment->delivered_at = now();
+            $shipment->recordDeliveryTelemetry();
+        } elseif ($newStatus === 'returned') {
+            $shipment->is_returned = true;
+            $shipment->returned_at = now();
+            if ($request->filled('note')) {
+                $shipment->return_reason = $request->note;
+            }
         }
 
         $shipment->save();
@@ -785,31 +987,49 @@ class ShipmentController extends Controller
         });
 
         $firstLeg = $createdLegs->first();
-        if ($firstLeg) {
+        $isExplicitSelfDropoff = $request->has('schedule_doorstep_pickup') && ($request->schedule_doorstep_pickup === '0' || $request->schedule_doorstep_pickup === 0 || $request->schedule_doorstep_pickup === false);
+
+        if ($firstLeg && !$isExplicitSelfDropoff) {
             $origin = $plan['origin_zone'];
             $destination = $plan['destination_zone'];
-            PickupRequest::create([
-                'seller_id' => $shipment->customer_id,
-                'shipment_id' => $shipment->id,
-                'partner_user_id' => $firstLeg->partner_id,
-                'pickup_address' => $request->pickup_address[0],
-                'pickup_ward_no' => 'N/A',
-                'pickup_municipality' => $origin->zone_name,
-                'pickup_district' => $origin->district ?: ($origin->districts[0] ?? $origin->zone_name),
-                'pickup_province' => $origin->province ?: 'Not specified',
-                'delivery_address' => $shipment->receiver_address,
-                'delivery_ward_no' => 'N/A',
-                'delivery_municipality' => $destination->zone_name,
-                'delivery_district' => $destination->district ?: ($destination->districts[0] ?? $destination->zone_name),
-                'delivery_province' => $destination->province ?: 'Not specified',
-                'scheduled_pickup_time' => now(),
-                'items_description' => $shipment->description ?: 'Parcel shipment',
-                'estimated_weight_kg' => $shipment->chargeable_weight,
-                'service_tier' => in_array($shipment->service_type, ['flash', 'same_day', 'standard', 'himalayan'], true) ? $shipment->service_type : 'standard',
-                'status' => 'assigned',
-                'calculated_price' => $plan['customer_price'],
-                'tracking_number' => $shipment->tracking_number,
-            ]);
+
+            $existingPickup = PickupRequest::where('shipment_id', $shipment->id)->first();
+            if ($existingPickup) {
+                $existingPickup->update([
+                    'partner_user_id' => $firstLeg->partner_id,
+                    'pickup_municipality' => $origin->zone_name,
+                    'pickup_district' => $origin->district ?: ($origin->districts[0] ?? $origin->zone_name),
+                    'pickup_province' => $origin->province ?: 'Not specified',
+                    'delivery_municipality' => $destination->zone_name,
+                    'delivery_district' => $destination->district ?: ($destination->districts[0] ?? $destination->zone_name),
+                    'delivery_province' => $destination->province ?: 'Not specified',
+                    'status' => 'assigned',
+                    'calculated_price' => $plan['customer_price'],
+                ]);
+            } else {
+                PickupRequest::create([
+                    'seller_id' => $shipment->customer_id,
+                    'shipment_id' => $shipment->id,
+                    'partner_user_id' => $firstLeg->partner_id,
+                    'pickup_address' => $request->pickup_address[0],
+                    'pickup_ward_no' => 'N/A',
+                    'pickup_municipality' => $origin->zone_name,
+                    'pickup_district' => $origin->district ?: ($origin->districts[0] ?? $origin->zone_name),
+                    'pickup_province' => $origin->province ?: 'Not specified',
+                    'delivery_address' => $shipment->receiver_address,
+                    'delivery_ward_no' => 'N/A',
+                    'delivery_municipality' => $destination->zone_name,
+                    'delivery_district' => $destination->district ?: ($destination->districts[0] ?? $destination->zone_name),
+                    'delivery_province' => $destination->province ?: 'Not specified',
+                    'scheduled_pickup_time' => now(),
+                    'items_description' => $shipment->description ?: 'Parcel shipment',
+                    'estimated_weight_kg' => $shipment->chargeable_weight,
+                    'service_tier' => in_array($shipment->service_type, ['flash', 'same_day', 'standard', 'himalayan'], true) ? $shipment->service_type : 'standard',
+                    'status' => 'assigned',
+                    'calculated_price' => $plan['customer_price'],
+                    'tracking_number' => $shipment->tracking_number,
+                ]);
+            }
         }
 
         $notifiedPartners = [];

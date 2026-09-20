@@ -56,91 +56,518 @@
     $initialView = (request('tab') === 'queue' || request('view') === 'queue') ? 'queue' : 'booking';
 @endphp
 
-<div class="max-w-7xl mx-auto space-y-6 pb-16"
-     x-data="{
-         activeConsoleView: '{{ $initialView }}',
-         activeConsoleTab: '{{ $initialView === 'queue' ? 'queue' : 'consignment' }}',
-         hasDoorstepPickup: {{ $hasPickupInitial ? 'true' : 'false' }},
-         pickupScope: 'inside_valley',
-         pickupServiceTier: 'flash',
-         pickupCalcWeight: 1.0,
-         hasKnownDestination: false,
-         savedAddresses: {{ Js::from($savedAddressesJson) }},
-         selectedAddressId: '',
-         contactPersonName: '{{ addslashes($convertPickup->contact_person_name ?? $defaultName) }}',
-         contactPhone: '{{ addslashes($convertPickup->contact_person_phone ?? $defaultPhone) }}',
-         pickupAddress: '{{ addslashes($convertPickup->pickup_address ?? $defaultAddress) }}',
-         pickupLandmark: '',
-         pickupCity: 'Kathmandu',
-         saveAddress: true,
-         addressLabel: '',
-         isSubmittingPickup: false,
+<script>
+function shipmentConsoleData() {
+    return {
+        activeConsoleView: '{{ $initialView }}',
+        activeConsoleTab: '{{ $initialView === 'queue' ? 'queue' : 'consignment' }}',
+        hasDoorstepPickup: {{ $hasPickupInitial ? 'true' : 'false' }},
+        pickupScope: 'inside_valley',
+        pickupServiceTier: 'flash',
+        pickupCalcWeight: 1.0,
+        hasKnownDestination: false,
+        savedAddresses: {{ Js::from($savedAddressesJson) }},
+        selectedAddressId: '',
+        contactPersonName: '{{ addslashes($convertPickup->contact_person_name ?? $defaultName) }}',
+        contactPhone: '{{ addslashes($convertPickup->contact_person_phone ?? $defaultPhone) }}',
+        pickupAddress: '{{ addslashes($convertPickup->pickup_address ?? $defaultAddress) }}',
+        pickupLandmark: '',
+        pickupCity: 'Kathmandu',
+        saveAddress: true,
+        addressLabel: '',
+        isSubmittingPickup: false,
 
-         switchConsole(view) {
-             this.activeConsoleView = view;
-             this.activeConsoleTab = view === 'queue' ? 'queue' : 'consignment';
-             if (view === 'booking' || view === 'consignment') {
-                 setTimeout(() => {
-                     if (window.pickupMaps) Object.values(pickupMaps).forEach(m => m && m.map && m.map.invalidateSize());
-                     if (window.deliveryMaps) Object.values(deliveryMaps).forEach(m => m && m.map && m.map.invalidateSize());
-                     if (window.internationalMap && internationalMap.map) internationalMap.map.invalidateSize();
-                 }, 150);
-             }
-         },
+        switchConsole(view) {
+            this.activeConsoleView = view;
+            this.activeConsoleTab = view === 'queue' ? 'queue' : 'consignment';
+            if (view === 'booking' || view === 'consignment') {
+                setTimeout(() => {
+                    if (window.pickupMaps) Object.values(pickupMaps).forEach(m => m && m.map && m.map.invalidateSize());
+                    if (window.deliveryMaps) Object.values(deliveryMaps).forEach(m => m && m.map && m.map.invalidateSize());
+                    if (window.internationalMap && internationalMap.map) internationalMap.map.invalidateSize();
+                }, 150);
+            }
+        },
 
-         selectSavedPickupAddress(addr) {
-             if (!addr) return;
-             this.selectedAddressId = addr.id;
-             this.contactPersonName = addr.contact_person_name;
-             this.contactPhone = addr.contact_phone;
-             this.pickupAddress = addr.pickup_address;
-             this.pickupLandmark = addr.pickup_landmark || '';
-             this.pickupCity = addr.pickup_city || 'Kathmandu';
-             this.addressLabel = addr.label || '';
-         },
+        setDoorstepPickup(val) {
+            this.hasDoorstepPickup = val;
+            const input = document.getElementById('schedule_doorstep_pickup');
+            if (input) input.value = val ? '1' : '0';
+            if (typeof updateSummaryStats === 'function') {
+                updateSummaryStats();
+            }
+            if (val) {
+                setTimeout(() => {
+                    if (window.pickupMaps) Object.values(pickupMaps).forEach(m => m && m.map && m.map.invalidateSize());
+                }, 150);
+            }
+        },
 
-         resetToNewPickupAddress() {
-             this.selectedAddressId = 'new';
-             this.contactPersonName = '{{ addslashes($defaultName) }}';
-             this.contactPhone = '{{ addslashes($defaultPhone) }}';
-             this.pickupAddress = '';
-             this.pickupLandmark = '';
-             this.pickupCity = 'Kathmandu';
-             this.addressLabel = '';
-         },
+        selectSavedPickupAddress(addr) {
+            if (!addr) return;
+            this.selectedAddressId = addr.id;
+            this.contactPersonName = addr.contact_person_name;
+            this.contactPhone = addr.contact_phone;
+            this.pickupAddress = addr.pickup_address;
+            this.pickupLandmark = addr.pickup_landmark || '';
+            this.pickupCity = addr.pickup_city || 'Kathmandu';
+            this.addressLabel = addr.label || '';
+        },
 
-         setPickupScope(newScope) {
-             this.pickupScope = newScope;
-             if (newScope === 'inside_valley') {
-                 this.pickupServiceTier = 'flash';
-             } else if (newScope === 'outside_valley') {
-                 this.pickupServiceTier = 'express';
-             } else {
-                 this.pickupServiceTier = 'priority_express';
-             }
-         },
+        resetToNewPickupAddress() {
+            this.selectedAddressId = 'new';
+            this.contactPersonName = '{{ addslashes($defaultName) }}';
+            this.contactPhone = '{{ addslashes($defaultPhone) }}';
+            this.pickupAddress = '';
+            this.pickupLandmark = '';
+            this.pickupCity = 'Kathmandu';
+            this.addressLabel = '';
+        },
 
-         get estimatedPickupCost() {
-             let weight = Math.max(0.1, parseFloat(this.pickupCalcWeight) || 1.0);
-             let base = 0;
-             let perKg = 0;
-             
-             if (this.pickupScope === 'inside_valley') {
-                 if (this.pickupServiceTier === 'flash') { base = 120; perKg = 60; }
-                 else if (this.pickupServiceTier === 'same_day') { base = 100; perKg = 50; }
-                 else { base = 80; perKg = 40; }
-             } else if (this.pickupScope === 'outside_valley') {
-                 if (this.pickupServiceTier === 'express') { base = 220; perKg = 90; }
-                 else if (this.pickupServiceTier === 'himalayan') { base = 350; perKg = 150; }
-                 else { base = 160; perKg = 70; }
-             } else {
-                 if (this.pickupServiceTier === 'priority_express') { base = 2800; perKg = 1200; }
-                 else if (this.pickupServiceTier === 'document') { base = 1800; perKg = 800; }
-                 else { base = 2200; perKg = 950; }
-             }
-             return Math.round(base + (Math.max(0, weight - 1) * perKg));
-         }
-     }">
+        setPickupScope(newScope) {
+            this.pickupScope = newScope;
+            if (newScope === 'inside_valley') {
+                this.pickupServiceTier = 'flash';
+            } else if (newScope === 'outside_valley') {
+                this.pickupServiceTier = 'express';
+            } else {
+                this.pickupServiceTier = 'priority_express';
+            }
+        },
+
+        get estimatedPickupCost() {
+            let weight = Math.max(0.1, parseFloat(this.pickupCalcWeight) || 1.0);
+            let base = 0;
+            let perKg = 0;
+            
+            if (this.pickupScope === 'inside_valley') {
+                if (this.pickupServiceTier === 'flash') { base = 120; perKg = 60; }
+                else if (this.pickupServiceTier === 'same_day') { base = 100; perKg = 50; }
+                else { base = 80; perKg = 40; }
+            } else if (this.pickupScope === 'outside_valley') {
+                if (this.pickupServiceTier === 'express') { base = 220; perKg = 90; }
+                else if (this.pickupServiceTier === 'himalayan') { base = 350; perKg = 150; }
+                else { base = 160; perKg = 70; }
+            } else {
+                if (this.pickupServiceTier === 'priority_express') { base = 2800; perKg = 1200; }
+                else if (this.pickupServiceTier === 'document') { base = 1800; perKg = 800; }
+                else { base = 2200; perKg = 950; }
+            }
+            return Math.round(base + (Math.max(0, weight - 1) * perKg));
+        },
+
+        // Documentation & Cargo Specifications Engine
+        shipmentMode: '{{ request("shipment_type", "domestic") }}',
+        invoiceNumber: 'INV-{{ date("Y") }}-{{ rand(10000, 99999) }}',
+        invoiceDate: '{{ date("Y-m-d") }}',
+        invoiceCurrency: '{{ request("shipment_type") === "international" ? "USD" : "NPR" }}',
+        incoterm: 'DAP',
+        reasonForExport: 'Commercial Sale / Export',
+        exporterName: '{{ addslashes(Auth::user()->name ?? "") }}',
+        exporterPanVat: '{{ addslashes(Auth::user()->pan_vat_number ?? Auth::user()->pan_number ?? "") }}',
+        exporterEximCode: '{{ addslashes(Auth::user()->exim_code ?? "") }}',
+        consigneeTaxId: '',
+        sellerBillType: 'vat_invoice',
+        sellerBillNumber: '',
+        selectedBillFileName: '',
+        acquisitionSource: '{{ old("acquisition_source", "direct_portal") }}',
+
+        // Invoice line items with live WCO HS suggestion state
+        invoiceItems: [
+            {
+                name: 'Handmade Pashmina / Cashmere Shawl',
+                hs_code: '6214.20.00',
+                origin_country: 'Nepal',
+                qty: 2,
+                uom: 'PCS',
+                unit_price: 35.00,
+                duty_rate: 0,
+                searchQuery: '',
+                suggestions: [],
+                showSuggestions: false,
+                isSearching: false
+            }
+        ],
+
+        // Packing List Box Matrix
+        totalBoxes: 1,
+        boxes: [
+            {
+                box_number: 1,
+                weight_kg: {{ old('weight', $convertPickup->estimated_weight_kg ?? request('weight', '1.0')) }},
+                length_cm: 30,
+                width_cm: 25,
+                height_cm: 20,
+                items: [
+                    { item_index: 0, item_name: 'Handmade Pashmina / Cashmere Shawl', qty: 2 }
+                ]
+            }
+        ],
+
+        // WCO Tariff Search Modal state
+        wcoModalOpen: false,
+        wcoSearchQuery: '',
+        wcoCategory: '',
+        wcoResults: [],
+        wcoLoading: false,
+        activeItemIndexForWco: null,
+
+        addInvoiceItem() {
+            this.invoiceItems.push({
+                name: '',
+                hs_code: '',
+                origin_country: 'Nepal',
+                qty: 1,
+                uom: 'PCS',
+                unit_price: 10.00,
+                duty_rate: 0,
+                searchQuery: '',
+                suggestions: [],
+                showSuggestions: false,
+                isSearching: false
+            });
+            const newIdx = this.invoiceItems.length - 1;
+            this.boxes.forEach(box => {
+                if (!box.items) box.items = [];
+                box.items.push({
+                    item_index: newIdx,
+                    item_name: '',
+                    qty: this.totalBoxes === 1 ? 1 : 0
+                });
+            });
+            if (this.totalBoxes === 1) {
+                this.autoAllocateSingleBox();
+            }
+            this.syncCargoWeight();
+        },
+
+        removeInvoiceItem(index) {
+            if (this.invoiceItems.length <= 1) {
+                alert('At least one item is required in the Commercial Invoice.');
+                return;
+            }
+            this.invoiceItems.splice(index, 1);
+            this.boxes.forEach(box => {
+                if (box.items) {
+                    box.items.splice(index, 1);
+                    box.items.forEach((it, i) => it.item_index = i);
+                }
+            });
+            if (this.totalBoxes === 1) {
+                this.autoAllocateSingleBox();
+            }
+            this.syncCargoWeight();
+        },
+
+        setBoxCount(count) {
+            count = Math.max(1, parseInt(count) || 1);
+            this.totalBoxes = count;
+            while (this.boxes.length < count) {
+                const num = this.boxes.length + 1;
+                this.boxes.push({
+                    box_number: num,
+                    weight_kg: 1.0,
+                    length_cm: 30,
+                    width_cm: 25,
+                    height_cm: 20,
+                    items: this.invoiceItems.map((item, idx) => ({
+                        item_index: idx,
+                        item_name: item.name,
+                        qty: 0
+                    }))
+                });
+            }
+            if (this.boxes.length > count) {
+                this.boxes = this.boxes.slice(0, count);
+            }
+            if (count === 1) {
+                this.autoAllocateSingleBox();
+            }
+            this.syncCargoWeight();
+        },
+
+        autoAllocateSingleBox() {
+            if (this.boxes.length > 0) {
+                this.boxes[0].items = this.invoiceItems.map((item, idx) => ({
+                    item_index: idx,
+                    item_name: item.name,
+                    qty: parseFloat(item.qty) || 0
+                }));
+            }
+        },
+
+        packingListWarning: '',
+
+        syncInvoiceItemQty(itemIndex) {
+            if (this.totalBoxes === 1) {
+                this.autoAllocateSingleBox();
+            } else {
+                const total = parseFloat(this.invoiceItems[itemIndex]?.qty) || 0;
+                let totalAllocated = this.getItemAllocatedQty(itemIndex);
+                if (totalAllocated > total) {
+                    for (let b = this.boxes.length - 1; b >= 0; b--) {
+                        const bItem = this.boxes[b]?.items?.[itemIndex];
+                        if (!bItem) continue;
+                        const current = parseFloat(bItem.qty) || 0;
+                        const excess = totalAllocated - total;
+                        if (excess <= 0) break;
+                        const reduction = Math.min(current, excess);
+                        bItem.qty = Math.max(0, current - reduction);
+                        totalAllocated -= reduction;
+                    }
+                }
+            }
+        },
+
+        getAvailableQtyForBox(boxIndex, itemIndex) {
+            const total = parseFloat(this.invoiceItems[itemIndex]?.qty) || 0;
+            const allocatedOtherBoxes = this.boxes.reduce((sum, b, bIdx) => {
+                if (bIdx === boxIndex) return sum;
+                const it = (b.items || []).find(i => i.item_index === itemIndex);
+                return sum + (it ? (parseFloat(it.qty) || 0) : 0);
+            }, 0);
+            return Math.max(0, total - allocatedOtherBoxes);
+        },
+
+        enforceMaxBoxItemQty(boxIndex, itemIndex) {
+            if (!this.boxes[boxIndex] || !this.boxes[boxIndex].items || !this.boxes[boxIndex].items[itemIndex]) return;
+            const maxAllowed = this.getAvailableQtyForBox(boxIndex, itemIndex);
+            let entered = parseFloat(this.boxes[boxIndex].items[itemIndex].qty);
+            if (isNaN(entered) || entered < 0) {
+                entered = 0;
+                this.boxes[boxIndex].items[itemIndex].qty = 0;
+            }
+            if (entered > maxAllowed) {
+                this.boxes[boxIndex].items[itemIndex].qty = maxAllowed;
+                const itemTitle = this.invoiceItems[itemIndex]?.name || ('Item #' + (itemIndex + 1));
+                const totalDecl = this.invoiceItems[itemIndex]?.qty || 0;
+                this.packingListWarning = `Quantity capped: '${itemTitle}' in Box #${boxIndex + 1} cannot exceed available quantity (${maxAllowed}). Total items packed cannot exceed entered invoice quantity of ${totalDecl}.`;
+                setTimeout(() => {
+                    if (this.packingListWarning && !this.hasOverAllocatedItems) {
+                        this.packingListWarning = '';
+                    }
+                }, 4000);
+            } else {
+                if (!this.hasOverAllocatedItems) {
+                    this.packingListWarning = '';
+                }
+            }
+        },
+
+        getItemAllocatedQty(itemIndex) {
+            return this.boxes.reduce((sum, box) => {
+                const found = (box.items || []).find(i => i.item_index === itemIndex);
+                return sum + (found ? (parseFloat(found.qty) || 0) : 0);
+            }, 0);
+        },
+
+        getItemRemainingQty(itemIndex) {
+            const total = parseFloat(this.invoiceItems[itemIndex]?.qty) || 0;
+            const allocated = this.getItemAllocatedQty(itemIndex);
+            return Math.max(0, total - allocated);
+        },
+
+        allocateRemainingToBox(boxIndex, itemIndex) {
+            const rem = this.getItemRemainingQty(itemIndex);
+            if (rem <= 0) return;
+            if (this.boxes[boxIndex] && this.boxes[boxIndex].items && this.boxes[boxIndex].items[itemIndex]) {
+                this.boxes[boxIndex].items[itemIndex].qty = (parseFloat(this.boxes[boxIndex].items[itemIndex].qty) || 0) + rem;
+                this.enforceMaxBoxItemQty(boxIndex, itemIndex);
+            }
+        },
+
+        allocateAllRemainingToBox(boxIndex) {
+            this.invoiceItems.forEach((_, itemIndex) => {
+                this.allocateRemainingToBox(boxIndex, itemIndex);
+            });
+        },
+
+        get hasOverAllocatedItems() {
+            return this.invoiceItems.some((item, idx) => {
+                const total = parseFloat(item.qty) || 0;
+                return this.getItemAllocatedQty(idx) > (total + 0.0001);
+            });
+        },
+
+        validatePackingListSubmission(event) {
+            if (this.totalBoxes > 1 && this.hasOverAllocatedItems) {
+                if (event) event.preventDefault();
+                alert('Cannot submit shipment: One or more items in the packing list exceed the total quantity entered in the invoice. Please ensure total packed quantities do not exceed the declared item quantities.');
+                return false;
+            }
+            return true;
+        },
+
+        async fetchHsSuggestions(itemIndex, query) {
+            if (!query || query.length < 2) {
+                this.invoiceItems[itemIndex].suggestions = [];
+                this.invoiceItems[itemIndex].showSuggestions = false;
+                return;
+            }
+            this.invoiceItems[itemIndex].isSearching = true;
+            try {
+                const res = await fetch(`/api/hs-codes/search?q=${encodeURIComponent(query)}&limit=6`);
+                const data = await res.json();
+                this.invoiceItems[itemIndex].suggestions = data.data || data.results || [];
+                this.invoiceItems[itemIndex].showSuggestions = true;
+            } catch (e) {
+                console.error('HS Code search failed', e);
+            } finally {
+                this.invoiceItems[itemIndex].isSearching = false;
+            }
+        },
+
+        selectHsCode(itemIndex, hs) {
+            this.invoiceItems[itemIndex].hs_code = hs.code;
+            this.invoiceItems[itemIndex].name = hs.commodity_name;
+            if (hs.standard_uom) this.invoiceItems[itemIndex].uom = hs.standard_uom;
+            this.invoiceItems[itemIndex].duty_rate = hs.export_duty_rate || 0;
+            this.invoiceItems[itemIndex].showSuggestions = false;
+            this.boxes.forEach(box => {
+                if (box.items && box.items[itemIndex]) {
+                    box.items[itemIndex].item_name = hs.commodity_name;
+                }
+            });
+        },
+
+        openWcoModal(itemIndex) {
+            this.activeItemIndexForWco = itemIndex;
+            this.wcoSearchQuery = this.invoiceItems[itemIndex]?.name || '';
+            this.wcoModalOpen = true;
+            this.performWcoSearch();
+        },
+
+        async performWcoSearch() {
+            this.wcoLoading = true;
+            try {
+                let url = '/api/hs-codes/search?limit=30';
+                if (this.wcoSearchQuery) url += `&q=${encodeURIComponent(this.wcoSearchQuery)}`;
+                if (this.wcoCategory) url += `&category=${encodeURIComponent(this.wcoCategory)}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                this.wcoResults = data.data || data.results || [];
+            } catch (e) {
+                console.error('WCO fetch failed', e);
+            } finally {
+                this.wcoLoading = false;
+            }
+        },
+
+        chooseWcoResult(hs) {
+            if (this.activeItemIndexForWco !== null) {
+                this.selectHsCode(this.activeItemIndexForWco, hs);
+            }
+            this.wcoModalOpen = false;
+        },
+
+        get invoiceSubtotal() {
+            return this.invoiceItems.reduce((acc, item) => acc + ((parseFloat(item.qty) || 0) * (parseFloat(item.unit_price) || 0)), 0);
+        },
+
+        get totalCargoGrossWeight() {
+            if (this.totalBoxes > 1) {
+                return this.boxes.reduce((acc, b) => acc + (parseFloat(b.weight_kg) || 0), 0);
+            }
+            return parseFloat(this.boxes[0]?.weight_kg) || 1.0;
+        },
+
+        get totalCargoVolumetricWeight() {
+            if (this.totalBoxes > 1) {
+                return this.boxes.reduce((acc, b) => {
+                    const l = parseFloat(b.length_cm) || 0;
+                    const w = parseFloat(b.width_cm) || 0;
+                    const h = parseFloat(b.height_cm) || 0;
+                    return acc + ((l * w * h) / 5000);
+                }, 0);
+            }
+            const l = parseFloat(this.boxes[0]?.length_cm) || 0;
+            const w = parseFloat(this.boxes[0]?.width_cm) || 0;
+            const h = parseFloat(this.boxes[0]?.height_cm) || 0;
+            return (l * w * h) / 5000;
+        },
+
+        get totalChargeableWeight() {
+            return Math.max(this.totalCargoGrossWeight, this.totalCargoVolumetricWeight);
+        },
+
+        syncCargoWeight() {
+            const weightInput = document.getElementById('weight-input');
+            if (weightInput) {
+                weightInput.value = this.totalCargoGrossWeight.toFixed(2);
+            }
+            if (typeof calculateVolumetricWeight === 'function') {
+                calculateVolumetricWeight();
+            }
+        },
+
+        handleBillFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                this.selectedBillFileName = file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+            } else {
+                this.selectedBillFileName = '';
+            }
+        },
+
+        get invoiceDataJsonPayload() {
+            return JSON.stringify({
+                invoice_number: this.invoiceNumber,
+                invoice_date: this.invoiceDate,
+                currency: this.invoiceCurrency,
+                incoterm: this.incoterm,
+                export_reason: this.reasonForExport,
+                acquisition_source: this.acquisitionSource,
+                shipper_pan_vat: this.exporterPanVat,
+                shipper_exim_code: this.exporterEximCode,
+                consignee_tax_id: this.consigneeTaxId,
+                seller_bill_type: this.sellerBillType,
+                seller_bill_number: this.sellerBillNumber,
+                subtotal: this.invoiceSubtotal,
+                items: this.invoiceItems.map(it => ({
+                    description: it.name,
+                    hs_code: it.hs_code,
+                    origin_country: it.origin_country || 'Nepal',
+                    quantity: parseFloat(it.qty) || 0,
+                    uom: it.uom || 'PCS',
+                    unit_value: parseFloat(it.unit_price) || 0,
+                    total_value: (parseFloat(it.qty) || 0) * (parseFloat(it.unit_price) || 0),
+                    duty_rate: it.duty_rate || 0
+                }))
+            });
+        },
+
+        get packingListDataJsonPayload() {
+            return JSON.stringify({
+                total_boxes: this.totalBoxes,
+                total_gross_weight: this.totalCargoGrossWeight,
+                total_volumetric_weight: this.totalCargoVolumetricWeight,
+                boxes: this.boxes.map(b => ({
+                    box_number: b.box_number,
+                    length: parseFloat(b.length_cm) || 0,
+                    width: parseFloat(b.width_cm) || 0,
+                    height: parseFloat(b.height_cm) || 0,
+                    gross_weight: parseFloat(b.weight_kg) || 0,
+                    volumetric_weight: ((parseFloat(b.length_cm) || 0) * (parseFloat(b.width_cm) || 0) * (parseFloat(b.height_cm) || 0)) / 5000,
+                    items: (b.items || []).map(bi => ({
+                        item_index: bi.item_index,
+                        item_name: bi.item_name || (this.invoiceItems[bi.item_index]?.name || ''),
+                        hs_code: this.invoiceItems[bi.item_index]?.hs_code || '',
+                        quantity: parseFloat(bi.qty) || 0,
+                        uom: this.invoiceItems[bi.item_index]?.uom || 'PCS'
+                    }))
+                }))
+            });
+        }
+    };
+}
+document.addEventListener('alpine:init', () => {
+    if (window.Alpine) {
+        Alpine.data('shipmentConsoleData', shipmentConsoleData);
+    }
+});
+</script>
+
+<div class="max-w-7xl mx-auto space-y-6 pb-16" x-data="shipmentConsoleData()">
     
     <!-- TOP HERO BANNER -->
     <div class="relative overflow-hidden bg-gradient-to-r from-slate-950 via-slate-900 to-teal-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl border border-teal-800/40">
@@ -283,7 +710,9 @@
     <!-- UNIFIED SHIPMENT & DOORSTEP PICKUP BOOKING FORM -->
     <!-- ========================================================================= -->
     <div x-show="activeConsoleView === 'booking' || activeConsoleTab === 'consignment'" x-transition class="space-y-6">
-        <form action="{{ route('shipments.store') }}" method="POST" id="shipment-form" class="space-y-6">
+        <form action="{{ route('shipments.store') }}" method="POST" enctype="multipart/form-data" id="shipment-form" 
+              @submit="if (!validatePackingListSubmission($event)) { $event.preventDefault(); return false; }"
+              class="space-y-6">
             @csrf
             @if(request()->filled('quoted_rate'))
                 <input type="hidden" name="quoted_rate" value="{{ request('quoted_rate') }}">
@@ -433,216 +862,315 @@
                 @endif
             </div>
 
-            <!-- 2. DOORSTEP PICKUP & COLLECTION OPTION (KEPT INITIALLY, ENABLED ONLY WHEN CHOSEN) -->
+            <!-- 2. COLLECTION METHOD & SENDER DETAILS (MERGED SINGLE FUNCTION, PICKUP CHOSEN INITIALLY OR OPTIONAL) -->
             <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/90 space-y-6">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
                     <div>
                         <h3 class="text-sm font-black uppercase tracking-wider text-slate-900 flex items-center gap-2">
                             <span class="w-5 h-5 rounded-full bg-teal-600 text-white text-[10px] flex items-center justify-center font-bold">2</span>
-                            <span>📍 Doorstep Pickup & Collection Option</span>
+                            <span>📦 Collection Method & Sender Details</span>
                         </h3>
                         <p class="text-xs text-slate-500 mt-0.5">
-                            Request an on-demand courier rider to collect parcels from your doorstep, or drop off at an authorized counter.
+                            Select how packages will be collected: dispatch our doorstep rider fleet or drop off at any Netpack station.
                         </p>
                     </div>
 
                     <div x-show="hasDoorstepPickup" x-transition>
                         <button type="button" onclick="addPickupPoint()" 
-                                class="px-4 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-extrabold transition flex items-center gap-1.5 self-start sm:self-auto cursor-pointer">
+                                class="px-4 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-extrabold transition flex items-center gap-1.5 self-start sm:self-auto cursor-pointer shadow-xs">
                             <i class="fas fa-plus text-teal-600"></i>
                             <span>Add Another Pickup Point</span>
                         </button>
                     </div>
                 </div>
 
-                <!-- INTEGRATED DOORSTEP PICKUP RIDER DISPATCH TOGGLE (OPTION TO CHOOSE) -->
-                <div class="p-4 sm:p-5 rounded-2xl border-2 transition-all"
-                     :class="hasDoorstepPickup ? 'bg-gradient-to-r from-teal-50 via-emerald-50/70 to-slate-50 border-teal-600 ring-2 ring-teal-500/20' : 'bg-slate-50 border-slate-200'">
-                    <div class="flex items-start justify-between gap-4">
-                        <div class="flex items-start gap-3.5">
-                            <div class="pt-0.5">
-                                <input type="checkbox" id="schedule_doorstep_pickup" name="schedule_doorstep_pickup" value="1"
-                                       x-model="hasDoorstepPickup"
-                                       class="w-5 h-5 text-teal-600 rounded-md border-slate-300 focus:ring-teal-500 cursor-pointer">
+                <!-- DUAL METHOD SELECTOR CARDS -->
+                <input type="hidden" name="schedule_doorstep_pickup" id="schedule_doorstep_pickup" :value="hasDoorstepPickup ? '1' : '0'">
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Option 1: Doorstep Courier Collection -->
+                    <div @click="setDoorstepPickup(true)"
+                         class="relative p-4 sm:p-5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between"
+                         :class="hasDoorstepPickup ? 'bg-gradient-to-br from-teal-50 via-emerald-50/60 to-white border-teal-600 ring-2 ring-teal-500/20 shadow-sm' : 'bg-white border-slate-200 hover:border-slate-300 opacity-80 hover:opacity-100'">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex items-start gap-3.5">
+                                <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 transition"
+                                     :class="hasDoorstepPickup ? 'bg-teal-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600'">
+                                    <i class="fas fa-motorcycle"></i>
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-sm font-black text-slate-900">Doorstep Courier Collection</span>
+                                        <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-teal-600 text-white">Rider Fleet</span>
+                                    </div>
+                                    <p class="text-xs text-slate-600 mt-1 leading-relaxed">
+                                        A courier rider will be dispatched to collect packages directly from your location.
+                                    </p>
+                                </div>
                             </div>
+                            <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition flex-shrink-0 mt-0.5"
+                                 :class="hasDoorstepPickup ? 'border-teal-600 bg-teal-600 text-white' : 'border-slate-300 bg-white'">
+                                <i class="fas fa-check text-[10px]" x-show="hasDoorstepPickup"></i>
+                            </div>
+                        </div>
+                        <div class="mt-3 pt-3 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
+                            <span class="font-extrabold text-teal-700" x-show="hasDoorstepPickup">✓ Collection Active</span>
+                            <span class="text-slate-400 font-medium" x-show="!hasDoorstepPickup">Click to dispatch rider</span>
+                            <span class="text-slate-500 font-medium">On-Demand Pickup</span>
+                        </div>
+                    </div>
+
+                    <!-- Option 2: Station / Counter Drop-off -->
+                    <div @click="setDoorstepPickup(false)"
+                         class="relative p-4 sm:p-5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between"
+                         :class="!hasDoorstepPickup ? 'bg-gradient-to-br from-slate-100 via-slate-50 to-white border-slate-800 ring-2 ring-slate-800/10 shadow-sm' : 'bg-white border-slate-200 hover:border-slate-300 opacity-80 hover:opacity-100'">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex items-start gap-3.5">
+                                <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 transition"
+                                     :class="!hasDoorstepPickup ? 'bg-slate-800 text-white shadow-xs' : 'bg-slate-100 text-slate-600'">
+                                    <i class="fas fa-store"></i>
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-sm font-black text-slate-900">Station / Counter Drop-off</span>
+                                        <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-slate-200 text-slate-700">Self Drop-off</span>
+                                    </div>
+                                    <p class="text-xs text-slate-600 mt-1 leading-relaxed">
+                                        You drop off packages at any Netpack station or branch counter. No rider will be dispatched.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition flex-shrink-0 mt-0.5"
+                                 :class="!hasDoorstepPickup ? 'border-slate-800 bg-slate-800 text-white' : 'border-slate-300 bg-white'">
+                                <i class="fas fa-check text-[10px]" x-show="!hasDoorstepPickup"></i>
+                            </div>
+                        </div>
+                        <div class="mt-3 pt-3 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
+                            <span class="font-extrabold text-slate-800" x-show="!hasDoorstepPickup">✓ Counter Drop-off Active</span>
+                            <span class="text-slate-400 font-medium" x-show="hasDoorstepPickup">Click for self drop-off</span>
+                            <span class="text-slate-500 font-medium">Standard Hub Processing</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================================================= -->
+                <!-- DOORSTEP PICKUP DETAILS CONTAINER (ONLY SHOWN WHEN hasDoorstepPickup IS TRUE) -->
+                <!-- ========================================================================= -->
+                <div x-show="hasDoorstepPickup" x-transition class="space-y-6">
+                    <!-- Collection Time & Rider Notes -->
+                    <div class="p-4 sm:p-5 rounded-2xl bg-teal-50/50 border border-teal-200/80 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-xs font-bold text-slate-800 block mb-1.5 flex items-center gap-1.5">
+                                <i class="fas fa-clock text-teal-600"></i>
+                                <span>Preferred Collection Time Slot:</span>
+                            </label>
+                            <input type="datetime-local" name="scheduled_pickup_time" 
+                                   :disabled="!hasDoorstepPickup"
+                                   value="{{ old('scheduled_pickup_time', now()->addHours(2)->format('Y-m-d\TH:i')) }}"
+                                   class="w-full text-xs px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 font-medium text-slate-900 shadow-xs">
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-slate-800 block mb-1.5 flex items-center gap-1.5">
+                                <i class="fas fa-comment-dots text-teal-600"></i>
+                                <span>Pickup Notes for Rider (Optional):</span>
+                            </label>
+                            <input type="text" name="pickup_notes" placeholder="e.g. Ring bell on 2nd floor, call sender on arrival"
+                                   :disabled="!hasDoorstepPickup"
+                                   class="w-full text-xs px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 font-medium text-slate-900 shadow-xs">
+                        </div>
+                    </div>
+
+                    <!-- Pickup Cards Container -->
+                    <div id="pickup-container" class="space-y-6">
+                        <!-- Initial Pickup Card #0 -->
+                        <div class="pickup-card p-5 sm:p-6 rounded-2xl bg-slate-50/70 border border-slate-200 space-y-4" id="pickup-card-0">
+                            <div class="flex items-center justify-between gap-3 pb-2 border-b border-slate-200">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-6 h-6 rounded-lg bg-teal-600 text-white text-xs font-black flex items-center justify-center">1</span>
+                                    <span class="font-extrabold text-xs text-slate-800 uppercase tracking-wider">Pickup Location #1</span>
+                                </div>
+                                <button type="button" onclick="removePickupPoint(0)" class="text-rose-500 hover:text-rose-700 text-xs font-bold hidden remove-pickup-btn cursor-pointer">
+                                    <i class="fas fa-trash-can mr-1"></i> Remove Location
+                                </button>
+                            </div>
+
+                            <!-- 1-CLICK SAVED ADDRESS & INQUIRY PRE-FILLER -->
+                            <div class="p-3.5 rounded-xl bg-white border border-slate-200 space-y-2">
+                                <div class="flex items-center justify-between flex-wrap gap-2">
+                                    <label class="text-[11px] font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                                        <i class="fas fa-bolt text-amber-500"></i>
+                                        <span>1-Click Auto-Fill from Address Book / Inquiries:</span>
+                                    </label>
+                                    <span class="text-[10px] text-teal-700 font-semibold">Instant data population</span>
+                                </div>
+
+                                <select onchange="applySavedPickup(this, 0)" class="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none font-medium text-slate-800">
+                                    <option value="">-- Choose from Saved Addresses or Prior Doorstep Inquiries --</option>
+                                    
+                                    @if(isset($savedAddresses) && $savedAddresses->count() > 0)
+                                        <optgroup label="🏢 Address Book (Saved Locations)">
+                                            @foreach($savedAddresses as $sAddr)
+                                                <option value="saved_{{ $sAddr->id }}"
+                                                        data-name="{{ $sAddr->contact_person_name }}"
+                                                        data-phone="{{ $sAddr->contact_person_phone }}"
+                                                        data-address="{{ $sAddr->address . ($sAddr->landmark ? ', ' . $sAddr->landmark : '') }}"
+                                                        data-lat="{{ $sAddr->latitude ?? '' }}"
+                                                        data-lng="{{ $sAddr->longitude ?? '' }}">
+                                                    {{ $sAddr->display_name }} ({{ $sAddr->contact_person_name }} &bull; {{ $sAddr->contact_person_phone }})
+                                                </option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
+
+                                    @if(isset($recentPickups) && $recentPickups->count() > 0)
+                                        <optgroup label="📦 Recent Doorstep Inquiries">
+                                            @foreach($recentPickups as $pReq)
+                                                <option value="inquiry_{{ $pReq->id }}"
+                                                        data-name="{{ $pReq->contact_person_name ?? Auth::user()->name }}"
+                                                        data-phone="{{ $pReq->contact_person_phone ?? Auth::user()->phone }}"
+                                                        data-address="{{ $pReq->pickup_address }}"
+                                                        data-lat="{{ $pReq->pickup_latitude ?? '' }}"
+                                                        data-lng="{{ $pReq->pickup_longitude ?? '' }}">
+                                                    {{ $pReq->tracking_number ?? ('#REQ-' . $pReq->id) }} &bull; {{ Str::limit($pReq->pickup_address, 35) }}
+                                                </option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
+                                </select>
+                            </div>
+
+                            <!-- Pickup Contact & Address Inputs -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Contact Person Name <span class="text-rose-500">*</span></label>
+                                    <div class="relative">
+                                        <i class="fas fa-user absolute left-3 top-3 text-slate-400 text-xs pointer-events-none"></i>
+                                        <input type="text" name="pickup_name[]" id="pickup_name_0"
+                                               :required="hasDoorstepPickup"
+                                               :disabled="!hasDoorstepPickup"
+                                               value="{{ old('pickup_name.0', $convertPickup->contact_person_name ?? Auth::user()->name ?? '') }}"
+                                               class="w-full text-xs pl-8 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-medium text-slate-900"
+                                               placeholder="Contact person name">
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Mobile Number <span class="text-rose-500">*</span></label>
+                                    <div class="relative">
+                                        <i class="fas fa-phone absolute left-3 top-3 text-slate-400 text-xs pointer-events-none"></i>
+                                        <input type="text" name="pickup_phone[]" id="pickup_phone_0"
+                                               :required="hasDoorstepPickup"
+                                               :disabled="!hasDoorstepPickup"
+                                               value="{{ old('pickup_phone.0', $convertPickup->contact_person_phone ?? Auth::user()->phone ?? '') }}"
+                                               class="w-full text-xs pl-8 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-mono font-medium text-slate-900"
+                                               placeholder="98XXXXXXXX">
+                                    </div>
+                                </div>
+                            </div>
+
                             <div>
-                                <label for="schedule_doorstep_pickup" class="text-xs sm:text-sm font-black text-slate-900 cursor-pointer flex items-center gap-2 flex-wrap">
-                                    <span>Dispatch Doorstep Courier Collection for this Consignment</span>
-                                    <span class="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase bg-teal-600 text-white tracking-wider">Rider Fleet</span>
-                                </label>
-                                <p class="text-[11px] sm:text-xs text-slate-600 mt-1 leading-relaxed">
-                                    A courier rider will be dispatched to collect packages from <strong>Pickup Location #1</strong> at your chosen time slot.
+                                <label class="block text-xs font-bold text-slate-700 mb-1.5">Full Pickup Street Address & Landmark <span class="text-rose-500">*</span></label>
+                                <textarea name="pickup_address[]" id="pickup_address_0" rows="2"
+                                          :required="hasDoorstepPickup"
+                                          :disabled="!hasDoorstepPickup"
+                                          class="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-medium text-slate-900"
+                                          placeholder="Full street address, ward number, or building">{{ old('pickup_address.0', $convertPickup->pickup_address ?? Auth::user()->address ?? Auth::user()->permanent_address ?? '') }}</textarea>
+                            </div>
+
+                            <!-- Interactive Leaflet Map for Pickup #0 -->
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <label class="text-[11px] font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                                        <i class="fas fa-map-location-dot text-teal-600"></i>
+                                        <span>Interactive Map Pin (Click or Drag Marker):</span>
+                                    </label>
+                                    <span class="text-[10px] text-slate-400 font-mono" id="pickup-coords-0">Lat: 27.7172, Lng: 85.3240</span>
+                                </div>
+
+                                <div class="flex items-center gap-2">
+                                    <div class="relative flex-1">
+                                        <i class="fas fa-search absolute left-3 top-2.5 text-slate-400 text-xs pointer-events-none"></i>
+                                        <input type="text" id="pickup-search-0" 
+                                               placeholder="Search landmark, area or street in Nepal..."
+                                               onkeydown="if(event.key === 'Enter'){ event.preventDefault(); searchLocationOnMap('pickup', 0); }"
+                                               class="w-full text-xs pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none">
+                                    </div>
+                                    <button type="button" onclick="searchLocationOnMap('pickup', 0)" class="px-3 py-2 bg-slate-800 text-white rounded-xl text-xs font-bold hover:bg-slate-700 transition cursor-pointer">
+                                        Search
+                                    </button>
+                                    <button type="button" onclick="getCurrentLocationOnMap('pickup', 0)" title="Use Current GPS" class="px-3 py-2 bg-teal-50 text-teal-700 border border-teal-200 rounded-xl text-xs font-bold hover:bg-teal-100 transition cursor-pointer">
+                                        <i class="fas fa-location-crosshairs"></i>
+                                    </button>
+                                </div>
+
+                                <div id="pickup-map-0" class="map-container"></div>
+                                <input type="hidden" name="pickup_lat[]" id="pickup-lat-0" value="27.7172" :disabled="!hasDoorstepPickup">
+                                <input type="hidden" name="pickup_lng[]" id="pickup-lng-0" value="85.3240" :disabled="!hasDoorstepPickup">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Auto-Save Address Book Option -->
+                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center gap-3">
+                        <input type="checkbox" name="save_pickup_addresses" id="save_pickup_addresses" value="1" checked 
+                               :disabled="!hasDoorstepPickup"
+                               class="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500 cursor-pointer">
+                        <label for="save_pickup_addresses" class="text-xs text-slate-700 font-medium cursor-pointer">
+                            Automatically remember and save newly entered pickup locations to my Address Book for 1-click re-use.
+                        </label>
+                    </div>
+                </div>
+
+                <!-- ========================================================================= -->
+                <!-- COUNTER / STATION DROP-OFF PANEL (ONLY SHOWN WHEN hasDoorstepPickup IS FALSE) -->
+                <!-- ========================================================================= -->
+                <div x-show="!hasDoorstepPickup" x-transition class="space-y-4">
+                    <div class="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200 text-slate-800 space-y-3">
+                        <div class="flex items-start gap-3.5">
+                            <div class="w-10 h-10 rounded-xl bg-slate-800 text-white flex items-center justify-center flex-shrink-0 text-base shadow-xs">
+                                <i class="fas fa-store"></i>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <h4 class="font-extrabold text-slate-900 text-sm">Station / Counter Drop-off Selected</h4>
+                                    <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800">No Pickup Fee</span>
+                                </div>
+                                <p class="text-xs text-slate-600 mt-1 leading-relaxed">
+                                    You can drop off your consignment at any authorized Netpack hub or branch counter. No courier rider will be dispatched to your location.
                                 </p>
                             </div>
                         </div>
-                        <div class="flex-shrink-0">
-                            <span class="text-[11px] font-extrabold px-3 py-1 rounded-xl transition"
-                                  :class="hasDoorstepPickup ? 'bg-teal-600 text-white shadow-xs' : 'bg-slate-200 text-slate-600'">
-                                <span x-text="hasDoorstepPickup ? '✓ Doorstep Pickup Active' : 'Self Drop-off'"></span>
-                            </span>
-                        </div>
-                    </div>
 
-                    <!-- Collection Time & Rider Instructions (visible when chosen) -->
-                    <div x-show="hasDoorstepPickup" x-transition class="mt-4 pt-4 border-t border-teal-200/60 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label class="text-[11px] font-bold text-slate-700 block mb-1">Preferred Collection Time Slot:</label>
-                            <input type="datetime-local" name="scheduled_pickup_time" 
-                                   value="{{ old('scheduled_pickup_time', now()->addHours(2)->format('Y-m-d\TH:i')) }}"
-                                   class="w-full text-xs px-3 py-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 font-medium">
-                        </div>
-                        <div>
-                            <label class="text-[11px] font-bold text-slate-700 block mb-1">Pickup Notes for Rider (Optional):</label>
-                            <input type="text" name="pickup_notes" placeholder="e.g. Ring bell on 2nd floor, call sender on arrival"
-                                   class="w-full text-xs px-3 py-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 font-medium">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- SELF DROP-OFF NOTICE (when doorstep pickup is NOT chosen) -->
-                <div x-show="!hasDoorstepPickup" x-transition class="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 text-amber-900 flex items-start gap-3">
-                    <div class="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <i class="fas fa-boxes-packing"></i>
-                    </div>
-                    <div class="text-xs">
-                        <h4 class="font-bold text-amber-950 text-sm">Self Drop-off at Station Selected</h4>
-                        <p class="mt-0.5 text-amber-800">
-                            You may drop off your consignment at any authorized Netpack hub or branch counter. No courier rider will be dispatched.
-                            Please verify your sender contact details below for the consignment label.
-                        </p>
-                    </div>
-                </div>
-
-                <!-- PICKUP CARDS CONTAINER -->
-                <div id="pickup-container" class="space-y-6">
-                    <!-- Initial Pickup Card #0 -->
-                    <div class="pickup-card p-5 sm:p-6 rounded-2xl bg-slate-50/70 border border-slate-200 space-y-4" id="pickup-card-0">
-                        <div class="flex items-center justify-between gap-3 pb-2 border-b border-slate-200">
-                            <div class="flex items-center gap-2">
-                                <span class="w-6 h-6 rounded-lg bg-teal-600 text-white text-xs font-black flex items-center justify-center">1</span>
-                                <span class="font-extrabold text-xs text-slate-800 uppercase tracking-wider">Pickup Location #1</span>
-                            </div>
-                            <button type="button" onclick="removePickupPoint(0)" class="text-rose-500 hover:text-rose-700 text-xs font-bold hidden remove-pickup-btn cursor-pointer">
-                                <i class="fas fa-trash-can mr-1"></i> Remove Location
-                            </button>
-                        </div>
-
-                        <!-- 1-CLICK SAVED ADDRESS & INQUIRY PRE-FILLER -->
-                        <div class="p-3.5 rounded-xl bg-white border border-slate-200 space-y-2">
-                            <div class="flex items-center justify-between flex-wrap gap-2">
-                                <label class="text-[11px] font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
-                                    <i class="fas fa-bolt text-amber-500"></i>
-                                    <span>1-Click Auto-Fill from Address Book / Inquiries:</span>
-                                </label>
-                                <span class="text-[10px] text-teal-700 font-semibold">Instant data population</span>
-                            </div>
-
-                            <select onchange="applySavedPickup(this, 0)" class="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none font-medium text-slate-800">
-                                <option value="">-- Choose from Saved Addresses or Prior Doorstep Inquiries --</option>
-                                
-                                @if(isset($savedAddresses) && $savedAddresses->count() > 0)
-                                    <optgroup label="🏢 Address Book (Saved Locations)">
-                                        @foreach($savedAddresses as $sAddr)
-                                            <option value="saved_{{ $sAddr->id }}"
-                                                    data-name="{{ $sAddr->contact_person_name }}"
-                                                    data-phone="{{ $sAddr->contact_person_phone }}"
-                                                    data-address="{{ $sAddr->address . ($sAddr->landmark ? ', ' . $sAddr->landmark : '') }}"
-                                                    data-lat="{{ $sAddr->latitude ?? '' }}"
-                                                    data-lng="{{ $sAddr->longitude ?? '' }}">
-                                                {{ $sAddr->display_name }} ({{ $sAddr->contact_person_name }} &bull; {{ $sAddr->contact_person_phone }})
-                                            </option>
-                                        @endforeach
-                                    </optgroup>
-                                @endif
-
-                                @if(isset($recentPickups) && $recentPickups->count() > 0)
-                                    <optgroup label="📦 Recent Doorstep Inquiries">
-                                        @foreach($recentPickups as $pReq)
-                                            <option value="inquiry_{{ $pReq->id }}"
-                                                    data-name="{{ $pReq->contact_person_name ?? Auth::user()->name }}"
-                                                    data-phone="{{ $pReq->contact_person_phone ?? Auth::user()->phone }}"
-                                                    data-address="{{ $pReq->pickup_address }}"
-                                                    data-lat="{{ $pReq->pickup_latitude ?? '' }}"
-                                                    data-lng="{{ $pReq->pickup_longitude ?? '' }}">
-                                                {{ $pReq->tracking_number ?? ('#REQ-' . $pReq->id) }} &bull; {{ Str::limit($pReq->pickup_address, 35) }}
-                                            </option>
-                                        @endforeach
-                                    </optgroup>
-                                @endif
-                            </select>
-                        </div>
-
-                        <!-- Pickup Contact & Address Inputs -->
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1.5">Contact Person Name <span class="text-rose-500">*</span></label>
-                                <div class="relative">
-                                    <i class="fas fa-user absolute left-3 top-3 text-slate-400 text-xs pointer-events-none"></i>
-                                    <input type="text" name="pickup_name[]" id="pickup_name_0" required 
-                                           value="{{ old('pickup_name.0', $convertPickup->contact_person_name ?? Auth::user()->name ?? '') }}"
-                                           class="w-full text-xs pl-8 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-medium text-slate-900"
-                                           placeholder="Contact person name">
+                        <!-- Sender Information (Used on Label) -->
+                        <div class="pt-3 border-t border-slate-200/80">
+                            <label class="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-2">
+                                Sender Information (Printed on Consignment Waybill):
+                            </label>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 mb-1">Sender Name</label>
+                                    <input type="text" name="sender_name" 
+                                           :disabled="hasDoorstepPickup"
+                                           value="{{ old('sender_name', Auth::user()->name ?? '') }}"
+                                           class="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-teal-500">
                                 </div>
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1.5">Mobile Number <span class="text-rose-500">*</span></label>
-                                <div class="relative">
-                                    <i class="fas fa-phone absolute left-3 top-3 text-slate-400 text-xs pointer-events-none"></i>
-                                    <input type="text" name="pickup_phone[]" id="pickup_phone_0" required 
-                                           value="{{ old('pickup_phone.0', $convertPickup->contact_person_phone ?? Auth::user()->phone ?? '') }}"
-                                           class="w-full text-xs pl-8 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-mono font-medium text-slate-900"
-                                           placeholder="98XXXXXXXX">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 mb-1">Sender Phone</label>
+                                    <input type="text" name="sender_phone" 
+                                           :disabled="hasDoorstepPickup"
+                                           value="{{ old('sender_phone', Auth::user()->phone ?? '') }}"
+                                           class="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono font-medium text-slate-900 focus:ring-2 focus:ring-teal-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 mb-1">Sender Address / Station</label>
+                                    <input type="text" name="sender_address" 
+                                           :disabled="hasDoorstepPickup"
+                                           value="{{ old('sender_address', Auth::user()->address ?? Auth::user()->permanent_address ?? 'Netpack Station Drop-off') }}"
+                                           class="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-teal-500">
                                 </div>
                             </div>
                         </div>
-
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1.5">Full Pickup Street Address & Landmark <span class="text-rose-500">*</span></label>
-                            <textarea name="pickup_address[]" id="pickup_address_0" rows="2" required 
-                                      class="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-medium text-slate-900"
-                                      placeholder="Full street address, ward number, or building">{{ old('pickup_address.0', $convertPickup->pickup_address ?? Auth::user()->address ?? Auth::user()->permanent_address ?? '') }}</textarea>
-                        </div>
-
-                        <!-- Interactive Leaflet Map for Pickup #0 -->
-                        <div class="space-y-2">
-                            <div class="flex items-center justify-between">
-                                <label class="text-[11px] font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
-                                    <i class="fas fa-map-location-dot text-teal-600"></i>
-                                    <span>Interactive Map Pin (Click or Drag Marker):</span>
-                                </label>
-                                <span class="text-[10px] text-slate-400 font-mono" id="pickup-coords-0">Lat: 27.7172, Lng: 85.3240</span>
-                            </div>
-
-                            <div class="flex items-center gap-2">
-                                <div class="relative flex-1">
-                                    <i class="fas fa-search absolute left-3 top-2.5 text-slate-400 text-xs pointer-events-none"></i>
-                                    <input type="text" id="pickup-search-0" 
-                                           placeholder="Search landmark, area or street in Nepal..."
-                                           onkeydown="if(event.key === 'Enter'){ event.preventDefault(); searchLocationOnMap('pickup', 0); }"
-                                           class="w-full text-xs pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none">
-                                </div>
-                                <button type="button" onclick="searchLocationOnMap('pickup', 0)" class="px-3 py-2 bg-slate-800 text-white rounded-xl text-xs font-bold hover:bg-slate-700 transition">
-                                    Search
-                                </button>
-                                <button type="button" onclick="getCurrentLocationOnMap('pickup', 0)" title="Use Current GPS" class="px-3 py-2 bg-teal-50 text-teal-700 border border-teal-200 rounded-xl text-xs font-bold hover:bg-teal-100 transition">
-                                    <i class="fas fa-location-crosshairs"></i>
-                                </button>
-                            </div>
-
-                            <div id="pickup-map-0" class="map-container"></div>
-                            <input type="hidden" name="pickup_lat[]" id="pickup-lat-0" value="27.7172">
-                            <input type="hidden" name="pickup_lng[]" id="pickup-lng-0" value="85.3240">
-                        </div>
                     </div>
-                </div>
-
-                <!-- Auto-Save Address Book Option -->
-                <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center gap-3">
-                    <input type="checkbox" name="save_pickup_addresses" id="save_pickup_addresses" value="1" checked class="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500 cursor-pointer">
-                    <label for="save_pickup_addresses" class="text-xs text-slate-700 font-medium cursor-pointer">
-                        Automatically remember and save newly entered pickup locations to my Address Book for 1-click re-use.
-                    </label>
                 </div>
             </div>
 
@@ -815,69 +1343,595 @@
                 </div>
             </div>
 
-            <!-- 4. CARGO SPECIFICATIONS & VOLUMETRIC CALCULATOR -->
-            <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/90 space-y-6">
-                <div>
-                    <h3 class="text-sm font-black uppercase tracking-wider text-slate-900 flex items-center gap-2">
-                        <span class="w-5 h-5 rounded-full bg-teal-600 text-white text-[10px] flex items-center justify-center font-bold">4</span>
-                        <span>⚖️ Package Weight & Cargo Specifications</span>
-                    </h3>
-                    <p class="text-xs text-slate-500 mt-0.5">
-                        Air cargo pricing is based on the greater of gross actual weight or IATA volumetric weight.
-                    </p>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- 4. SHIPPING DOCUMENTS, CARGO SPECIFICATIONS & SMART PACKING MATRIX -->
+            <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/90 space-y-8">
+                <!-- Section Header -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Gross Weight (KG) <span class="text-rose-500">*</span></label>
-                        <div class="relative">
-                            <input type="number" step="0.1" name="weight" id="weight-input" required 
-                                   value="{{ old('weight', $convertPickup->estimated_weight_kg ?? request('weight', '1.0')) }}"
-                                   oninput="calculateVolumetricWeight()"
-                                   class="w-full text-xs px-3 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-mono font-bold text-slate-900">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Length (cm)</label>
-                        <input type="number" step="0.1" name="length" id="length-input" placeholder="L" 
-                               oninput="calculateVolumetricWeight()"
-                               class="w-full text-xs px-3 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-mono">
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Width (cm)</label>
-                        <input type="number" step="0.1" name="width" id="width-input" placeholder="W" 
-                               oninput="calculateVolumetricWeight()"
-                               class="w-full text-xs px-3 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-mono">
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Height (cm)</label>
-                        <input type="number" step="0.1" name="height" id="height-input" placeholder="H" 
-                               oninput="calculateVolumetricWeight()"
-                               class="w-full text-xs px-3 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-mono">
-                    </div>
-                </div>
-
-                <!-- Real-time volumetric calculation badge -->
-                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                    <div class="flex items-center gap-3">
-                        <span class="font-bold text-slate-600">Volumetric Weight:</span>
-                        <span id="volumetric-weight-display" class="font-mono font-bold text-teal-700 bg-white px-2.5 py-1 rounded-lg border border-slate-200">0.00 KG</span>
+                        <h3 class="text-sm font-black uppercase tracking-wider text-slate-900 flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-full bg-teal-600 text-white text-[10px] flex items-center justify-center font-bold">4</span>
+                            <span>⚖️ Shipping Documents, Cargo Weight & Smart Packing List</span>
+                        </h3>
+                        <p class="text-xs text-slate-500 mt-0.5">
+                            Harmonized System (HS) WCO customs declaration, itemized Commercial Invoice & multi-box allocation matrix.
+                        </p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <span class="font-bold text-slate-600">IATA Standard (L×W×H / 5000):</span>
-                        <span id="chargeable-weight-display" class="font-mono font-black text-slate-900 bg-white px-3 py-1 rounded-lg border border-slate-200">
-                            Chargeable: 1.00 KG
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-teal-50 text-teal-700 border border-teal-200 flex items-center gap-1.5">
+                            <i class="fas fa-shield-halved text-teal-600"></i>
+                            <span>Nepal IRD & WCO Compliant</span>
                         </span>
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Cargo / Goods Description</label>
-                    <input type="text" name="description" placeholder="e.g. Garments, Electronic Samples, Documents"
-                           class="w-full text-xs px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 text-slate-900 font-medium">
+                <!-- Hidden Payloads for Backend Persistence -->
+                <input type="hidden" name="invoice_data_json" :value="invoiceDataJsonPayload">
+                <input type="hidden" name="packing_list_data_json" :value="packingListDataJsonPayload">
+
+                <!-- Conditional Mode Display: E-Commerce / Rider Mode Simple View vs Full Documentation Suite -->
+                <template x-if="shipmentMode === 'ecommerce'">
+                    <div class="space-y-6">
+                        <div class="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/70 text-xs text-amber-900 flex items-start gap-3">
+                            <i class="fas fa-info-circle text-amber-600 text-base mt-0.5"></i>
+                            <div>
+                                <span class="font-extrabold block">E-Commerce Rider Dispatch Mode</span>
+                                <span class="text-amber-800">Formal customs Commercial Invoices and multi-box packing lists are not required for local rider delivery. Enter package weight and attach merchant tax bill below if available.</span>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Parcel Gross Weight (KG) <span class="text-rose-500">*</span></label>
+                                <input type="number" step="0.1" name="weight" id="weight-input" required 
+                                       value="{{ old('weight', $convertPickup->estimated_weight_kg ?? request('weight', '1.0')) }}"
+                                       oninput="calculateVolumetricWeight()"
+                                       class="w-full text-xs px-3 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-mono font-bold text-slate-900">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Length (cm)</label>
+                                <input type="number" step="0.1" name="length" id="length-input" placeholder="L" oninput="calculateVolumetricWeight()"
+                                       class="w-full text-xs px-3 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-mono">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Width (cm)</label>
+                                <input type="number" step="0.1" name="width" id="width-input" placeholder="W" oninput="calculateVolumetricWeight()"
+                                       class="w-full text-xs px-3 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-mono">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Height (cm)</label>
+                                <input type="number" step="0.1" name="height" id="height-input" placeholder="H" oninput="calculateVolumetricWeight()"
+                                       class="w-full text-xs px-3 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-mono">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Cargo / Goods Description</label>
+                            <input type="text" name="description" placeholder="e.g. Retail apparel, Electronic accessories, Cosmetics"
+                                   class="w-full text-xs px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 text-slate-900 font-medium">
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Full Documentation Suite (Domestic & International Shipments) -->
+                <div x-show="shipmentMode !== 'ecommerce'" class="space-y-8">
+                    
+                    <!-- 4A. COMMERCIAL INVOICE & WCO HS CODE ENGINE -->
+                    <div class="p-5 sm:p-6 rounded-2xl bg-slate-50/80 border border-slate-200/90 space-y-6">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center text-sm shadow-xs">
+                                    <i class="fas fa-file-invoice-dollar"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-xs font-black uppercase tracking-wider text-slate-900">Commercial Invoice Preparation</h4>
+                                    <p class="text-[11px] text-slate-500">Auto-suggests WCO Harmonized System tariffs & Nepal Customs export classifications</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[11px] font-bold text-slate-600">Currency:</span>
+                                <select x-model="invoiceCurrency" class="text-xs font-black py-1 px-2.5 bg-white border border-slate-200 rounded-lg text-teal-800 focus:ring-2 focus:ring-teal-500">
+                                    <option value="USD">USD ($)</option>
+                                    <option value="NPR">NPR (Rs.)</option>
+                                    <option value="EUR">EUR (€)</option>
+                                    <option value="GBP">GBP (£)</option>
+                                    <option value="AUD">AUD ($)</option>
+                                    <option value="CAD">CAD ($)</option>
+                                    <option value="AED">AED (Dh)</option>
+                                    <option value="INR">INR (₹)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Invoice Metadata Bar -->
+                        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
+                            <div>
+                                <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Invoice Number</label>
+                                <input type="text" x-model="invoiceNumber" class="w-full text-xs font-mono font-bold px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-teal-500 text-slate-800">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Invoice Date</label>
+                                <input type="date" x-model="invoiceDate" class="w-full text-xs px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-teal-500 text-slate-800">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Incoterms</label>
+                                <select x-model="incoterm" class="w-full text-xs font-bold px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-teal-500 text-slate-800">
+                                    <option value="DAP">DAP (Delivered at Place)</option>
+                                    <option value="DDP">DDP (Delivered Duty Paid)</option>
+                                    <option value="FOB">FOB (Free on Board)</option>
+                                    <option value="CIF">CIF (Cost, Insurance & Freight)</option>
+                                    <option value="EXW">EXW (Ex Works)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Reason For Export</label>
+                                <select x-model="reasonForExport" class="w-full text-xs px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-teal-500 text-slate-800">
+                                    <option value="Commercial Sale / Export">Commercial Sale</option>
+                                    <option value="Sample Not For Sale">Sample Not For Sale</option>
+                                    <option value="Gift / Personal Effects">Personal / Gift</option>
+                                    <option value="Return / Repair">Return / Repair</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Acquisition Source</label>
+                                <select x-model="acquisitionSource" class="w-full text-xs font-semibold px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-teal-500 text-slate-800">
+                                    <option value="direct_portal">Direct Web Portal</option>
+                                    <option value="website_organic">Website / Organic</option>
+                                    <option value="referral">Client Referral</option>
+                                    <option value="sales_representative">Sales Executive</option>
+                                    <option value="social_media">Social Media</option>
+                                    <option value="agent_walkin">Walk-in Counter</option>
+                                    <option value="api_integration">API Integration</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Exporter PAN / VAT</label>
+                                <input type="text" x-model="exporterPanVat" placeholder="9-digit PAN" class="w-full text-xs font-mono px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-teal-500 text-slate-800">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">EXIM Code (Customs)</label>
+                                <input type="text" x-model="exporterEximCode" placeholder="NP-XXXXXXXX" class="w-full text-xs font-mono px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-teal-500 text-slate-800">
+                            </div>
+                        </div>
+
+                        <!-- Declared Commodities / Line Items Invoicing Table -->
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                                    <i class="fas fa-file-invoice text-teal-600"></i>
+                                    <span>Declared Commodity Line Items (Commercial Invoice)</span>
+                                    <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-teal-100 text-teal-800" x-text="invoiceItems.length + ' item(s)'"></span>
+                                </span>
+                                <button type="button" @click="addInvoiceItem()" class="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer transition">
+                                    <i class="fas fa-plus"></i>
+                                    <span>Add Commodity Row</span>
+                                </button>
+                            </div>
+
+                            <!-- Column-like Spreadsheet Invoice Table -->
+                            <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-2xs">
+                                <table class="w-full text-left border-collapse min-w-[780px]">
+                                    <thead>
+                                        <tr class="bg-slate-50/90 border-b border-slate-200 text-[10px] font-black uppercase tracking-wider text-slate-600">
+                                            <th class="py-2.5 px-3 w-10 text-center">#</th>
+                                            <th class="py-2.5 px-3 min-w-[300px]">Item / Commodity &amp; WCO HS Code <span class="text-rose-500">*</span></th>
+                                            <th class="py-2.5 px-3 w-28">Origin</th>
+                                            <th class="py-2.5 px-3 w-20 text-center">Qty</th>
+                                            <th class="py-2.5 px-3 w-24">UOM</th>
+                                            <th class="py-2.5 px-3 w-28 text-right">Unit (<span x-text="invoiceCurrency"></span>)</th>
+                                            <th class="py-2.5 px-3 w-28 text-right">Total (<span x-text="invoiceCurrency"></span>)</th>
+                                            <th class="py-2.5 px-3 w-12 text-center"><i class="fas fa-trash-can text-slate-400 text-xs"></i></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100 text-xs">
+                                        <template x-for="(item, index) in invoiceItems" :key="index">
+                                            <tr class="hover:bg-teal-50/30 transition group">
+                                                <!-- Row # -->
+                                                <td class="py-3 px-3 text-center align-top font-mono font-bold text-slate-400 pt-3.5" x-text="index + 1"></td>
+
+                                                <!-- Description & Live HS Suggestions -->
+                                                <td class="py-2.5 px-3 align-top relative">
+                                                    <div class="flex items-center gap-1.5">
+                                                        <div class="relative flex-1">
+                                                            <input type="text" x-model="item.name" 
+                                                                   @input.debounce.300ms="fetchHsSuggestions(index, item.name)"
+                                                                   @focus="if(item.name.length >= 2) fetchHsSuggestions(index, item.name)"
+                                                                   placeholder="Type item e.g. Pashmina Shawl, Tea, Singing Bowl..." 
+                                                                   class="w-full text-xs font-semibold px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-teal-500 text-slate-900">
+                                                            <span x-show="item.isSearching" class="absolute right-2.5 top-2 text-teal-600 text-xs">
+                                                                <i class="fas fa-spinner fa-spin"></i>
+                                                            </span>
+                                                        </div>
+                                                        <button type="button" @click="openWcoModal(index)" title="Explore WCO Tariff Database"
+                                                                class="px-2 py-1.5 rounded-lg bg-slate-100 hover:bg-teal-50 text-slate-700 hover:text-teal-700 border border-slate-200 text-xs font-bold transition flex items-center gap-1 cursor-pointer shrink-0">
+                                                            <i class="fas fa-search-dollar text-teal-600 text-xs"></i>
+                                                            <span class="text-[11px]">WCO</span>
+                                                        </button>
+                                                    </div>
+
+                                                    <!-- Active HS Code Badge -->
+                                                    <div class="mt-1 flex items-center gap-2 flex-wrap" x-show="item.hs_code">
+                                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-teal-50 text-teal-800 border border-teal-200 text-[10px] font-mono font-bold">
+                                                            <i class="fas fa-tag text-teal-600 text-[9px]"></i>
+                                                            <span x-text="'HS: ' + item.hs_code"></span>
+                                                        </span>
+                                                        <span class="text-[10px] text-slate-400">Export Duty: 0% Free</span>
+                                                    </div>
+
+                                                    <!-- Live Floating Suggestions Dropdown -->
+                                                    <div x-show="item.showSuggestions && item.suggestions.length > 0"
+                                                         @click.outside="item.showSuggestions = false"
+                                                         class="absolute z-30 left-3 right-3 top-full mt-1 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden text-xs max-h-60 overflow-y-auto">
+                                                        <div class="p-2 bg-slate-50 border-b border-slate-100 text-[10px] font-black uppercase tracking-wider text-slate-500 flex items-center justify-between">
+                                                            <span>WCO Tariff Auto-Suggestions</span>
+                                                            <span>Select to apply</span>
+                                                        </div>
+                                                        <template x-for="hs in item.suggestions" :key="hs.id">
+                                                            <div @click="selectHsCode(index, hs)" class="p-2.5 hover:bg-teal-50/80 cursor-pointer border-b border-slate-100 last:border-0 transition">
+                                                                <div class="flex items-center justify-between">
+                                                                    <span class="font-bold text-slate-900" x-text="hs.commodity_name"></span>
+                                                                    <span class="font-mono font-black text-teal-700 px-1.5 py-0.5 rounded bg-teal-100/60" x-text="'HS ' + hs.code"></span>
+                                                                </div>
+                                                                <div class="text-[10px] text-slate-500 mt-0.5 flex items-center gap-2">
+                                                                    <span x-text="hs.category"></span>
+                                                                    <span>&bull;</span>
+                                                                    <span x-text="'Standard UOM: ' + hs.standard_uom"></span>
+                                                                    <span>&bull;</span>
+                                                                    <span x-text="'Export Duty: ' + (hs.export_duty_rate ? hs.export_duty_rate + '%' : '0% (Free)')"></span>
+                                                                </div>
+                                                            </div>
+                                                        </template>
+                                                    </div>
+                                                </td>
+
+                                                <!-- Origin -->
+                                                <td class="py-2.5 px-3 align-top">
+                                                    <input type="text" x-model="item.origin_country" placeholder="Nepal"
+                                                           class="w-full text-xs px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-teal-500 text-slate-800">
+                                                </td>
+
+                                                <!-- Quantity -->
+                                                <td class="py-2.5 px-3 align-top">
+                                                    <input type="number" step="1" min="1" x-model.number="item.qty" 
+                                                           @input="syncInvoiceItemQty(index)"
+                                                           class="w-full text-xs font-mono font-bold text-center px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-teal-500 text-slate-900">
+                                                </td>
+
+                                                <!-- UOM -->
+                                                <td class="py-2.5 px-3 align-top">
+                                                    <select x-model="item.uom" class="w-full text-xs font-semibold px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-teal-500 text-slate-800">
+                                                        <option value="PCS">PCS</option>
+                                                        <option value="SET">SET</option>
+                                                        <option value="KGS">KGS</option>
+                                                        <option value="MTR">MTR</option>
+                                                        <option value="BOX">BOX</option>
+                                                        <option value="PKT">PKT</option>
+                                                        <option value="PRS">PRS</option>
+                                                    </select>
+                                                </td>
+
+                                                <!-- Unit Price -->
+                                                <td class="py-2.5 px-3 align-top">
+                                                    <input type="number" step="0.01" min="0" x-model.number="item.unit_price" 
+                                                           class="w-full text-xs font-mono font-bold text-right px-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-teal-500 text-slate-900">
+                                                </td>
+
+                                                <!-- Line Total -->
+                                                <td class="py-2.5 px-3 align-top text-right pt-3.5">
+                                                    <span class="text-xs font-mono font-black text-slate-900" x-text="((parseFloat(item.qty) || 0) * (parseFloat(item.unit_price) || 0)).toFixed(2)"></span>
+                                                </td>
+
+                                                <!-- Action -->
+                                                <td class="py-2.5 px-3 align-top text-center pt-3.5">
+                                                    <button type="button" @click="removeInvoiceItem(index)" :disabled="invoiceItems.length <= 1"
+                                                            class="text-slate-400 hover:text-rose-600 disabled:opacity-20 disabled:hover:text-slate-400 text-xs transition cursor-pointer p-1"
+                                                            title="Remove line item">
+                                                        <i class="fas fa-trash-can"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                    <tfoot class="bg-slate-50 border-t border-slate-200">
+                                        <tr>
+                                            <td colspan="4" class="py-3 px-3">
+                                                <button type="button" @click="addInvoiceItem()" class="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-2xs transition cursor-pointer">
+                                                    <i class="fas fa-plus"></i>
+                                                    <span>Add Item Row</span>
+                                                </button>
+                                            </td>
+                                            <td colspan="2" class="py-3 px-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">
+                                                Declared Customs Subtotal:
+                                            </td>
+                                            <td class="py-3 px-3 text-right">
+                                                <span class="font-mono font-black text-xs text-teal-800 bg-teal-50 px-2 py-1 rounded border border-teal-200 inline-block" 
+                                                      x-text="invoiceCurrency + ' ' + invoiceSubtotal.toFixed(2)"></span>
+                                            </td>
+                                            <td></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+
+                            <!-- Invoice Subtotal Summary Bar -->
+                            <div class="p-3.5 rounded-xl bg-white border border-slate-200 flex items-center justify-between text-xs">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-slate-600">Declared Customs Subtotal:</span>
+                                    <span class="font-mono font-black text-teal-800 bg-teal-50 px-2.5 py-1 rounded-md border border-teal-200" 
+                                          x-text="invoiceCurrency + ' ' + invoiceSubtotal.toFixed(2)"></span>
+                                </div>
+                                <div class="text-[11px] text-slate-500">
+                                    <i class="fas fa-check-circle text-emerald-600 mr-1"></i> Ready for printable export invoice & customs filing
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4B. PACKAGE WEIGHT, CARGO SPECIFICATIONS & SMART PACKING LIST MATRIX -->
+                    <div class="p-5 sm:p-6 rounded-2xl bg-teal-50/50 border border-teal-200/80 space-y-6">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-teal-200/60">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-xl bg-teal-700 text-white flex items-center justify-center text-sm shadow-xs">
+                                    <i class="fas fa-boxes-stacked"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-xs font-black uppercase tracking-wider text-teal-950">Package Weight & Smart Packing List Matrix</h4>
+                                    <p class="text-[11px] text-teal-700">Allocate declared goods across single or multiple cartons with real-time balance tracking</p>
+                                </div>
+                            </div>
+
+                            <!-- Box Count Selector -->
+                            <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-teal-200 shadow-2xs">
+                                <span class="text-xs font-black text-slate-700">Total Boxes:</span>
+                                <div class="flex items-center gap-1">
+                                    <button type="button" @click="setBoxCount(totalBoxes - 1)" :disabled="totalBoxes <= 1"
+                                            class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-30 text-slate-700 font-bold text-xs flex items-center justify-center cursor-pointer">
+                                        -
+                                    </button>
+                                    <input type="number" min="1" max="50" x-model.number="totalBoxes" @change="setBoxCount(totalBoxes)"
+                                           class="w-12 text-center text-xs font-mono font-black py-1 px-1 bg-transparent border-0 focus:ring-0 text-teal-950">
+                                    <button type="button" @click="setBoxCount(totalBoxes + 1)"
+                                            class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center cursor-pointer">
+                                        +
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CASE 1: Single Box (Zero-friction 100% auto-allocation) -->
+                        <div x-show="totalBoxes === 1" class="space-y-4">
+                            <div class="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <i class="fas fa-circle-check text-emerald-600 text-sm"></i>
+                                    <span class="font-bold">Single Box Shipment: Box #1 automatically contains 100% of all declared invoice items.</span>
+                                </div>
+                                <span class="text-[10px] font-mono uppercase font-black px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">100% Auto-Allocated</span>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-white p-4 rounded-xl border border-teal-200/70">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">Gross Actual Weight (KG) <span class="text-rose-500">*</span></label>
+                                    <input type="number" step="0.1" min="0.1" name="weight" id="weight-input" required 
+                                           x-model.number="boxes[0].weight_kg" @input="syncCargoWeight()"
+                                           class="w-full text-xs px-3 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-mono font-bold text-slate-900">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">Length (cm)</label>
+                                    <input type="number" step="0.1" name="length" id="length-input" placeholder="L" 
+                                           x-model.number="boxes[0].length_cm" @input="syncCargoWeight()"
+                                           class="w-full text-xs px-3 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-mono">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">Width (cm)</label>
+                                    <input type="number" step="0.1" name="width" id="width-input" placeholder="W" 
+                                           x-model.number="boxes[0].width_cm" @input="syncCargoWeight()"
+                                           class="w-full text-xs px-3 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-mono">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">Height (cm)</label>
+                                    <input type="number" step="0.1" name="height" id="height-input" placeholder="H" 
+                                           x-model.number="boxes[0].height_cm" @input="syncCargoWeight()"
+                                           class="w-full text-xs px-3 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-mono">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CASE 2: Multi-Box Matrix (> 1 Box) -->
+                        <div x-show="totalBoxes > 1" class="space-y-4">
+                            <!-- Over-Allocation Warning Banner -->
+                            <div x-show="packingListWarning || hasOverAllocatedItems" x-transition 
+                                 class="p-3.5 rounded-xl bg-rose-50 border-2 border-rose-300 text-rose-900 text-xs flex items-center gap-2.5 shadow-sm">
+                                <i class="fas fa-triangle-exclamation text-rose-600 text-base flex-shrink-0"></i>
+                                <div>
+                                    <span class="font-extrabold block" x-text="packingListWarning || 'Item quantities in the packing list cannot exceed the total quantity entered in the invoice.'"></span>
+                                    <span class="text-[11px] text-rose-700">Please reduce the allocated box quantities to match the declared total invoice quantity.</span>
+                                </div>
+                            </div>
+
+                            <!-- Remaining Balance Tracker Pills -->
+                            <div class="p-3.5 rounded-xl bg-white border border-teal-200 space-y-2">
+                                <div class="flex items-center justify-between text-xs">
+                                    <span class="font-extrabold text-slate-800 uppercase tracking-wider text-[11px]">Item Allocation Tracker:</span>
+                                    <span class="text-[11px] text-slate-500">Box item quantities cannot exceed entered total quantity</span>
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    <template x-for="(item, idx) in invoiceItems" :key="idx">
+                                        <div class="px-3 py-1.5 rounded-lg border text-xs flex items-center gap-2 transition"
+                                             :class="getItemAllocatedQty(idx) > (parseFloat(item.qty) || 0) 
+                                                        ? 'bg-rose-50 border-rose-300 text-rose-900 ring-1 ring-rose-400 font-bold' 
+                                                        : (getItemRemainingQty(idx) === 0 
+                                                            ? 'bg-emerald-50 border-emerald-200 text-emerald-900 font-medium' 
+                                                            : 'bg-amber-50 border-amber-200 text-amber-900')">
+                                            <span class="font-bold" x-text="item.name || ('Item #' + (idx + 1))"></span>
+                                            <span class="font-mono font-black" x-text="getItemAllocatedQty(idx) + ' / ' + item.qty + ' ' + item.uom"></span>
+                                            
+                                            <!-- Over-Allocated Indicator -->
+                                            <span x-show="getItemAllocatedQty(idx) > (parseFloat(item.qty) || 0)" 
+                                                  class="text-[10px] font-black px-1.5 py-0.5 rounded bg-rose-200 text-rose-950 flex items-center gap-1">
+                                                <i class="fas fa-circle-exclamation"></i>
+                                                <span>Exceeds by <span x-text="(getItemAllocatedQty(idx) - (parseFloat(item.qty) || 0)).toFixed(0)"></span>!</span>
+                                            </span>
+
+                                            <!-- Remaining Quantity Indicator -->
+                                            <span x-show="getItemRemainingQty(idx) > 0 && getItemAllocatedQty(idx) <= (parseFloat(item.qty) || 0)" 
+                                                  class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-200/80 text-amber-950" 
+                                                  x-text="getItemRemainingQty(idx) + ' left'"></span>
+
+                                            <!-- Complete 100% Allocation Indicator -->
+                                            <span x-show="getItemRemainingQty(idx) === 0 && getItemAllocatedQty(idx) === (parseFloat(item.qty) || 0)" 
+                                                  class="text-[10px] text-emerald-700 font-black">
+                                                <i class="fas fa-check"></i>
+                                            </span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <!-- Box Cards Grid -->
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                <template x-for="(box, bIdx) in boxes" :key="bIdx">
+                                    <div class="p-4 rounded-xl bg-white border border-teal-200 shadow-2xs space-y-3">
+                                        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                                            <div class="flex items-center gap-2">
+                                                <span class="w-6 h-6 rounded-md bg-teal-700 text-white text-xs font-black flex items-center justify-center" x-text="box.box_number"></span>
+                                                <span class="font-extrabold text-xs text-slate-900" x-text="'Box #' + box.box_number + ' of ' + totalBoxes"></span>
+                                            </div>
+                                            <button type="button" @click="allocateAllRemainingToBox(bIdx)" 
+                                                    class="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-[10px] font-black tracking-wider transition cursor-pointer">
+                                                <i class="fas fa-bolt text-teal-600 mr-1"></i> Fill Remaining
+                                            </button>
+                                        </div>
+
+                                        <!-- Dimensions & Weight -->
+                                        <div class="grid grid-cols-4 gap-2">
+                                            <div>
+                                                <label class="block text-[9px] font-bold uppercase text-slate-500 mb-0.5">Weight (KG)</label>
+                                                <input type="number" step="0.1" min="0.1" x-model.number="box.weight_kg" @input="syncCargoWeight()"
+                                                       class="w-full text-xs font-mono font-bold px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg">
+                                            </div>
+                                            <div>
+                                                <label class="block text-[9px] font-bold uppercase text-slate-500 mb-0.5">L (cm)</label>
+                                                <input type="number" step="0.1" x-model.number="box.length_cm" @input="syncCargoWeight()"
+                                                       class="w-full text-xs font-mono px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg">
+                                            </div>
+                                            <div>
+                                                <label class="block text-[9px] font-bold uppercase text-slate-500 mb-0.5">W (cm)</label>
+                                                <input type="number" step="0.1" x-model.number="box.width_cm" @input="syncCargoWeight()"
+                                                       class="w-full text-xs font-mono px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg">
+                                            </div>
+                                            <div>
+                                                <label class="block text-[9px] font-bold uppercase text-slate-500 mb-0.5">H (cm)</label>
+                                                <input type="number" step="0.1" x-model.number="box.height_cm" @input="syncCargoWeight()"
+                                                       class="w-full text-xs font-mono px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg">
+                                            </div>
+                                        </div>
+
+                                        <!-- Items inside this box -->
+                                        <div class="space-y-1.5 pt-1">
+                                            <span class="block text-[10px] font-extrabold uppercase text-slate-600">Contents in this box:</span>
+                                            <template x-for="(item, iIdx) in invoiceItems" :key="iIdx">
+                                                <div class="flex items-center justify-between gap-2 p-1.5 rounded-lg bg-slate-50 text-xs">
+                                                    <div class="truncate flex-1">
+                                                        <span class="font-bold text-slate-800 text-[11px]" x-text="item.name || ('Item #' + (iIdx + 1))"></span>
+                                                        <span class="text-[10px] text-slate-400 font-mono ml-1" x-text="'(' + item.uom + ')'"></span>
+                                                    </div>
+                                                    <div class="flex items-center gap-1.5">
+                                                        <input type="number" min="0" :max="getAvailableQtyForBox(bIdx, iIdx)" 
+                                                               x-model.number="box.items[iIdx].qty"
+                                                               @input="enforceMaxBoxItemQty(bIdx, iIdx)"
+                                                               @change="enforceMaxBoxItemQty(bIdx, iIdx)"
+                                                               class="w-16 text-center font-mono font-bold text-xs py-1 px-1 bg-white border border-slate-200 rounded-md focus:ring-1 focus:ring-teal-500"
+                                                               :class="getItemAllocatedQty(iIdx) > (parseFloat(item.qty) || 0) ? 'border-rose-500 text-rose-700 bg-rose-50 ring-1 ring-rose-400' : ''">
+                                                        <button type="button" @click="allocateRemainingToBox(bIdx, iIdx)" 
+                                                                x-show="getItemRemainingQty(iIdx) > 0"
+                                                                :title="'Add remaining (' + getItemRemainingQty(iIdx) + ') to this box'"
+                                                                class="px-2 py-1 rounded bg-teal-100 hover:bg-teal-200 text-teal-900 text-[10px] font-black cursor-pointer transition">
+                                                            +<span x-text="getItemRemainingQty(iIdx)"></span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Real-time volumetric calculation badge across all boxes -->
+                        <div class="p-4 rounded-2xl bg-white border border-teal-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                            <div class="flex items-center gap-3">
+                                <span class="font-bold text-slate-600">Total Gross Actual Weight:</span>
+                                <span class="font-mono font-bold text-slate-900 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200" 
+                                      x-text="totalCargoGrossWeight.toFixed(2) + ' KG'"></span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="font-bold text-slate-600">Volumetric Weight (IATA L×W×H / 5000):</span>
+                                <span id="volumetric-weight-display" class="font-mono font-bold text-teal-700 bg-white px-2.5 py-1 rounded-lg border border-slate-200"
+                                      x-text="totalCargoVolumetricWeight.toFixed(2) + ' KG'"></span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-slate-600">Chargeable Weight:</span>
+                                <span id="chargeable-weight-display" class="font-mono font-black text-slate-900 bg-teal-50 px-3 py-1 rounded-lg border border-teal-200 text-teal-900"
+                                      x-text="'Chargeable: ' + totalChargeableWeight.toFixed(2) + ' KG'"></span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Cargo / Goods Description</label>
+                            <input type="text" name="description" placeholder="e.g. Garments, Handcrafted Goods, Samples"
+                                   class="w-full text-xs px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 text-slate-900 font-medium">
+                        </div>
+                    </div>
+
+                    <!-- 4C. NEPAL GOVERNMENT TAX & CUSTOMS COMPLIANCE (SUPPORTING BILL UPLOAD) -->
+                    <div class="p-5 sm:p-6 rounded-2xl bg-slate-50/90 border border-slate-200/90 space-y-4">
+                        <div class="flex items-center gap-2.5 pb-2 border-b border-slate-200">
+                            <div class="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center text-sm shadow-xs">
+                                <i class="fas fa-receipt"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-xs font-black uppercase tracking-wider text-slate-900">Nepal Tax & Customs Documentation</h4>
+                                <p class="text-[11px] text-slate-500">Attach supporting VAT Tax Invoice, PAN Bill, or Customs Export Declaration</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Supporting Document / Bill Type</label>
+                                <select name="seller_bill_type" x-model="sellerBillType" class="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 text-slate-800 font-semibold">
+                                    <option value="vat_invoice">Inland Revenue Dept (IRD) Authenticated VAT Invoice</option>
+                                    <option value="pan_bill">PAN Cash Bill / Retail Receipt</option>
+                                    <option value="customs_declaration">Nepal Customs Export Declaration (Pragyapanpatra)</option>
+                                    <option value="certificate_of_origin">Certificate of Origin (NCCI / FNCCI)</option>
+                                    <option value="other">Other Official Commercial Bill</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Document / Bill Reference Number</label>
+                                <input type="text" name="seller_bill_number" x-model="sellerBillNumber" placeholder="e.g. VAT-081/82-00412" 
+                                       class="w-full text-xs font-mono font-medium px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 text-slate-800">
+                            </div>
+                        </div>
+
+                        <!-- File Drag & Drop / Input -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Upload Bill / Receipt File (PDF, JPG, PNG, WEBP &bull; Max 10MB)</label>
+                            <div class="relative border-2 border-dashed border-slate-300 hover:border-teal-500 rounded-2xl p-4 bg-white text-center transition cursor-pointer">
+                                <input type="file" name="seller_bill_file" id="seller_bill_file" accept=".pdf,.jpg,.jpeg,.png,.webp"
+                                       @change="handleBillFileSelect($event)"
+                                       class="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10">
+                                <div class="space-y-1">
+                                    <i class="fas fa-cloud-arrow-up text-teal-600 text-xl"></i>
+                                    <p class="text-xs font-bold text-slate-800" x-show="!selectedBillFileName">
+                                        Click or drag tax bill / invoice file to upload
+                                    </p>
+                                    <p class="text-xs font-black text-teal-700" x-show="selectedBillFileName" x-text="selectedBillFileName"></p>
+                                    <span class="text-[10px] text-slate-400 block">Complies with Nepal Inland Revenue Department (IRD) transport guidelines</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
@@ -908,6 +1962,8 @@
                 </div>
 
                 <button type="submit" id="submit-btn"
+                        :disabled="totalBoxes > 1 && hasOverAllocatedItems"
+                        :class="totalBoxes > 1 && hasOverAllocatedItems ? 'opacity-50 cursor-not-allowed filter grayscale' : ''"
                         class="w-full py-4 bg-gradient-to-r from-teal-400 to-emerald-400 hover:from-teal-300 hover:to-emerald-300 text-slate-950 font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer">
                     <i class="fas fa-circle-check"></i>
                     <span>Confirm & Book Consignment (Issue HAWB)</span>
@@ -1049,6 +2105,131 @@
                     <p class="text-xs max-w-sm mx-auto">Schedule a doorstep pickup or book a full consignment to dispatch couriers immediately.</p>
                 </div>
             @endif
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- WCO HARMONIZED SYSTEM (HS) TARIFF EXPLORER MODAL -->
+    <!-- ========================================================================= -->
+    <div x-show="wcoModalOpen" 
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs"
+         style="display: none;">
+        <div @click.outside="wcoModalOpen = false" 
+             class="bg-white rounded-3xl max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
+            <!-- Modal Header -->
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-teal-600 text-white flex items-center justify-center text-base shadow-xs">
+                        <i class="fas fa-book-atlas"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-black text-slate-900 uppercase tracking-wider">WCO Harmonized System (HS) Tariffs Explorer</h3>
+                        <p class="text-xs text-slate-500">Official World Customs Organization tariff codes for Nepal exports & global clearance</p>
+                    </div>
+                </div>
+                <button type="button" @click="wcoModalOpen = false" class="text-slate-400 hover:text-slate-600 w-8 h-8 rounded-xl flex items-center justify-center hover:bg-slate-100 cursor-pointer">
+                    <i class="fas fa-times text-sm"></i>
+                </button>
+            </div>
+
+            <!-- Search & Filter Controls -->
+            <div class="p-4 border-b border-slate-100 space-y-3 bg-white">
+                <div class="flex items-center gap-2">
+                    <div class="relative flex-1">
+                        <i class="fas fa-search absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+                        <input type="text" x-model="wcoSearchQuery" @input.debounce.300ms="performWcoSearch()"
+                               placeholder="Search by commodity name, keyword, or HS code prefix..." 
+                               class="w-full text-xs pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-medium text-slate-900">
+                    </div>
+                    <button type="button" @click="performWcoSearch()" class="px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition shadow-xs cursor-pointer">
+                        Search
+                    </button>
+                </div>
+
+                <!-- Category Pills Filter -->
+                <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+                    <button type="button" @click="wcoCategory = ''; performWcoSearch()" 
+                            :class="wcoCategory === '' ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+                            class="px-2.5 py-1 rounded-lg font-bold whitespace-nowrap transition cursor-pointer">
+                        All Categories
+                    </button>
+                    <button type="button" @click="wcoCategory = 'Handicrafts & Art'; performWcoSearch()" 
+                            :class="wcoCategory === 'Handicrafts & Art' ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+                            class="px-2.5 py-1 rounded-lg font-bold whitespace-nowrap transition cursor-pointer">
+                        Handicrafts & Art
+                    </button>
+                    <button type="button" @click="wcoCategory = 'Pashmina & Wool'; performWcoSearch()" 
+                            :class="wcoCategory === 'Pashmina & Wool' ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+                            class="px-2.5 py-1 rounded-lg font-bold whitespace-nowrap transition cursor-pointer">
+                        Pashmina & Wool
+                    </button>
+                    <button type="button" @click="wcoCategory = 'Tea, Coffee & Spices'; performWcoSearch()" 
+                            :class="wcoCategory === 'Tea, Coffee & Spices' ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+                            class="px-2.5 py-1 rounded-lg font-bold whitespace-nowrap transition cursor-pointer">
+                        Tea & Spices
+                    </button>
+                    <button type="button" @click="wcoCategory = 'Medicinal & Herbal'; performWcoSearch()" 
+                            :class="wcoCategory === 'Medicinal & Herbal' ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+                            class="px-2.5 py-1 rounded-lg font-bold whitespace-nowrap transition cursor-pointer">
+                        Herbal & Ayurvedic
+                    </button>
+                    <button type="button" @click="wcoCategory = 'Apparel & Textiles'; performWcoSearch()" 
+                            :class="wcoCategory === 'Apparel & Textiles' ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+                            class="px-2.5 py-1 rounded-lg font-bold whitespace-nowrap transition cursor-pointer">
+                        Apparel & Textiles
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Body Results List -->
+            <div class="flex-1 overflow-y-auto p-4 space-y-2.5">
+                <div x-show="wcoLoading" class="text-center py-12 text-slate-500 text-xs">
+                    <i class="fas fa-spinner fa-spin text-2xl text-teal-600 mb-2"></i>
+                    <p>Loading WCO Tariff schedule...</p>
+                </div>
+
+                <div x-show="!wcoLoading && wcoResults.length === 0" class="text-center py-12 text-slate-500 text-xs">
+                    <i class="fas fa-folder-open text-2xl text-slate-300 mb-2"></i>
+                    <p>No HS Codes found matching your query.</p>
+                </div>
+
+                <template x-for="hs in wcoResults" :key="hs.id">
+                    <div class="p-3 rounded-xl border border-slate-200 hover:border-teal-500 hover:bg-teal-50/40 transition flex items-center justify-between gap-4">
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-xs text-slate-900" x-text="hs.commodity_name"></span>
+                                <span class="font-mono font-black text-xs text-teal-700 px-2 py-0.5 rounded bg-teal-100/60" x-text="'HS ' + hs.code"></span>
+                            </div>
+                            <div class="text-[11px] text-slate-500 flex items-center gap-2 flex-wrap">
+                                <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold" x-text="hs.category"></span>
+                                <span>&bull;</span>
+                                <span x-text="'UOM: ' + hs.standard_uom"></span>
+                                <span>&bull;</span>
+                                <span x-text="'Export Duty: ' + (hs.export_duty_rate ? hs.export_duty_rate + '%' : '0% Free')"></span>
+                                <span x-show="hs.customs_notes" class="text-slate-400" x-text="'(' + hs.customs_notes + ')'"></span>
+                            </div>
+                        </div>
+                        <button type="button" @click="chooseWcoResult(hs)"
+                                class="px-3.5 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs transition shadow-2xs whitespace-nowrap cursor-pointer">
+                            Select
+                        </button>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-3.5 border-t border-slate-100 bg-slate-50 flex items-center justify-between text-xs text-slate-500">
+                <span>World Customs Organization (WCO) & Department of Customs, Nepal</span>
+                <button type="button" @click="wcoModalOpen = false" class="px-4 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold transition">
+                    Close
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -1419,6 +2600,16 @@
             domesticZones.classList.toggle('hidden', mode === 'ecommerce');
         }
 
+        const alpineEl = document.querySelector('[x-data]');
+        if (alpineEl && alpineEl._x_dataStack && alpineEl._x_dataStack[0]) {
+            alpineEl._x_dataStack[0].shipmentMode = mode;
+            if (mode === 'international') {
+                alpineEl._x_dataStack[0].invoiceCurrency = 'USD';
+            } else if (mode === 'domestic') {
+                alpineEl._x_dataStack[0].invoiceCurrency = 'NPR';
+            }
+        }
+
         updateSummaryStats();
     }
 
@@ -1440,14 +2631,25 @@
     }
 
     function updateSummaryStats() {
-        const mode = document.getElementById('shipment_type').value || 'domestic';
-        document.getElementById('summary-mode-badge').innerText = mode.toUpperCase();
+        const mode = document.getElementById('shipment_type')?.value || 'domestic';
+        const badgeEl = document.getElementById('summary-mode-badge');
+        if (badgeEl) badgeEl.innerText = mode.toUpperCase();
 
-        const pickups = document.querySelectorAll('.pickup-card').length;
-        document.getElementById('summary-pickups-count').innerText = `${pickups} ${pickups === 1 ? 'Location' : 'Locations'}`;
+        const pickupEl = document.getElementById('summary-pickups-count');
+        if (pickupEl) {
+            const doorstepInput = document.getElementById('schedule_doorstep_pickup');
+            const hasPickup = doorstepInput ? (doorstepInput.value === '1') : true;
+            if (hasPickup) {
+                const pickups = document.querySelectorAll('.pickup-card').length;
+                pickupEl.innerText = `${pickups} ${pickups === 1 ? 'Pickup Location' : 'Pickup Locations'}`;
+            } else {
+                pickupEl.innerText = 'Counter Drop-off';
+            }
+        }
 
         const deliveries = mode === 'international' ? 1 : document.querySelectorAll('.delivery-card').length;
-        document.getElementById('summary-deliveries-count').innerText = `${deliveries} ${deliveries === 1 ? 'Destination' : 'Destinations'}`;
+        const delivEl = document.getElementById('summary-deliveries-count');
+        if (delivEl) delivEl.innerText = `${deliveries} ${deliveries === 1 ? 'Destination' : 'Destinations'}`;
     }
 
     function requestDomesticQuote() {

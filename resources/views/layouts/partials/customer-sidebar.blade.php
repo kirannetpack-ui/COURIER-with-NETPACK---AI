@@ -56,19 +56,6 @@
                     Console
                 </span>
             </a>
-
-            <!-- Dedicated Doorstep Pickup Component -->
-            <a href="{{ route('client.inquiries') }}" 
-               class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition {{ request()->routeIs('client.inquiries*') ? 'bg-teal-600 text-white font-bold shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
-                <i class="fas fa-truck-pickup w-4 text-center {{ request()->routeIs('client.inquiries*') ? 'text-white' : 'text-sky-400' }}"></i>
-                <span class="font-semibold">Request Pickup</span>
-                <span class="sr-only">Shipment Inquiries</span>
-                @if($pendingInq > 0)
-                    <span class="ml-auto bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded">
-                        {{ $pendingInq }}
-                    </span>
-                @endif
-            </a>
         </div>
 
         <!-- 4. Rate Calculator & Tariff Inquiry -->

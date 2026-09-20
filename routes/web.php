@@ -45,6 +45,8 @@ use App\Http\Controllers\Ecommerce\OrderController as EcommerceOrderController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\GroceryBoxController;
 use App\Http\Controllers\HAWBController;
+use App\Http\Controllers\HsCodeController;
+use App\Http\Controllers\ShippingDocumentController;
 // =============================================
 // SELLER CONTROLLERS
 // =============================================
@@ -193,11 +195,22 @@ Route::get('/tracking/{tracking_number}/hawb/download', [HAWBController::class, 
 Route::post('/track/subscribe', [TrackingController::class, 'subscribe'])->name('tracking.subscribe');
 Route::post('/tracking/sync-carrier/{shipment}', [TrackingController::class, 'syncCarrier'])->name('tracking.sync-carrier');
 
+// Universal Shipment Issue & Situation Reporting
+Route::post('/shipments/{trackingNumberOrId}/issues', [\App\Http\Controllers\ShipmentIssueController::class, 'store'])->name('shipments.issues.store');
+Route::get('/shipments/{trackingNumberOrId}/issues', [\App\Http\Controllers\ShipmentIssueController::class, 'getShipmentIssues'])->name('shipments.issues.list');
+Route::post('/tracking/{tracking_number}/report-issue', [\App\Http\Controllers\ShipmentIssueController::class, 'store'])->name('tracking.report-issue');
+
 // =============================================
 // RATE INQUIRY & TARIFF CALCULATOR (Public & Clients)
 // =============================================
 Route::get('/rates/inquiry', [RateInquiryController::class, 'index'])->name('rates.inquiry');
 Route::post('/rates/calculate', [RateInquiryController::class, 'calculate'])->name('rates.calculate');
+
+// =============================================
+// WCO HS CODES & CUSTOMS TARIFF ROUTES (PUBLIC & CLIENTS)
+// =============================================
+Route::get('/api/hs-codes/search', [HsCodeController::class, 'search'])->name('api.hs-codes.search');
+Route::get('/api/hs-codes/categories', [HsCodeController::class, 'categories'])->name('api.hs-codes.categories');
 
 // =============================================
 // AUTH PROTECTED ROUTES
@@ -240,6 +253,13 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/shipments', [ShipmentController::class, 'store'])->name('shipments.store');
     Route::get('/shipments/{shipment}', [ShipmentController::class, 'show'])->whereNumber('shipment')->name('shipments.show');
     Route::resource('shipments', ShipmentController::class)->except(['create', 'store', 'show']);
+
+    // =============================================
+    // SHIPPING DOCUMENTS (COMMERCIAL INVOICE & PACKING LIST)
+    // =============================================
+    Route::get('/shipments/{id}/commercial-invoice', [ShippingDocumentController::class, 'commercialInvoice'])->name('shipments.invoice');
+    Route::get('/shipments/{id}/packing-list', [ShippingDocumentController::class, 'packingList'])->name('shipments.packing-list');
+    Route::get('/shipments/{id}/seller-bill', [ShippingDocumentController::class, 'sellerBill'])->name('shipments.seller-bill');
 
     // =============================================
     // HAWB ROUTES
@@ -482,9 +502,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:super_admin,ad
     Route::get('/pickups', [AdminPickupController::class, 'index'])->name('pickups');
     Route::get('/shipments', [AdminShipmentController::class, 'index'])->name('shipments.index');
     Route::get('/shipments/{id}', [AdminShipmentController::class, 'show'])->whereNumber('id')->name('shipments.show');
-    Route::get('/analytics', function () {
-        return view('admin.analytics');
-    })->name('analytics');
+    Route::get('/analytics', [\App\Http\Controllers\Admin\AnalyticsController::class, 'index'])->name('analytics');
     Route::get('/settlements', function () {
         return view('admin.settlements');
     })->name('settlements');

@@ -18,7 +18,7 @@ class DedicatedPickupAndSavedAddressTest extends TestCase
         // Seed basic logistics and roles if needed
     }
 
-    public function test_customer_sidebar_includes_create_shipment_and_request_pickup_links()
+    public function test_customer_sidebar_includes_unified_create_shipment_and_no_redundant_pickup_menu()
     {
         $client = User::factory()->create([
             'user_type' => User::TYPE_CLIENT,
@@ -31,8 +31,8 @@ class DedicatedPickupAndSavedAddressTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee(route('shipments.create'), false);
         $response->assertSee('Create Shipment');
-        $response->assertSee(route('client.inquiries'), false);
-        $response->assertSee('Request Pickup');
+        // Redundant separate Request Pickup link removed in favor of single unified creation console
+        $response->assertDontSee(route('client.inquiries'), false);
     }
 
     public function test_client_can_submit_pickup_without_mandatory_destination()

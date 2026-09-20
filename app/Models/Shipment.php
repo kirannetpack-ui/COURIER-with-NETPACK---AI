@@ -98,8 +98,12 @@ class Shipment extends Model
     'departed_from_agency',
     'agency_status_history',
     
-    // Documents
+    // Documents & Customs Invoicing
     'invoice_file',
+    'seller_bill_file',
+    'invoice_data',
+    'packing_list_data',
+    'boxes',
     'customs_declaration_file',
     'label_file',
     'proof_of_delivery',
@@ -119,10 +123,37 @@ class Shipment extends Model
     'last_mile_tracking_number',
     'customs_mode',
     'agency_milestone',
+
+    // Operational Analytics Telemetry (18 Core Tracking Parameters)
+    'acquisition_source',
+    'destination_country',
+    'price_quoted',
+    'price_sold',
+    'cost_amount',
+    'gross_margin',
+    'gross_margin_percentage',
+    'vendor_name',
+    'vendor_id',
+    'transit_time_hours',
+    'transit_time_days',
+    'is_delayed',
+    'delay_hours',
+    'is_returned',
+    'return_reason',
+    'returned_at',
+    'is_damaged',
+    'damage_description',
+    'damage_reported_at',
+    'has_complaint',
+    'complaint_count',
+    'is_repeat_customer',
+    'customer_shipment_sequence',
 ];
 
     protected $casts = [
         'boxes' => 'array',
+        'invoice_data' => 'array',
+        'packing_list_data' => 'array',
         'tracking_history' => 'array',
         'tracking_timeline' => 'array',
         'pickup_points' => 'array',
@@ -138,6 +169,23 @@ class Shipment extends Model
         'insurance_fee' => 'decimal:2',
         'total_amount' => 'decimal:2',
         'discount' => 'decimal:2',
+        'price_quoted' => 'decimal:2',
+        'price_sold' => 'decimal:2',
+        'cost_amount' => 'decimal:2',
+        'gross_margin' => 'decimal:2',
+        'gross_margin_percentage' => 'decimal:2',
+        'transit_time_hours' => 'decimal:2',
+        'transit_time_days' => 'decimal:2',
+        'is_delayed' => 'boolean',
+        'delay_hours' => 'decimal:2',
+        'is_returned' => 'boolean',
+        'returned_at' => 'datetime',
+        'is_damaged' => 'boolean',
+        'damage_reported_at' => 'datetime',
+        'has_complaint' => 'boolean',
+        'complaint_count' => 'integer',
+        'is_repeat_customer' => 'boolean',
+        'customer_shipment_sequence' => 'integer',
         'sender_lat' => 'decimal:8',
         'sender_lng' => 'decimal:8',
         'receiver_lat' => 'decimal:8',
@@ -145,6 +193,35 @@ class Shipment extends Model
         'estimated_delivery' => 'datetime',
         'delivered_at' => 'datetime',
     ];
+
+    public function recordDeliveryTelemetry($deliveredAt = null): void
+    {
+        $deliveredAt = $deliveredAt ? \Carbon\Carbon::parse($deliveredAt) : now();
+        $this->delivered_at = $deliveredAt;
+        if ($this->created_at) {
+            $createdAt = \Carbon\Carbon::parse($this->created_at);
+            $hours = $createdAt->diffInMinutes($deliveredAt) / 60.0;
+            $this->transit_time_hours = round(max(0.01, $hours), 2);
+            $this->transit_time_days = round(max(0.01, $hours) / 24.0, 2);
+        }
+        if ($this->estimated_delivery) {
+            $estimated = \Carbon\Carbon::parse($this->estimated_delivery);
+            if ($deliveredAt->greaterThan($estimated)) {
+                $this->is_delayed = true;
+                $this->delay_hours = round($estimated->diffInMinutes($deliveredAt) / 60.0, 2);
+            }
+        }
+    }
+
+    public function getDestinationCountryAttribute($value)
+    {
+        return $value ?: ($this->receiver_country ?? 'Nepal');
+    }
+
+    public function issues()
+    {
+        return $this->hasMany(ShipmentIssue::class);
+    }
 
     // Relationships
     public function customer()

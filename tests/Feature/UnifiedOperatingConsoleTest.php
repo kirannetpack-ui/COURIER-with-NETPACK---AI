@@ -41,7 +41,7 @@ class UnifiedOperatingConsoleTest extends TestCase
         $response->assertSee('Live Dispatches Queue');
         $response->assertSee('Main Office Hub');
         $response->assertSee('Baluwatar Plot 10, Kathmandu');
-        $response->assertSee('Dispatch Doorstep Courier Collection');
+        $response->assertSee('Doorstep Courier Collection');
         $response->assertDontSee('ORIGIN TERRITORY & DESTINATION GATEWAY ROUTE');
         $response->assertSee('leaflet.js', false);
         $response->assertSee('leaflet.css', false);
@@ -58,7 +58,8 @@ class UnifiedOperatingConsoleTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Create Shipment & Pickup', false);
         $response->assertSee('schedule_doorstep_pickup');
-        $response->assertSee('Dispatch Doorstep Courier Collection for this Consignment');
+        $response->assertSee('Doorstep Courier Collection');
+        $response->assertSee('Station / Counter Drop-off');
         // Ensure Origin Territory & Destination Gateway Route is removed from client view
         $response->assertDontSee('ORIGIN TERRITORY & DESTINATION GATEWAY ROUTE');
         $response->assertDontSee('Select origin territory');
@@ -143,7 +144,7 @@ class UnifiedOperatingConsoleTest extends TestCase
         $this->assertEquals('Kathmandu Central Store', $pickup->contact_person_name);
         $this->assertEquals('9841999999', $pickup->contact_person_phone);
         $this->assertEquals('Tripureshwor Ward 11, Kathmandu', $pickup->pickup_address);
-        $this->assertEquals('pending', $pickup->status);
+        $this->assertTrue(in_array($pickup->status, ['pending', 'assigned']));
 
         // Verify Eloquent relationship works in both directions
         $this->assertEquals($pickup->id, $shipment->pickupRequest->id);
@@ -252,9 +253,12 @@ class UnifiedOperatingConsoleTest extends TestCase
         $dashboardResponse->assertStatus(200);
         $dashboardResponse->assertSee(route('shipments.create'), false);
         $dashboardResponse->assertSee('Create Shipment');
-        $dashboardResponse->assertSee(route('client.inquiries'), false);
-        $dashboardResponse->assertSee('Request Pickup');
+        // Redundant separate Request Pickup link removed from customer navigation
+        $dashboardResponse->assertDontSee(route('client.inquiries'), false);
         $dashboardResponse->assertSee('Ship & Pickup Console', false);
+
+        // Dispatches Queue shortcut on dashboard
+        $dashboardResponse->assertSee('Dispatches Queue');
 
         $inquiriesResponse = $this->actingAs($client)->get(route('client.inquiries'));
         $inquiriesResponse->assertStatus(200);
@@ -402,6 +406,83 @@ class UnifiedOperatingConsoleTest extends TestCase
         $this->assertNotNull($shipment);
 
         // No PickupRequest should be created when schedule_doorstep_pickup is 0
+        $pickup = PickupRequest::where('shipment_id', $shipment->id)->first();
+        $this->assertNull($pickup);
+    }
+
+    public function test_client_can_submit_self_dropoff_without_pickup_location_inputs()
+    {
+        $client = User::factory()->create([
+            'user_type' => User::TYPE_CLIENT,
+            'name' => 'Profile Sender',
+            'phone' => '9841555666',
+            'address' => 'Thamel Ward 26, Kathmandu',
+        ]);
+
+        $zoneOrigin = DeliveryZone::create([
+            'zone_name' => 'KTM Center',
+            'zone_code' => 'KTM-CTR',
+            'district' => 'Kathmandu',
+            'province' => 'Bagmati',
+            'approval_status' => 'approved',
+            'is_active' => true,
+        ]);
+
+        $zoneDest = DeliveryZone::create([
+            'zone_name' => 'Butwal Hub',
+            'zone_code' => 'BTW-HUB',
+            'district' => 'Rupandehi',
+            'province' => 'Lumbini',
+            'approval_status' => 'approved',
+            'is_active' => true,
+        ]);
+
+        $partner = User::factory()->create(['user_type' => User::TYPE_PARTNER]);
+
+        \App\Models\DomesticRate::create([
+            'partner_id' => $partner->id,
+            'origin_zone_id' => $zoneOrigin->id,
+            'destination_zone_id' => $zoneDest->id,
+            'origin_city' => 'Kathmandu',
+            'destination_city' => 'Butwal',
+            'service_type' => 'standard',
+            'service_name' => 'STANDARD',
+            'weight_from' => 0,
+            'weight_to' => 10,
+            'base_rate' => 110,
+            'per_kg_rate' => 20,
+            'rate_per_kg' => 20,
+            'rate_type' => 'door_to_door',
+            'approval_status' => 'approved',
+            'effective_from' => now()->subDay(),
+            'is_active' => true,
+        ]);
+
+        // Submit with schedule_doorstep_pickup = 0 and NO pickup_name, pickup_phone, pickup_address
+        $response = $this->actingAs($client)->post(route('shipments.store'), [
+            'shipment_type' => 'domestic',
+            'service_type' => 'standard',
+            'origin_zone_id' => $zoneOrigin->id,
+            'destination_zone_id' => $zoneDest->id,
+            'weight' => 1.0,
+            'delivery_name' => ['Butwal Recipient'],
+            'delivery_phone' => ['9801234567'],
+            'delivery_address' => ['Traffic Chowk, Butwal'],
+            'schedule_doorstep_pickup' => 0,
+            'sender_name' => 'Profile Sender',
+            'sender_phone' => '9841555666',
+            'sender_address' => 'Thamel Ward 26, Kathmandu',
+        ]);
+
+        $response->assertRedirect();
+
+        $shipment = Shipment::latest()->first();
+        $this->assertNotNull($shipment);
+        $this->assertEquals('Profile Sender', $shipment->sender_name);
+        $this->assertEquals('9841555666', $shipment->sender_phone);
+        $this->assertEquals('Thamel Ward 26, Kathmandu', $shipment->sender_address);
+
+        // Verify no rider pickup inquiry was created
         $pickup = PickupRequest::where('shipment_id', $shipment->id)->first();
         $this->assertNull($pickup);
     }

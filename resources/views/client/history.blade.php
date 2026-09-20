@@ -214,6 +214,15 @@
                                                 <span>HAWB</span>
                                             </a>
                                         @endif
+
+                                        <!-- Report Issue Action Button -->
+                                        <button type="button" 
+                                                onclick="openHistoryIssueModal('{{ $shipment->tracking_number }}')" 
+                                                class="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white font-bold text-[11px] transition flex items-center gap-1 cursor-pointer"
+                                                title="Report any issue or situation regarding this consignment">
+                                            <i class="fas fa-triangle-exclamation text-[10px]"></i>
+                                            <span>Issue</span>
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
@@ -243,4 +252,106 @@
         @endif
     </div>
 </div>
+
+<!-- CLIENT ISSUE & SITUATION REPORTING MODAL -->
+<div id="historyIssueModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-xl w-full shadow-2xl border border-slate-200 max-h-[90vh] flex flex-col overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+            <div class="flex items-center gap-2.5">
+                <span class="h-9 w-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center text-sm font-bold">
+                    <i class="fas fa-triangle-exclamation"></i>
+                </span>
+                <div>
+                    <h3 class="font-extrabold text-slate-900 text-sm">Report Shipment Issue / Situation</h3>
+                    <p class="text-[11px] text-slate-500">
+                        Consignment Tracking: <span id="modalTrackingDisplay" class="font-mono font-bold text-slate-800"></span>
+                    </p>
+                </div>
+            </div>
+            <button type="button" onclick="closeHistoryIssueModal()" class="text-slate-400 hover:text-slate-600 text-lg p-1 cursor-pointer">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="p-6 overflow-y-auto space-y-4 text-xs text-slate-700">
+            <div class="p-3 rounded-xl bg-teal-50/70 border border-teal-200/70 text-[11px] text-teal-900 flex items-start gap-2">
+                <i class="fas fa-circle-info text-teal-600 text-sm mt-0.5"></i>
+                <span>Our operations team investigates all situations—package damage, transit delays, customs holds, or billing questions. Your report is linked directly to consignment telemetry.</span>
+            </div>
+
+            <form id="historyIssueForm" method="POST" action="" enctype="multipart/form-data" class="space-y-4">
+                @csrf
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                        Situation Category <span class="text-rose-500">*</span>
+                    </label>
+                    <select name="issue_type" required class="w-full text-xs font-semibold px-3 py-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-500 text-slate-800">
+                        <option value="damage">📦 Damaged Package or Broken Contents</option>
+                        <option value="delay">⏱️ Excessive Transit Delay / Missed Delivery SLA</option>
+                        <option value="lost_item">❓ Missing Items / Lost Parcel</option>
+                        <option value="customs_hold">🛂 Customs Clearance Hold / Document Required</option>
+                        <option value="billing_discrepancy">💵 Billing, Invoice or Tariff Discrepancy</option>
+                        <option value="return_request">🔄 Return to Origin (RTO) Request</option>
+                        <option value="rider_conduct">🛵 Courier / Rider Conduct Feedback</option>
+                        <option value="general_inquiry">💬 General Inquiry / Other Situation</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                        Details of Situation / Issue <span class="text-rose-500">*</span>
+                    </label>
+                    <textarea name="situation_description" rows="4" required minlength="8"
+                              placeholder="Please describe the exact situation or issue in detail..."
+                              class="w-full text-xs px-3 py-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-500 text-slate-900"></textarea>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Claim Amount (Optional)</label>
+                        <div class="flex items-center gap-1">
+                            <select name="claimed_currency" class="text-xs font-bold px-2 py-1.5 bg-slate-100 border border-slate-300 rounded-lg">
+                                <option value="NPR">NPR (Rs.)</option>
+                                <option value="USD">USD ($)</option>
+                            </select>
+                            <input type="number" step="0.01" min="0" name="claimed_amount" placeholder="0.00"
+                                   class="w-full text-xs font-mono font-bold px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500 text-slate-900">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Photo / Proof Attachment</label>
+                        <input type="file" name="attachment" accept="image/*,.pdf"
+                               class="w-full text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-rose-50 file:text-rose-700 hover:file:bg-rose-100 text-slate-600 border border-slate-300 rounded-lg">
+                    </div>
+                </div>
+
+                <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+                    <button type="button" onclick="closeHistoryIssueModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-md transition cursor-pointer">
+                        <i class="fas fa-paper-plane"></i>
+                        <span>Submit Situation Report</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+function openHistoryIssueModal(trackingNumber) {
+    document.getElementById('modalTrackingDisplay').textContent = trackingNumber;
+    const form = document.getElementById('historyIssueForm');
+    form.action = '/shipments/' + encodeURIComponent(trackingNumber) + '/issues';
+    document.getElementById('historyIssueModal').classList.remove('hidden');
+}
+
+function closeHistoryIssueModal() {
+    document.getElementById('historyIssueModal').classList.add('hidden');
+}
+</script>
+@endpush
 @endsection

@@ -115,8 +115,25 @@
 
             <!-- Print Waybill / HAWB Copy Button -->
             <a href="{{ route('tracking.hawb.print', $shipment->tracking_number) }}" target="_blank" class="px-3.5 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold flex items-center gap-1.5 transition shadow-2xs" title="Print Domestic Consignment Note (HAWB)">
-                <i class="fas fa-print"></i> <span>Print Waybill</span>
+                <i class="fas fa-print"></i> <span>Waybill</span>
             </a>
+
+            <!-- Commercial Invoice -->
+            <a href="{{ route('shipments.invoice', $shipment->id) }}" target="_blank" class="px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 text-xs font-bold flex items-center gap-1.5 transition shadow-2xs" title="View & Print Official Invoice">
+                <i class="fas fa-file-invoice-dollar text-teal-600"></i> <span>Invoice</span>
+            </a>
+
+            <!-- Packing List -->
+            <a href="{{ route('shipments.packing-list', $shipment->id) }}" target="_blank" class="px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 text-xs font-bold flex items-center gap-1.5 transition shadow-2xs" title="View & Print Packing List">
+                <i class="fas fa-boxes-stacked text-teal-600"></i> <span>Packing List</span>
+            </a>
+
+            @if($shipment->seller_bill_file)
+                <!-- Attached Tax Bill -->
+                <a href="{{ route('shipments.seller-bill', $shipment->id) }}" target="_blank" class="px-3.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold flex items-center gap-1.5 transition" title="View Attached Tax Invoice / Bill">
+                    <i class="fas fa-paperclip text-amber-600"></i> <span>Tax Bill</span>
+                </a>
+            @endif
 
             <!-- Print Status -->
             <button type="button" onclick="window.print()" class="px-3.5 py-1.5 rounded-xl border border-slate-200 hover:border-slate-800 text-slate-700 hover:text-slate-900 text-xs font-semibold flex items-center gap-1.5 transition">

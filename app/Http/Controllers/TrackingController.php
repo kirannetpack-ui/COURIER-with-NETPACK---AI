@@ -62,7 +62,7 @@ class TrackingController extends Controller
             ->orWhere('last_mile_tracking_number', $trackingNumberUpper)
             ->orWhereRaw("REPLACE(REPLACE(tracking_number, '-', ''), ' ', '') = ?", [$cleanNumber])
             ->orWhereRaw("REPLACE(REPLACE(hawb_number, '-', ''), ' ', '') = ?", [$cleanNumber])
-            ->with(['hub', 'currentAgency', 'lastMileCarrier', 'mawb'])
+            ->with(['hub', 'currentAgency', 'lastMileCarrier', 'mawb', 'issues'])
             ->first();
 
         // 2. Check if entered code matches a Master Air Waybill (MAWB)
@@ -74,7 +74,7 @@ class TrackingController extends Controller
                 $shipment = Shipment::where('mawb_id', $mawb->id)
                     ->orWhere('mawb_number', $mawb->mawb_number)
                     ->latest()
-                    ->with(['hub', 'currentAgency', 'lastMileCarrier', 'mawb'])
+                    ->with(['hub', 'currentAgency', 'lastMileCarrier', 'mawb', 'issues'])
                     ->first();
             }
         }
