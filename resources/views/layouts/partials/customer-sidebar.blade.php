@@ -31,6 +31,16 @@
             <span>Dashboard</span>
         </a>
 
+        <!-- AI Logistics Copilot & Voice -->
+        <a href="{{ route('ai.assistant') }}" 
+           class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition {{ request()->routeIs('ai.assistant*') ? 'bg-teal-600 text-white font-bold shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+            <i class="fas fa-robot w-4 text-center {{ request()->routeIs('ai.assistant*') ? 'text-white' : 'text-cyan-400' }}"></i>
+            <span>AI Logistics Copilot</span>
+            <span class="ml-auto text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                Voice AI
+            </span>
+        </a>
+
         <!-- 2. Unified Ship & Pickup Operating Console -->
         <div class="rounded-xl border border-slate-700/60 bg-slate-800/40 p-2 space-y-1 my-1">
             <div class="px-2 py-1 flex items-center justify-between">

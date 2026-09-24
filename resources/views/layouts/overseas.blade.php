@@ -50,6 +50,9 @@
         </main>
     </div>
 
+    <!-- Omnipresent AI Logistics Copilot (Voice & Text) -->
+    <x-ai-copilot-widget />
+
     @stack('scripts')
 </body>
 </html>

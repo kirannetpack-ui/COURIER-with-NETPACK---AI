@@ -69,6 +69,16 @@
             <span>Rider Cockpit</span>
         </a>
 
+        <!-- AI Logistics Copilot & Voice -->
+        <a href="{{ route('ai.assistant') }}" 
+           class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition {{ request()->routeIs('ai.assistant*') ? 'bg-amber-600 text-white font-bold shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+            <i class="fas fa-robot w-4 text-center text-teal-400"></i>
+            <span>AI Copilot (Voice & OTP)</span>
+            <span class="ml-auto text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                Voice
+            </span>
+        </a>
+
         <!-- 2. Available Jobs Pool -->
         <a href="{{ route('rider.delivery.available') }}" 
            class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition {{ request()->routeIs('rider.delivery.available') || request()->routeIs('rider.orders.available') ? 'bg-amber-600/30 text-amber-200 border border-amber-500/30 font-semibold' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">

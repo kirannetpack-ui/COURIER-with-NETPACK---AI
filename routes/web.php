@@ -28,7 +28,7 @@ use App\Http\Controllers\Admin\RiderMonitoringController;
 use App\Http\Controllers\Admin\ShipmentController as AdminShipmentController;
 // =============================================
 // ADMIN CONTROLLERS
-// =============================================
+use App\Http\Controllers\AiAssistantController;
 use App\Http\Controllers\Api\CustomerPaymentController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordChangeController;
@@ -1004,6 +1004,14 @@ Route::prefix('ecommerce')->name('ecommerce.')->middleware(['auth', 'role:super_
 Route::get('/rates/create', [RateUploadController::class, 'create'])->name('rates.create');
 Route::post('/rates/parse', [RateUploadController::class, 'parse'])->name('rates.parse');
 Route::post('/rates/import', [RateUploadController::class, 'import'])->name('rates.import');
+
+// =============================================
+// AI LOGISTICS COPILOT & VOICE ASSISTANCE
+// =============================================
+Route::get('/ai-assistant', [AiAssistantController::class, 'index'])->name('ai.assistant');
+Route::get('/ai/greeting', [AiAssistantController::class, 'greeting'])->name('ai.greeting');
+Route::post('/ai/chat', [AiAssistantController::class, 'chat'])->name('ai.chat');
+Route::get('/ai/occasions', [AiAssistantController::class, 'occasions'])->name('ai.occasions');
 
 // =============================================
 // FALLBACK ROUTE

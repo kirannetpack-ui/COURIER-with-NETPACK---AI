@@ -5,48 +5,12 @@
 @push('styles')
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <style>
-    @keyframes domestic-pulse {
-        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.6); }
-        70% { transform: scale(1.05); box-shadow: 0 0 0 16px rgba(13, 148, 136, 0); }
+    @keyframes pulse-ring {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.5); }
+        70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(13, 148, 136, 0); }
         100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(13, 148, 136, 0); }
     }
-    .domestic-active { animation: domestic-pulse 2.2s infinite ease-in-out; }
-    
-    @keyframes truck-travel {
-        0% { left: 8%; opacity: 0; transform: translateY(-50%); }
-        15% { opacity: 1; }
-        85% { opacity: 1; }
-        100% { left: 92%; opacity: 0; transform: translateY(-50%); }
-    }
-    .truck-anim {
-        animation: truck-travel 5.5s infinite cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    #domesticRouteMap .leaflet-tile {
-        filter: brightness(0.78) contrast(1.2) saturate(0.85);
-    }
-
-    .live-truck-marker {
-        background: radial-gradient(circle, rgba(13, 148, 136, 0.95) 0%, rgba(15, 118, 110, 0.6) 60%, transparent 100%);
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #ffffff;
-        box-shadow: 0 0 16px rgba(20, 184, 166, 0.8);
-        transition: transform 0.4s ease-out;
-    }
-
-    .highway-dash {
-        stroke-dasharray: 6, 8;
-        animation: highway-flow 1.5s linear infinite;
-    }
-    @keyframes highway-flow {
-        from { stroke-dashoffset: 14; }
-        to { stroke-dashoffset: 0; }
-    }
+    .active-stage-pulse { animation: pulse-ring 2.2s infinite ease-in-out; }
 </style>
 @endpush
 
@@ -72,13 +36,76 @@
         default => 0,
     };
 
+    // 5 Distinct Color-Coded Stages for Domestic Network
     $milestones = [
-        ['label' => 'Booking Placed', 'icon' => 'fa-receipt', 'desc' => 'Scheduled & verified in Nepal'],
-        ['label' => 'Pickup & Sorted', 'icon' => 'fa-box', 'desc' => 'Collected from sender & depot verified'],
-        ['label' => 'Highway Express', 'icon' => 'fa-truck-fast', 'desc' => 'Inter-district highway transit'],
-        ['label' => 'Ward Dispatch', 'icon' => 'fa-motorcycle', 'desc' => 'Rider assigned for doorstep delivery'],
-        ['label' => 'Delivered', 'icon' => 'fa-circle-check', 'desc' => 'Verified proof of delivery'],
+        [
+            'step' => 1,
+            'label' => 'Booking Placed',
+            'code' => 'BKG',
+            'icon' => 'fa-receipt',
+            'desc' => 'Scheduled & Verified',
+            'color' => 'blue',
+            'bg_active' => 'bg-blue-600',
+            'border_active' => 'border-blue-600',
+            'text_color' => 'text-blue-600',
+            'light_bg' => 'bg-blue-50',
+            'badge' => 'Verified'
+        ],
+        [
+            'step' => 2,
+            'label' => 'Pickup & Sorted',
+            'code' => 'HUB',
+            'icon' => 'fa-box',
+            'desc' => 'Collected from Sender',
+            'color' => 'purple',
+            'bg_active' => 'bg-purple-600',
+            'border_active' => 'border-purple-600',
+            'text_color' => 'text-purple-600',
+            'light_bg' => 'bg-purple-50',
+            'badge' => 'Origin Depot'
+        ],
+        [
+            'step' => 3,
+            'label' => 'Highway Express',
+            'code' => 'TRK',
+            'icon' => 'fa-truck-fast',
+            'desc' => 'Inter-District Highway Transit',
+            'color' => 'amber',
+            'bg_active' => 'bg-amber-500',
+            'border_active' => 'border-amber-500',
+            'text_color' => 'text-amber-600',
+            'light_bg' => 'bg-amber-50',
+            'badge' => 'In Transit'
+        ],
+        [
+            'step' => 4,
+            'label' => 'Ward Dispatch',
+            'code' => 'WST',
+            'icon' => 'fa-motorcycle',
+            'desc' => 'Rider Assigned for Doorstep',
+            'color' => 'teal',
+            'bg_active' => 'bg-teal-600',
+            'border_active' => 'border-teal-600',
+            'text_color' => 'text-teal-600',
+            'light_bg' => 'bg-teal-50',
+            'badge' => 'Out for Delivery'
+        ],
+        [
+            'step' => 5,
+            'label' => 'Delivered',
+            'code' => 'DLV',
+            'icon' => 'fa-circle-check',
+            'desc' => 'Signed & Delivered to Recipient',
+            'color' => 'emerald',
+            'bg_active' => 'bg-emerald-600',
+            'border_active' => 'border-emerald-600',
+            'text_color' => 'text-emerald-600',
+            'light_bg' => 'bg-emerald-50',
+            'badge' => 'Completed'
+        ],
     ];
+
+    $currentStage = $milestones[$milestoneStep] ?? $milestones[0];
 
     // Nepal city coordinate mapping
     $nepalCities = [
@@ -88,7 +115,7 @@
         'POKHARA' => ['lat' => 28.2096, 'lng' => 83.9856],
         'BIRATNAGAR' => ['lat' => 26.4525, 'lng' => 87.2718],
         'BUTWAL' => ['lat' => 27.7006, 'lng' => 83.4484],
-        'BHARAATPUR' => ['lat' => 27.6833, 'lng' => 84.4333],
+        'BHARATPUR' => ['lat' => 27.6833, 'lng' => 84.4333],
         'CHITWAN' => ['lat' => 27.6833, 'lng' => 84.4333],
         'NARAYANGARH' => ['lat' => 27.6934, 'lng' => 84.4285],
         'NEPALGUNJ' => ['lat' => 28.0500, 'lng' => 81.6167],
@@ -105,66 +132,72 @@
 
     $originCoords = $nepalCities[$originCityUpper] ?? ['lat' => 27.7172, 'lng' => 85.3240];
     $destCoords = $nepalCities[$destCityUpper] ?? ['lat' => 28.2096, 'lng' => 83.9856];
+
+    $latestEvent = reset($events) ?: null;
+    $latestLocation = $latestEvent['location'] ?? ($shipment->current_location ?: ($shipment->sender_city . ', Nepal'));
+    $latestTime = !empty($latestEvent['time']) ? \Carbon\Carbon::parse($latestEvent['time']) : $shipment->updated_at;
 @endphp
 
 <div class="max-w-6xl mx-auto space-y-6">
 
-    <!-- Top Action Breadcrumb Bar -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
+    <!-- TOP ACTION BAR -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
         <div class="flex items-center gap-3">
-            <a href="{{ route('tracking.page') }}" class="h-9 w-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition">
+            <a href="{{ route('tracking.page') }}" class="h-9 w-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition" title="Back to Tracking Search">
                 <i class="fas fa-arrow-left text-sm"></i>
             </a>
             <div>
                 <div class="flex items-center gap-2">
-                    <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Domestic Delivery &middot;</span>
-                    <span class="text-xs font-bold text-teal-700">All 7 Provinces of Nepal</span>
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-widest">Domestic Delivery &middot;</span>
+                    <span class="text-xs font-bold text-teal-700">77 Districts Network</span>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
+                        {{ strtoupper($service['label']) }}
+                    </span>
                 </div>
-                <p class="text-xs text-slate-500">Real-Time Hub Transit & Proof of Delivery</p>
+                <p class="text-xs text-slate-500">Real-Time Transit & Proof of Delivery</p>
             </div>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-wrap">
             <!-- Alert Subscription Button -->
             <button type="button" onclick="openDomesticSubscribeModal()" class="px-3.5 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 text-xs font-bold flex items-center gap-1.5 transition">
                 <i class="fas fa-bell text-teal-600"></i> <span>Get Alerts</span>
             </button>
 
             <!-- Copy Link -->
-            <button type="button" onclick="copyDomesticUrl()" id="domCopyBtn" class="px-3.5 py-1.5 rounded-xl border border-slate-200 hover:border-teal-500 text-slate-700 hover:text-teal-700 text-xs font-semibold flex items-center gap-1.5 transition">
+            <button type="button" onclick="copyDomesticUrl()" id="domCopyBtn" class="px-3.5 py-1.5 rounded-xl border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition">
                 <i class="fas fa-link text-slate-400"></i> <span>Copy Link</span>
             </button>
 
-            <!-- Print Waybill / HAWB Copy Button -->
-            <a href="{{ route('tracking.hawb.print', $shipment->tracking_number) }}" target="_blank" class="px-3.5 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold flex items-center gap-1.5 transition shadow-2xs" title="Print Domestic Consignment Note (HAWB)">
-                <i class="fas fa-print"></i> <span>Waybill</span>
+            <!-- Print Waybill Action (Mandatory for test assertion) -->
+            <a href="{{ route('tracking.hawb.print', $shipment->tracking_number) }}" target="_blank" class="px-3.5 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold flex items-center gap-1.5 transition shadow-xs" title="Print Domestic Waybill">
+                <i class="fas fa-print"></i> <span>Print Waybill</span>
             </a>
 
             <!-- Commercial Invoice -->
-            <a href="{{ route('shipments.invoice', $shipment->id) }}" target="_blank" class="px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 text-xs font-bold flex items-center gap-1.5 transition shadow-2xs" title="View & Print Official Invoice">
-                <i class="fas fa-file-invoice-dollar text-teal-600"></i> <span>Invoice</span>
+            <a href="{{ route('shipments.invoice', $shipment->id) }}" target="_blank" class="px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold flex items-center gap-1.5 transition" title="View Official Invoice">
+                <i class="fas fa-file-invoice text-teal-600"></i> <span>Invoice</span>
             </a>
 
             <!-- Packing List -->
-            <a href="{{ route('shipments.packing-list', $shipment->id) }}" target="_blank" class="px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 text-xs font-bold flex items-center gap-1.5 transition shadow-2xs" title="View & Print Packing List">
+            <a href="{{ route('shipments.packing-list', $shipment->id) }}" target="_blank" class="px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold flex items-center gap-1.5 transition" title="View Packing List">
                 <i class="fas fa-boxes-stacked text-teal-600"></i> <span>Packing List</span>
             </a>
 
             @if($shipment->seller_bill_file)
-                <!-- Attached Tax Bill -->
-                <a href="{{ route('shipments.seller-bill', $shipment->id) }}" target="_blank" class="px-3.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold flex items-center gap-1.5 transition" title="View Attached Tax Invoice / Bill">
+                <a href="{{ route('shipments.seller-bill', $shipment->id) }}" target="_blank" class="px-3.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold flex items-center gap-1.5 transition" title="Attached Tax Bill">
                     <i class="fas fa-paperclip text-amber-600"></i> <span>Tax Bill</span>
                 </a>
             @endif
 
             <!-- Print Status -->
-            <button type="button" onclick="window.print()" class="px-3.5 py-1.5 rounded-xl border border-slate-200 hover:border-slate-800 text-slate-700 hover:text-slate-900 text-xs font-semibold flex items-center gap-1.5 transition">
+            <button type="button" onclick="window.print()" class="px-3.5 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition">
                 <i class="fas fa-file-lines text-slate-400"></i> <span>Print Status</span>
             </button>
 
             <!-- WhatsApp Live Help -->
-            <a href="https://wa.me/97715970123?text=Inquiry%20about%20domestic%20shipment%20{{ $shipment->tracking_number }}" target="_blank" class="px-3.5 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold flex items-center gap-1.5 transition shadow-2xs">
-                <i class="fab fa-whatsapp text-sm"></i> <span>Live Help</span>
+            <a href="https://wa.me/97715970123?text=Inquiry%20about%20domestic%20shipment%20{{ $shipment->tracking_number }}" target="_blank" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 transition shadow-xs">
+                <i class="fab fa-whatsapp"></i> <span>Live Help</span>
             </a>
         </div>
     </div>
@@ -181,271 +214,310 @@
         </div>
     @endif
 
-    <!-- HERO DOMESTIC MASTER CARD -->
-    <section class="overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-teal-950 text-white shadow-xl border border-slate-800">
-        <div class="p-6 md:p-8 pb-4">
+    <!-- MAIN TRACKING CONSOLE CARD -->
+    <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+
+        <!-- HEADER SECTION: Track ID & Real-Time Operational Status -->
+        <div class="p-6 sm:p-8 bg-slate-900 text-white border-b border-slate-800">
             <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-                <!-- Identifiers -->
+                <!-- Tracking Identifiers -->
                 <div class="space-y-2">
-                    <div class="flex flex-wrap items-center gap-2.5">
+                    <div class="flex flex-wrap items-center gap-2">
                         <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30">
                             <span class="h-2 w-2 rounded-full bg-teal-400 animate-ping"></span>
-                            {{ strtoupper($service['label']) }}
+                            🇳🇵 NEPAL DOMESTIC COURIER
                         </span>
-                        <span class="rounded-xl bg-white/10 px-3.5 py-1 text-xs font-mono font-bold tracking-widest text-teal-200 border border-white/10">
-                            77 DISTRICT EXPRESS NETWORK
+                        <span class="rounded-xl bg-white/10 px-3 py-1 text-xs font-mono font-bold tracking-wider text-teal-200 border border-white/10">
+                            77 DISTRICT NETWORK
                         </span>
-                        <a href="{{ route('tracking.hawb.print', $shipment->tracking_number) }}" target="_blank" class="rounded-xl bg-white/10 hover:bg-white/20 px-3.5 py-1 text-xs font-mono font-bold tracking-widest text-teal-200 border border-white/15 flex items-center gap-1.5 transition" title="Print Domestic Consignment Note">
-                            <i class="fas fa-print text-[10px]"></i> Waybill Copy
-                        </a>
                     </div>
 
                     <h1 class="text-3xl sm:text-4xl font-black font-mono tracking-tight text-white">
                         {{ $shipment->tracking_number }}
                     </h1>
 
-                    <p class="text-xs text-slate-400 flex items-center gap-2">
-                        <span><i class="fas fa-truck-fast text-teal-400"></i> Highway Fleet Synchronized</span>
+                    <p class="text-xs text-slate-400 flex items-center gap-2 flex-wrap">
+                        <span><i class="fas fa-clock text-teal-400"></i> Updated {{ $shipment->updated_at->diffForHumans() }}</span>
                         <span>&middot;</span>
-                        <span>Updated {{ $shipment->updated_at->diffForHumans() }}</span>
-                        <span>&middot;</span>
-                        <span class="text-teal-300 font-mono">Live Sync Active</span>
+                        <span>Live Domestic Hub Telemetry</span>
                     </p>
                 </div>
 
-                <!-- Status Badge -->
-                <div class="flex items-center gap-4 bg-white/10 backdrop-blur-xl p-4 sm:p-5 rounded-2xl border border-white/15">
-                    <div class="h-14 w-14 rounded-2xl bg-teal-500/20 border border-teal-500/30 flex items-center justify-center text-teal-300 text-2xl shrink-0 domestic-active">
-                        <i class="fas {{ $status['icon'] }}"></i>
+                <!-- Operational Milestone Banner -->
+                <div class="flex items-center gap-4 bg-white/10 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-white/15 max-w-md">
+                    <div class="h-14 w-14 rounded-2xl {{ $currentStage['bg_active'] }} flex items-center justify-center text-white text-2xl shrink-0 shadow-lg active-stage-pulse">
+                        <i class="fas {{ $status['icon'] ?? 'fa-box' }}"></i>
                     </div>
                     <div>
-                        <span class="text-[10px] uppercase font-bold tracking-widest text-teal-300/80">Delivery Milestone</span>
-                        <h3 class="text-xl font-extrabold text-white">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] uppercase font-bold tracking-widest text-teal-300">
+                                Current Status (Stage {{ $milestoneStep + 1 }} of 5)
+                            </span>
+                        </div>
+                        <h2 class="text-xl font-black text-white">
                             {{ $status['label'] }}
-                        </h3>
-                        <p class="text-xs text-slate-300 mt-0.5 max-w-xs leading-tight">
+                        </h2>
+                        <p class="text-xs text-slate-300 mt-0.5 leading-relaxed">
                             {{ $status['description'] }}
                         </p>
                     </div>
                 </div>
             </div>
 
-            <!-- INTER-DISTRICT HIGHWAY ROUTE CORRIDOR PREVIEW -->
-            <div class="mt-8 pt-6 border-t border-white/10">
-                <div class="bg-slate-900/80 rounded-2xl p-4 sm:p-6 border border-white/10 relative overflow-hidden">
-                    <div class="relative flex items-center justify-between z-10">
-                        <!-- Origin Hub -->
-                        <div class="flex items-center gap-3">
-                            <span class="h-10 w-10 sm:h-12 sm:w-12 rounded-xl bg-teal-500/20 text-teal-400 flex items-center justify-center text-xl shrink-0 border border-teal-500/30">
-                                <i class="fas fa-warehouse"></i>
-                            </span>
-                            <div>
-                                <span class="text-[10px] font-bold text-teal-400 uppercase tracking-widest">Origin Hub</span>
-                                <h4 class="text-base sm:text-lg font-bold text-white leading-snug">
-                                    {{ $shipment->sender_city ?: 'Kathmandu' }}
-                                </h4>
-                                <span class="text-[11px] font-mono text-slate-400">{{ $shipment->sender_zone ?: 'Central Bagmati Hub' }}</span>
-                            </div>
+            <!-- Route Summary Strip -->
+            <div class="mt-6 pt-5 border-t border-slate-800">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-800/60 p-3.5 rounded-xl border border-slate-700/60 text-xs">
+                    <div class="flex items-center gap-2.5">
+                        <span class="text-2xl">🇳🇵</span>
+                        <div>
+                            <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Origin City</span>
+                            <p class="font-bold text-slate-100">{{ $shipment->sender_city ?: 'Kathmandu' }}</p>
                         </div>
+                    </div>
 
-                        <!-- Midline Animated Truck -->
-                        <div class="hidden md:flex flex-col items-center flex-1 px-8 relative">
-                            <div class="w-full h-0.5 border-t-2 border-dashed border-teal-500/40 relative">
-                                <div class="truck-anim absolute top-1/2 text-teal-300 text-lg">
-                                    <i class="fas fa-truck-fast"></i>
-                                </div>
-                            </div>
-                            <span class="text-[10px] font-bold tracking-widest uppercase text-slate-400 mt-2 bg-slate-950 px-3 py-0.5 rounded-full border border-slate-800">
-                                Nepal Highway Fleet Corridor
-                            </span>
-                        </div>
+                    <div class="flex items-center gap-3 text-slate-400">
+                        <span class="h-px w-8 sm:w-16 bg-slate-700"></span>
+                        <span class="flex items-center gap-1 font-mono text-[11px] text-teal-300 bg-slate-900 px-2.5 py-1 rounded-full border border-slate-700">
+                            <i class="fas fa-truck text-[10px]"></i> Highway Fleet Transit
+                        </span>
+                        <span class="h-px w-8 sm:w-16 bg-slate-700"></span>
+                    </div>
 
-                        <!-- Destination Hub -->
-                        <div class="flex items-center gap-3 text-right">
-                            <div>
-                                <span class="text-[10px] font-bold text-teal-400 uppercase tracking-widest">Destination Hub</span>
-                                <h4 class="text-base sm:text-lg font-bold text-white leading-snug">
-                                    {{ $shipment->receiver_city ?: 'District Center' }}
-                                </h4>
-                                <span class="text-[11px] font-mono text-slate-400">
-                                    {{ $shipment->receiver_zone ?: 'Regional Delivery Depot' }} &bull; Ward {{ $shipment->receiver_ward ?: '1' }}
-                                </span>
-                            </div>
-                            <span class="h-10 w-10 sm:h-12 sm:w-12 rounded-xl bg-teal-500/20 text-teal-400 flex items-center justify-center text-xl shrink-0 border border-teal-500/30">
-                                <i class="fas fa-location-dot"></i>
-                            </span>
+                    <div class="flex items-center gap-2.5 sm:text-right sm:flex-row-reverse">
+                        <span class="text-2xl">📍</span>
+                        <div>
+                            <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Destination Hub</span>
+                            <p class="font-bold text-slate-100">{{ $shipment->receiver_city ?: 'District Depot' }} (Ward {{ $shipment->receiver_ward ?: '1' }})</p>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- 5-STAGE MILESTONE STEPPER -->
-            <div class="mt-8 pt-6 border-t border-white/10 pb-2">
-                <div class="grid grid-cols-5 gap-2 text-center">
+        <!-- THE MULTI-COLORED PROGRESSIVE BAR -->
+        <div class="p-6 sm:p-8 bg-white border-b border-slate-100">
+            <div class="mb-4 flex items-center justify-between">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                    <i class="fas fa-bars-progress text-teal-600"></i>
+                    <span>Delivery Progress Pipeline</span>
+                </h3>
+                <span class="text-xs font-bold text-slate-600">
+                    {{ round((($milestoneStep + 1) / 5) * 100) }}% Completed
+                </span>
+            </div>
+
+            <!-- Segmented Multi-Color Progress Track -->
+            <div class="relative">
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-2 relative">
+
                     @foreach($milestones as $idx => $m)
-                        @php 
-                            $isDone = $idx <= $milestoneStep; 
-                            $isCurrent = $idx === $milestoneStep; 
+                        @php
+                            $isDone = $idx <= $milestoneStep;
+                            $isCurrent = $idx === $milestoneStep;
+
+                            $nodeColorClasses = match($m['color']) {
+                                'blue' => [
+                                    'active' => 'bg-blue-600 text-white border-blue-600 ring-4 ring-blue-100',
+                                    'done' => 'bg-blue-600 text-white border-blue-600',
+                                    'badge' => 'bg-blue-50 text-blue-700 border-blue-200',
+                                    'line' => 'bg-blue-600',
+                                ],
+                                'purple' => [
+                                    'active' => 'bg-purple-600 text-white border-purple-600 ring-4 ring-purple-100',
+                                    'done' => 'bg-purple-600 text-white border-purple-600',
+                                    'badge' => 'bg-purple-50 text-purple-700 border-purple-200',
+                                    'line' => 'bg-purple-600',
+                                ],
+                                'amber' => [
+                                    'active' => 'bg-amber-500 text-white border-amber-500 ring-4 ring-amber-100',
+                                    'done' => 'bg-amber-500 text-white border-amber-500',
+                                    'badge' => 'bg-amber-50 text-amber-700 border-amber-200',
+                                    'line' => 'bg-amber-500',
+                                ],
+                                'teal' => [
+                                    'active' => 'bg-teal-600 text-white border-teal-600 ring-4 ring-teal-100',
+                                    'done' => 'bg-teal-600 text-white border-teal-600',
+                                    'badge' => 'bg-teal-50 text-teal-700 border-teal-200',
+                                    'line' => 'bg-teal-600',
+                                ],
+                                'emerald' => [
+                                    'active' => 'bg-emerald-600 text-white border-emerald-600 ring-4 ring-emerald-100',
+                                    'done' => 'bg-emerald-600 text-white border-emerald-600',
+                                    'badge' => 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                                    'line' => 'bg-emerald-600',
+                                ],
+                                default => [
+                                    'active' => 'bg-slate-800 text-white',
+                                    'done' => 'bg-slate-800 text-white',
+                                    'badge' => 'bg-slate-100 text-slate-700',
+                                    'line' => 'bg-slate-800',
+                                ]
+                            };
+
+                            $nodeStateClass = $isCurrent 
+                                ? $nodeColorClasses['active'] . ' active-stage-pulse' 
+                                : ($isDone ? $nodeColorClasses['done'] : 'bg-slate-100 text-slate-400 border-slate-200');
                         @endphp
-                        <div class="flex flex-col items-center group">
-                            <span class="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl flex items-center justify-center text-sm font-bold transition transform group-hover:scale-105 {{ $isDone ? 'bg-gradient-to-tr from-teal-500 to-teal-400 text-slate-950 shadow-lg shadow-teal-500/30' : 'bg-white/10 text-white/40 border border-white/10' }} {{ $isCurrent ? 'ring-4 ring-teal-400/40' : '' }}">
-                                <i class="fas {{ $m['icon'] }}"></i>
-                            </span>
-                            <span class="mt-2 text-xs font-bold {{ $isDone ? 'text-white' : 'text-slate-500' }}">
-                                {{ $m['label'] }}
-                            </span>
-                            <span class="text-[10px] text-slate-400 hidden sm:block mt-0.5">
-                                {{ $m['desc'] }}
-                            </span>
+
+                        <div class="flex md:flex-col items-center md:items-center text-left md:text-center relative group p-2 rounded-2xl transition hover:bg-slate-50/80">
+                            
+                            @if(!$loop->last)
+                                <div class="hidden md:block absolute top-7 left-1/2 w-full h-1.5 -z-0 {{ $idx < $milestoneStep ? $nodeColorClasses['line'] : 'bg-slate-100' }}"></div>
+                            @endif
+
+                            @if(!$loop->last)
+                                <div class="md:hidden absolute left-6 top-12 bottom-0 w-1 -z-0 {{ $idx < $milestoneStep ? $nodeColorClasses['line'] : 'bg-slate-100' }}"></div>
+                            @endif
+
+                            <div class="relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border-2 text-base font-bold transition shadow-xs {{ $nodeStateClass }}">
+                                @if($isDone && !$isCurrent)
+                                    <i class="fas fa-check"></i>
+                                @else
+                                    <i class="fas {{ $m['icon'] }}"></i>
+                                @endif
+                            </div>
+
+                            <div class="ml-4 md:ml-0 md:mt-3 flex-1 min-w-0">
+                                <div class="flex items-center md:justify-center gap-1.5">
+                                    <span class="text-[11px] font-bold uppercase tracking-wider {{ $isDone ? 'text-slate-900' : 'text-slate-400' }}">
+                                        {{ $m['label'] }}
+                                    </span>
+                                </div>
+                                <p class="text-[11px] text-slate-500 leading-tight mt-0.5">
+                                    {{ $m['desc'] }}
+                                </p>
+                                @if($isCurrent)
+                                    <span class="inline-block mt-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wider {{ $nodeColorClasses['badge'] }}">
+                                        Current Stage
+                                    </span>
+                                @endif
+                            </div>
                         </div>
                     @endforeach
-                </div>
-            </div>
-        </div>
-    </section>
 
-    <!-- INTERACTIVE NEPAL PROVINCIAL ROUTE MAP & HIGHWAY TELEMETRY HUD -->
-    <section class="bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-800 shadow-xl text-white space-y-4">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
-            <div class="flex items-center gap-2.5">
-                <span class="relative flex h-3 w-3">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-3 w-3 bg-teal-500"></span>
-                </span>
-                <div>
-                    <h3 class="text-sm font-bold tracking-wide uppercase text-slate-100 flex items-center gap-2">
-                        <i class="fas fa-map-location-dot text-teal-400"></i>
-                        <span>Nepal National Highway Route & Linehaul Telemetry</span>
-                    </h3>
-                    <p class="text-[11px] text-slate-400">Arterial Corridor &bull; {{ $shipment->sender_city ?: 'Kathmandu' }} &rarr; {{ $shipment->receiver_city ?: 'Destination Hub' }}</p>
-                </div>
-            </div>
-
-            <!-- LIVE HIGHWAY TELEMETRY HUD PILLS -->
-            <div class="flex items-center gap-2 flex-wrap">
-                <div class="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700/80 text-[11px] font-mono text-teal-300 flex items-center gap-1.5 shadow-2xs">
-                    <i class="fas fa-truck-fast text-teal-400 text-[10px]"></i>
-                    <span id="domSpeed">Fleet: 58 km/h</span>
-                </div>
-                <div class="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700/80 text-[11px] font-mono text-sky-300 flex items-center gap-1.5 shadow-2xs">
-                    <i class="fas fa-road text-sky-400 text-[10px]"></i>
-                    <span>National Highway Network</span>
-                </div>
-                <div class="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700/80 text-[11px] font-mono text-emerald-300 flex items-center gap-1.5 shadow-2xs" id="domAutoSync">
-                    <i class="fas fa-rotate animate-spin text-[10px]"></i>
-                    <span>Sync: <span id="domCountdown">30</span>s</span>
                 </div>
             </div>
         </div>
 
-        <div class="relative rounded-2xl overflow-hidden border border-slate-800 shadow-inner">
-            <div id="domesticRouteMap" class="w-full h-80 sm:h-96 z-0"></div>
-            <!-- Radar sweep badge -->
-            <div class="absolute top-3 right-3 z-10 bg-slate-950/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-teal-500/30 text-[11px] font-mono text-teal-300 flex items-center gap-2 pointer-events-none">
-                <span class="w-2 h-2 rounded-full bg-teal-400 animate-ping"></span>
-                <span>GPS FLEET TRACKING</span>
-            </div>
-        </div>
-    </section>
+        <!-- MAXIMUM OPERATIONAL INFORMATION: DETAILED TELEMETRY GRID -->
+        <div class="p-6 sm:p-8 bg-slate-50/50">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-4 flex items-center gap-2">
+                <i class="fas fa-circle-info text-teal-600"></i>
+                <span>Comprehensive Domestic Consignment Telemetry</span>
+            </h3>
 
-    <!-- SPECS TILES -->
-    <section class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs">
-            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Weight Details</span>
-            <div class="mt-2 flex items-baseline gap-2">
-                <span class="text-2xl font-black text-slate-900 font-mono">
-                    {{ number_format($shipment->weight ?? 1, 2) }}
-                </span>
-                <span class="text-xs font-bold text-slate-500">KG Verified</span>
-            </div>
-            <p class="text-[11px] text-slate-400 mt-1">Certified Tare & Gross</p>
-        </div>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                <!-- 1. Current Location -->
+                <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Current Depot</span>
+                    <p class="text-sm font-bold text-slate-900 mt-1 truncate" title="{{ $latestLocation }}">
+                        {{ $latestLocation }}
+                    </p>
+                    <span class="text-[11px] text-slate-500 block mt-0.5">Verified Depot Scan</span>
+                </div>
 
-        <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs">
-            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Package Category</span>
-            <div class="mt-2 flex items-center gap-2">
-                <span class="h-8 w-8 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center text-sm">
-                    <i class="fas fa-box"></i>
-                </span>
-                <span class="text-base font-bold text-slate-900">
-                    {{ ucfirst($shipment->package_type ?? 'Parcel') }}
-                </span>
-            </div>
-            <p class="text-[11px] text-slate-400 mt-1">Inter-District Express</p>
-        </div>
-
-        <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs">
-            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Estimated Delivery</span>
-            <div class="mt-2 flex items-baseline gap-1.5">
-                <span class="text-lg font-black text-teal-700">
-                    {{ $shipment->estimated_delivery_at ? $shipment->estimated_delivery_at->format('M d, Y') : 'On Schedule' }}
-                </span>
-            </div>
-            <p class="text-[11px] text-slate-400 mt-1">Highway Transit SLA Guaranteed</p>
-        </div>
-
-        <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs">
-            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Payment / COD</span>
-            <div class="mt-2 flex items-center gap-2">
-                @if($shipment->is_cod)
-                    <span class="h-8 w-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center text-sm">
-                        <i class="fas fa-hand-holding-dollar"></i>
+                <!-- 2. Last Checkpoint Time -->
+                <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Last Checkpoint</span>
+                    <p class="text-sm font-bold text-slate-900 mt-1">
+                        {{ $latestTime->format('d M, h:i A') }}
+                    </p>
+                    <span class="text-[11px] text-teal-600 font-medium block mt-0.5">
+                        {{ $latestTime->diffForHumans() }}
                     </span>
-                    <div>
-                        <span class="text-xs font-bold text-slate-800">COD: NPR {{ number_format($shipment->cod_amount, 2) }}</span>
-                    </div>
-                @else
-                    <span class="h-8 w-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center text-sm">
-                        <i class="fas fa-circle-check"></i>
-                    </span>
-                    <span class="text-xs font-bold text-slate-800">Prepaid / Billed</span>
-                @endif
-            </div>
-            <p class="text-[11px] text-slate-400 mt-1">Secure Settlement</p>
-        </div>
-    </section>
+                </div>
 
-    <!-- TIMELINE & SUMMARY VAULT -->
+                <!-- 3. Target District & Ward -->
+                <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Destination Ward</span>
+                    <p class="text-sm font-bold text-slate-900 mt-1">
+                        Ward {{ $shipment->receiver_ward ?: '1' }}
+                    </p>
+                    <span class="text-[11px] text-slate-500 block mt-0.5">
+                        {{ $shipment->receiver_city ?: 'District' }}
+                    </span>
+                </div>
+
+                <!-- 4. Weight -->
+                <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Weight</span>
+                    <p class="text-sm font-black text-slate-900 font-mono mt-1">
+                        {{ number_format($shipment->weight ?? 1, 2) }} kg
+                    </p>
+                    <span class="text-[11px] text-slate-500 block mt-0.5">Verified Scaled</span>
+                </div>
+
+                <!-- 5. Assigned Partner / Rider -->
+                <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Depot Partner</span>
+                    <p class="text-sm font-bold text-slate-900 mt-1 truncate">
+                        {{ $shipment->domesticPartner?->name ?? 'Regional Hub' }}
+                    </p>
+                    <span class="text-[11px] text-slate-500 block mt-0.5">Depot Handling</span>
+                </div>
+
+                <!-- 6. Service Priority -->
+                <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Service Tier</span>
+                    <p class="text-sm font-bold text-teal-700 mt-1">
+                        {{ strtoupper($service['label']) }}
+                    </p>
+                    <span class="text-[11px] text-slate-500 block mt-0.5">All 7 Provinces</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TIMELINE & SIDEBAR -->
     <div class="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
-        <!-- Event Timeline -->
-        <section class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-2xs">
-            <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
+        
+        <!-- Left: Event Timeline -->
+        <section class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100">
                 <div>
-                    <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
-                        <i class="fas fa-timeline text-teal-600"></i> Domestic Journey Milestones
+                    <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <i class="fas fa-clock-rotate-left text-teal-600"></i>
+                        <span>Domestic Journey Timeline</span>
                     </h2>
-                    <p class="text-xs text-slate-500 mt-0.5">Chronological scan telemetry from origin booking to recipient verification</p>
+                    <p class="text-xs text-slate-500 mt-0.5">Chronological scan events across Nepal's transit hubs</p>
                 </div>
                 <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-bold">
-                    {{ count($events) }} Recorded Events
+                    {{ count($events) }} {{ Str::plural('Event', count($events)) }}
                 </span>
             </div>
 
-            <div class="relative space-y-0">
+            <div class="relative space-y-0 pl-2">
                 @foreach($events as $index => $event)
                     @php
-                        $isLatest = $loop->first;
+                        $isLatest = $index === 0;
                         $evInfo = config('tracking.statuses.' . ($event['status'] ?? ''), config('tracking.statuses.pending'));
-                        $iconName = $event['icon'] ?? $evInfo['icon'];
+                        $iconName = $event['icon'] ?? ($evInfo['icon'] ?? 'fa-circle-dot');
+
+                        $eventColor = match($event['status'] ?? '') {
+                            'delivered' => 'bg-emerald-600 text-white',
+                            'out_for_delivery' => 'bg-teal-600 text-white',
+                            'in_transit' => 'bg-amber-500 text-white',
+                            'picked_up' => 'bg-purple-600 text-white',
+                            default => 'bg-blue-600 text-white',
+                        };
                     @endphp
-                    <div class="relative grid grid-cols-[40px_1fr] gap-4 pb-8 last:pb-2">
+
+                    <div class="relative grid grid-cols-[36px_1fr] gap-4 pb-8 last:pb-2">
                         @if(!$loop->last)
-                            <div class="absolute left-[19px] top-10 bottom-0 w-0.5 bg-slate-200"></div>
+                            <div class="absolute left-[17px] top-10 bottom-0 w-0.5 bg-slate-200"></div>
                         @endif
 
-                        <!-- Pin -->
-                        <div class="relative z-10 flex h-10 w-10 items-center justify-center rounded-2xl text-sm font-bold shadow-2xs {{ $isLatest ? 'bg-teal-600 text-white domestic-active' : 'bg-slate-100 text-slate-600 border border-slate-200' }}">
+                        <div class="relative z-10 flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold shadow-xs {{ $loop->first ? $eventColor . ' active-stage-pulse' : 'bg-slate-100 text-slate-600 border border-slate-200' }}">
                             <i class="fas {{ $iconName }}"></i>
                         </div>
 
-                        <!-- Details Card -->
-                        <div class="rounded-2xl border p-4 transition {{ $isLatest ? 'border-teal-300/80 bg-teal-50/40 shadow-xs' : 'border-slate-200/80 bg-white' }}">
+                        <div class="rounded-2xl border p-4 transition {{ $loop->first ? 'border-teal-200 bg-teal-50/30 shadow-2xs' : 'border-slate-200/80 bg-white' }}">
                             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
                                 <h4 class="font-bold text-slate-900 text-sm flex items-center gap-2">
                                     <span>{{ $event['status_label'] ?? ucfirst(str_replace('_', ' ', $event['status'] ?? 'Updated')) }}</span>
-                                    @if($isLatest)
-                                        <span class="px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider rounded-md bg-teal-600 text-white">
-                                            Current Checkpoint
+                                    @if($loop->first)
+                                        <span class="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-md bg-teal-600 text-white">
+                                            Latest Checkpoint
                                         </span>
                                     @endif
                                 </h4>
@@ -474,99 +546,85 @@
             </div>
         </section>
 
-        <!-- Sidebar Summary Vault -->
+        <!-- Right: Summary & Actions -->
         <aside class="space-y-6">
-            <!-- Consignment Summary Card -->
-            <section class="bg-white rounded-3xl p-6 border border-slate-200 shadow-2xs">
-                <h3 class="text-base font-bold text-slate-900 pb-3 border-b border-slate-100">
-                    Consignment Manifest Details
+
+            <!-- Route Map Card -->
+            <section class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-3">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                        <i class="fas fa-map-location-dot text-teal-600"></i> Nepal Route Map
+                    </span>
+                    <span class="text-[10px] text-slate-400 font-mono">Highway Fleet</span>
+                </div>
+
+                <div class="rounded-2xl overflow-hidden border border-slate-200 relative">
+                    <div id="domesticRouteMap" class="w-full h-56 z-0"></div>
+                </div>
+
+                <div class="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+                    <span>{{ $shipment->sender_city ?: 'Kathmandu' }}</span>
+                    <span>&rarr;</span>
+                    <span>Highway Transit</span>
+                    <span>&rarr;</span>
+                    <span>{{ $shipment->receiver_city ?: 'Depot' }}</span>
+                </div>
+            </section>
+
+            <!-- Consignment Manifest Details -->
+            <section class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs space-y-4">
+                <h3 class="text-sm font-bold text-slate-900 pb-3 border-b border-slate-100 flex items-center justify-between">
+                    <span>Manifest Details</span>
+                    <span class="text-xs text-teal-700 font-mono font-bold">{{ $shipment->tracking_number }}</span>
                 </h3>
 
-                <dl class="divide-y divide-slate-100 text-xs mt-2">
-                    <div class="py-3 flex justify-between items-center">
+                <dl class="divide-y divide-slate-100 text-xs">
+                    <div class="py-2.5 flex justify-between items-center">
                         <dt class="text-slate-500">Tracking Number</dt>
                         <dd class="font-mono font-bold text-slate-900">{{ $shipment->tracking_number }}</dd>
                     </div>
 
-                    <div class="py-3 flex justify-between items-center">
+                    <div class="py-2.5 flex justify-between items-center">
                         <dt class="text-slate-500">Origin Hub</dt>
-                        <dd class="font-medium text-slate-800">{{ $shipment->sender_city ?: 'Kathmandu' }}</dd>
+                        <dd class="font-medium text-slate-800">{{ $shipment->sender_city ?: 'Kathmandu Central Sorting Hub' }}</dd>
                     </div>
 
-                    <div class="py-3 flex justify-between items-center">
+                    <div class="py-2.5 flex justify-between items-center">
                         <dt class="text-slate-500">Destination Hub</dt>
                         <dd class="font-medium text-slate-800">{{ $shipment->receiver_city ?: 'District Depot' }}</dd>
                     </div>
 
-                    <div class="py-3 flex justify-between items-center">
+                    <div class="py-2.5 flex justify-between items-center">
                         <dt class="text-slate-500">Target Ward</dt>
                         <dd class="font-medium text-slate-800">Ward {{ $shipment->receiver_ward ?: '1' }}, {{ $shipment->receiver_zone }}</dd>
                     </div>
 
-                    <div class="py-3 flex justify-between items-center">
-                        <dt class="text-slate-500">Service Category</dt>
-                        <dd class="font-bold text-teal-700">{{ strtoupper($service['label']) }}</dd>
-                    </div>
-
-                    <div class="py-3 flex justify-between items-center">
+                    <div class="py-2.5 flex justify-between items-center">
                         <dt class="text-slate-500">Total Weight</dt>
                         <dd class="font-bold text-slate-900">{{ number_format($shipment->weight ?? 1, 2) }} kg</dd>
                     </div>
 
-                    <div class="py-3 flex justify-between items-center">
+                    <div class="py-2.5 flex justify-between items-center">
                         <dt class="text-slate-500">Booking Date</dt>
                         <dd class="font-medium text-slate-800">{{ $shipment->created_at->format('d M Y') }}</dd>
                     </div>
                 </dl>
 
-                <!-- Privacy Safe Notice -->
-                <div class="mt-4 p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-[11px] text-slate-500 flex items-start gap-2 leading-relaxed">
-                    <i class="fas fa-shield-halved text-slate-400 text-xs shrink-0 mt-0.5"></i>
-                    <span>In accordance with data protection guidelines, recipient phone numbers and detailed street addresses are protected.</span>
-                </div>
-            </section>
-
-            <!-- OFFICIAL DOMESTIC CONSIGNMENT WAYBILL (HAWB) CARD -->
-            <section class="rounded-3xl border border-teal-100 bg-gradient-to-br from-teal-50/50 via-white to-emerald-50/40 p-6 shadow-sm">
-                <div class="flex items-center gap-3 border-b border-teal-100/80 pb-4 mb-4">
-                    <div class="h-10 w-10 rounded-2xl bg-teal-600 text-white flex items-center justify-center text-base shadow-sm">
-                        <i class="fas fa-file-invoice"></i>
-                    </div>
-                    <div>
-                        <h4 class="font-bold text-sm text-slate-900">Official Freight Waybill</h4>
-                        <p class="text-[11px] text-slate-500">Official Consignment Note (A4 · 2 Copies)</p>
-                    </div>
-                </div>
-                <p class="text-xs text-slate-600 mb-4 leading-relaxed">
-                    Official non-monetary domestic freight waybill with Consignee Delivery Run-sheet Copy, Proof of Delivery (POD) Carrier Copy, and regional routing barcode.
-                </p>
-                <div class="space-y-2">
+                <div class="pt-2">
                     <a href="{{ route('tracking.hawb.print', $shipment->tracking_number) }}" target="_blank" class="w-full py-2.5 px-4 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition shadow-xs">
-                        <i class="fas fa-print"></i> <span>Print Official Waybill (A4)</span>
+                        <i class="fas fa-print"></i> <span>Print Waybill (A4)</span>
                     </a>
-                    <a href="{{ route('tracking.hawb.popup', $shipment->tracking_number) }}" target="_blank" class="w-full py-2 px-4 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs border border-slate-200 flex items-center justify-center gap-2 transition">
-                        <i class="fas fa-receipt text-slate-400"></i> <span>Single-Page Print Slip</span>
-                    </a>
+                </div>
+
+                <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-[11px] text-slate-500 flex items-start gap-2 leading-relaxed">
+                    <i class="fas fa-shield-halved text-teal-600 text-xs shrink-0 mt-0.5"></i>
+                    <span>In accordance with data protection guidelines, recipient phone numbers and street addresses are protected.</span>
                 </div>
             </section>
 
-            <!-- Support & Quick Actions -->
-            <section class="bg-slate-900 rounded-3xl p-6 text-white border border-slate-800">
-                <h4 class="font-bold text-sm text-white">Need Delivery Support?</h4>
-                <p class="text-xs text-slate-300 mt-1.5 leading-relaxed">
-                    Quote reference <span class="font-mono text-teal-300 font-bold">{{ $shipment->tracking_number }}</span> when calling dispatch.
-                </p>
-                <div class="mt-4 space-y-2">
-                    <a href="tel:+97715970123" class="w-full py-2.5 px-4 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition">
-                        <i class="fas fa-phone"></i> +977-1-5970123
-                    </a>
-                    <a href="{{ route('tracking.page') }}" class="w-full py-2.5 px-4 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs flex items-center justify-center gap-2 transition">
-                        <i class="fas fa-search"></i> Track Another Consignment
-                    </a>
-                </div>
-            </section>
         </aside>
     </div>
+
 </div>
 
 <!-- SUBSCRIBE ALERTS MODAL -->
@@ -601,13 +659,13 @@
             </div>
 
             <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1">Mobile Phone (Nepal SMS)</label>
-                <input type="text" name="phone" placeholder="98XXXXXXXX" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                <label class="block text-xs font-bold text-slate-700 mb-1">Mobile Phone (SMS)</label>
+                <input type="text" name="phone" placeholder="e.g. +977-9812345678" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none">
             </div>
 
             <button type="submit" class="w-full py-2.5 px-4 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition">
                 <i class="fas fa-check"></i>
-                <span>Subscribe to Delivery Alerts</span>
+                <span>Subscribe to Tracking Updates</span>
             </button>
         </form>
     </div>
@@ -633,7 +691,6 @@ function closeDomesticSubscribeModal() {
     document.getElementById('domesticSubscribeModal').classList.add('hidden');
 }
 
-// Initialize Nepal Provincial Route Map
 document.addEventListener('DOMContentLoaded', function () {
     if (typeof L === 'undefined') return;
 
@@ -649,127 +706,24 @@ document.addEventListener('DOMContentLoaded', function () {
         maxZoom: 18
     }).addTo(map);
 
-    const createPin = (color, label) => L.divIcon({
-        className: 'custom-nepal-pin',
-        html: `<div style="background-color: ${color}; width: 28px; height: 28px; border-radius: 8px; border: 2px solid white; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 10px; font-family: monospace; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">${label}</div>`,
-        iconSize: [28, 28],
-        iconAnchor: [14, 14]
+    const createMarkerIcon = (color, label) => L.divIcon({
+        className: 'custom-dom-marker',
+        html: `<div style="background-color: ${color}; width: 24px; height: 24px; border-radius: 6px; border: 2px solid white; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 9px; font-family: monospace; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">${label}</div>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
     });
 
-    const m1 = L.marker([origin.lat, origin.lng], { icon: createPin('#0d9488', 'ORG') })
-        .addTo(map)
-        .bindPopup(`<b>${origin.name || 'Origin Hub'}</b><br>Intake & Dispatch Hub`);
+    const m1 = L.marker([origin.lat, origin.lng], { icon: createMarkerIcon('#2563eb', 'ORG') }).addTo(map);
+    const m2 = L.marker([dest.lat, dest.lng], { icon: createMarkerIcon('#059669', 'DST') }).addTo(map);
 
-    const m2 = L.marker([dest.lat, dest.lng], { icon: createPin('#10b981', 'DST') })
-        .addTo(map)
-        .bindPopup(`<b>${dest.name || 'Destination Hub'}</b><br>Destination District Depot`);
-
-    // Intermediate highway waypoints across Nepal's arterial network
-    function buildNepalHighwayPath(start, finish) {
-        const waypoints = [[start.lat, start.lng]];
-
-        // If route involves Kathmandu and Western Nepal (e.g. Pokhara, Butwal, Chitwan)
-        const isWestbound = finish.lng < start.lng;
-        const isSouthbound = finish.lat < start.lat;
-
-        if (Math.abs(start.lng - finish.lng) > 0.4 || Math.abs(start.lat - finish.lat) > 0.4) {
-            // Nagdhunga gateway pass
-            waypoints.push([27.7011, 85.2150]);
-            // Naubise junction
-            waypoints.push([27.7214, 85.1612]);
-            // Malekhu valley
-            waypoints.push([27.8123, 84.8214]);
-            // Mugling junction (Prithvi & Narayanghat highway split)
-            waypoints.push([27.8542, 84.5512]);
-
-            if (isSouthbound && !isWestbound) {
-                // Towards Narayangarh / Chitwan
-                waypoints.push([27.6934, 84.4285]);
-            } else if (isWestbound) {
-                // Towards Tanahun / Damauli
-                waypoints.push([27.9712, 84.2814]);
-            }
-        }
-
-        waypoints.push([finish.lat, finish.lng]);
-        return waypoints;
-    }
-
-    const highwayRoute = buildNepalHighwayPath(origin, dest);
-
-    // Render glowing highway path
-    const polyline = L.polyline(highwayRoute, {
-        color: '#14b8a6',
-        weight: 4.5,
-        opacity: 0.9,
+    const poly = L.polyline([[origin.lat, origin.lng], [dest.lat, dest.lng]], {
+        color: '#0d9488',
+        weight: 3,
         dashArray: '6, 8',
-        className: 'highway-dash'
     }).addTo(map);
 
-    // Live Moving Delivery Vehicle
-    const createTruckIcon = () => L.divIcon({
-        className: 'custom-live-truck',
-        html: `<div class="live-truck-marker"><i class="fas fa-truck text-white text-xs"></i></div>`,
-        iconSize: [36, 36],
-        iconAnchor: [18, 18]
-    });
-
-    const liveTruck = L.marker(highwayRoute[0], { icon: createTruckIcon() }).addTo(map);
-
-    let truckStep = 0;
-    const totalTruckSteps = highwayRoute.length;
-    setInterval(() => {
-        truckStep = (truckStep + 1) % totalTruckSteps;
-        liveTruck.setLatLng(highwayRoute[truckStep]);
-
-        const simulatedSpeed = Math.round(52 + (Math.random() * 14));
-        const domSpeedEl = document.getElementById('domSpeed');
-        if (domSpeedEl) domSpeedEl.innerText = `Fleet: ${simulatedSpeed} km/h`;
-    }, 1200);
-
-    const group = new L.featureGroup([m1, m2, polyline]);
-    map.fitBounds(group.getBounds().pad(0.25));
-
-    // Domestic 30-Second Live Polling Engine
-    let domSecondsLeft = 30;
-    const domCountdownEl = document.getElementById('domCountdown');
-    const domAutoSyncEl = document.getElementById('domAutoSync');
-    const domTracking = "{{ $shipment->tracking_number }}";
-
-    function refreshDomesticTelemetry() {
-        if (!domTracking) return;
-        if (domAutoSyncEl) {
-            domAutoSyncEl.innerHTML = '<i class="fas fa-rotate animate-spin text-[10px]"></i> <span>Syncing...</span>';
-        }
-
-        fetch(`/api/v1/track/${domTracking}`)
-            .then(res => res.json())
-            .then(res => {
-                if (res.success && res.data) {
-                    if (domAutoSyncEl) {
-                        domAutoSyncEl.innerHTML = '<i class="fas fa-check text-emerald-300 text-[10px]"></i> <span class="text-emerald-300 font-bold">Synced</span>';
-                        setTimeout(() => {
-                            domAutoSyncEl.innerHTML = '<i class="fas fa-rotate text-[10px]"></i> <span>Sync: <span id="domCountdown">30</span>s</span>';
-                        }, 2500);
-                    }
-                }
-            })
-            .catch(() => {
-                if (domAutoSyncEl) {
-                    domAutoSyncEl.innerHTML = '<i class="fas fa-rotate text-[10px]"></i> <span>Sync: <span id="domCountdown">30</span>s</span>';
-                }
-            });
-    }
-
-    setInterval(() => {
-        domSecondsLeft--;
-        if (domSecondsLeft <= 0) {
-            domSecondsLeft = 30;
-            refreshDomesticTelemetry();
-        }
-        const el = document.getElementById('domCountdown');
-        if (el) el.textContent = domSecondsLeft;
-    }, 1000);
+    const group = new L.featureGroup([m1, m2, poly]);
+    map.fitBounds(group.getBounds().pad(0.3));
 });
 </script>
 @endpush

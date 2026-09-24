@@ -32,6 +32,56 @@
         </div>
     </div>
 
+    <!-- AI Logistics Copilot: Proactive Occasion & Schedule Alert -->
+    @php
+        $aiService = app(\App\Services\AiAssistantService::class);
+        $aiGreeting = $aiService->generateGreeting(Auth::user());
+    @endphp
+    <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-teal-950 via-slate-900 to-teal-950 border border-teal-500/30 p-4 sm:p-5 shadow-sm text-white">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div class="flex items-center gap-3.5 min-w-0">
+                <div class="relative w-11 h-11 rounded-2xl bg-gradient-to-tr from-teal-500 to-emerald-400 p-0.5 shadow-md flex-shrink-0">
+                    <div class="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center text-xl">
+                        <span>🤖</span>
+                    </div>
+                    <span class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 border-2 border-slate-950 rounded-full flex items-center justify-center text-[8px] text-slate-950 font-bold">
+                        <i class="fas fa-check"></i>
+                    </span>
+                </div>
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-xs font-black text-teal-300">NETPACK AI Copilot</span>
+                        <span class="px-2 py-0.5 rounded text-[9px] font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30 uppercase tracking-wider">
+                            Voice & Chat Ready
+                        </span>
+                        @if(!empty($aiGreeting['festive_notice']))
+                            <span class="px-2 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase tracking-wider">
+                                🗓️ {{ $aiGreeting['festive_notice']['occasion'] }} (Cutoff: {{ $aiGreeting['festive_notice']['cutoff'] }})
+                            </span>
+                        @endif
+                    </div>
+                    <p class="text-xs text-slate-200 mt-1 leading-snug">
+                        {{ $aiGreeting['greeting'] }}
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto">
+                <button type="button"
+                        onclick="document.querySelector('#netpack-ai-copilot button[aria-label=\'Open AI Logistics Copilot\']')?.click()"
+                        class="w-full sm:w-auto px-3.5 py-2 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5 focus:outline-none">
+                    <i class="fas fa-microphone"></i>
+                    <span>Talk with AI</span>
+                </button>
+                <a href="{{ route('ai.assistant') }}" 
+                   class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-medium text-xs border border-slate-700 transition flex items-center justify-center gap-1 whitespace-nowrap">
+                    <span>Schedules & Hubs</span>
+                    <i class="fas fa-arrow-right text-[10px]"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
     <!-- Quick Metrics Cards -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <a href="{{ route('client.history', ['filter' => 'all']) }}" class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-4 hover:border-teal-500/40 transition block">

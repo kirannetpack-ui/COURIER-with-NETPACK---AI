@@ -1,7 +1,7 @@
-# COURIER with NETPACK &middot; Enterprise Platform
+# COURIER-with-NETPACK---AI &middot; Enterprise Platform
 
 [![System Architecture PDF](https://img.shields.io/badge/System%20Documentation-Download%20PDF-0d9488?style=for-the-badge&logo=adobeacrobatreader)](NETPACK_SYSTEM_README_DOCUMENTATION.pdf)
-[![Test Suite](https://img.shields.io/badge/Test%20Suite-143%20Passed%20%7C%20100%25-10b981?style=for-the-badge&logo=php)](tests/)
+[![Test Suite](https://img.shields.io/badge/Test%20Suite-230%20Passed%20%7C%20100%25-10b981?style=for-the-badge&logo=php)](tests/)
 [![Laravel](https://img.shields.io/badge/Framework-Laravel%2012%20%7C%20PHP%208.3-f43f5e?style=for-the-badge&logo=laravel)](https://laravel.com)
 [![MySQL](https://img.shields.io/badge/Database-MySQL%208.0%20%2F%20MariaDB-00758F?style=for-the-badge&logo=mysql)](https://mysql.com)
 
@@ -26,6 +26,7 @@
    - [C. Nepal Domestic Logistics (7 Provinces & 77 Districts)](#c-nepal-domestic-logistics-7-provinces--77-districts)
    - [D. Universal Tracking & Zero-Charges HAWB Generator](#d-universal-tracking--zero-charges-hawb-generator)
    - [E. Compacted Role Portals & Permanent Desktop Sidebar](#e-compacted-role-portals--permanent-desktop-sidebar)
+   - [F. Omnipresent AI Logistics Copilot (Voice & Text Assistance)](#f-omnipresent-ai-logistics-copilot-voice--text-assistance)
 7. [Database Schema & Data Model Reference](#7-database-schema--data-model-reference)
 8. [Automated Testing & Quality Assurance](#8-automated-testing--quality-assurance)
 9. [Production Deployment & Background Daemons](#9-production-deployment--background-daemons)
@@ -123,8 +124,8 @@ Follow this guide to build and run the entire project from scratch in a local en
 
 ### Step 1: Clone the Repository
 ```bash
-git clone https://github.com/kirannetpack-ui/COURIER-by-NETPACK.git
-cd COURIER-by-NETPACK
+git clone https://github.com/kirannetpack-ui/COURIER-with-NETPACK---AI.git
+cd COURIER-with-NETPACK---AI
 ```
 
 ### Step 2: Install Composer Dependencies
@@ -294,6 +295,27 @@ The E-Commerce Delivery platform connects individual riders and domestic courier
 * **Permanent Desktop Sidebar**:
   * The desktop navigation sidebar (`lg:` and up) is locked into static layout across all 7 role layouts and guest views.
   * Zero unexpected collapse or layout shifts. Mobile screens retain smooth off-canvas drawer interactions.
+
+---
+
+### F. Omnipresent AI Logistics Copilot (Voice & Text Assistance)
+
+* **Multi-Modal Voice & Chat Hub**:
+  * **Real-Time Voice Input (Speech-to-Text)**: Browser-native Web Speech API with real-time waveform visualization, multi-accent recognition (including Nepali city and logistics terminology), and optional OpenAI Whisper compatibility.
+  * **Voice Synthesis (Text-to-Speech)**: Zero-latency natural vocalization with SpeechSynthesis and ElevenLabs / OpenAI TTS neural engine compatibility.
+* **Culturally Attuned & Non-Monotonous Improvisation**:
+  * Automatically addresses authenticated clients by name (e.g. *"Namaste Kiran Ji!"*, *"Good morning Captain!"*).
+  * Dynamic rotation of greeting phrases and animated gestures (👋 Waving, 🎙️ Speaking with audio equalizer, 🧠 Thinking neural pulse, 🎉 Festival celebration, ⚠️ Cutoff warning).
+* **Deep Logistics Knowledge Base**:
+  * **Door-to-Door Delivery Security**: Dual cryptographic OTP handover (Secret 6-digit Pickup OTP from Seller, Secret 6-digit Delivery OTP from Customer), verified POD photos, and tiered COD limits (Level 0 through Level 4).
+  * **Domestic Nepal Coverage**: 7 Provinces, 77 Districts, highway night linehaul schedules, and nylon bag QR manifests.
+  * **International Air Cargo**: Tribhuvan International Airport (TIA) Cargo Terminal, domestic feeder linehaul from outside Kathmandu Valley, zero-charge HAWBs, volumetric weight ($L \times W \times H / 5000$).
+* **Festival & Logistics Scheduling Intelligence**:
+  * Proactive calendar awareness for Bada Dashain, Tihar / Deepawali, Chhath Puja, Nepali New Year, Black Friday, and Christmas cargo deadlines.
+  * Daily operational cutoffs: Same-Day pickup cutoff (12:00 PM), TIA cargo intake cutoff (3:00 PM), and highway night linehauls (7:00 PM).
+* **Multi-Provider Global AI Architecture**:
+  * Defaults to a built-in offline autonomous expert engine (zero API cost, instant sub-50ms response).
+  * Seamlessly connects to **OpenAI (GPT-4o / Realtime)**, **Google Gemini**, **Anthropic Claude**, and **ElevenLabs** via `.env` configuration.
 
 ---
 

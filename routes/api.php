@@ -36,6 +36,13 @@ Route::get('/v1/track/{trackingNumber}', [PublicTrackingApiController::class, 't
 Route::post('/webhooks/carrier-tracking/{carrier}', [CarrierWebhookController::class, 'handle'])
     ->name('api.webhooks.carrier');
 
+// AI Logistics Assistant Endpoints
+Route::prefix('ai')->group(function () {
+    Route::get('/greeting', [\App\Http\Controllers\AiAssistantController::class, 'greeting'])->name('api.ai.greeting');
+    Route::post('/chat', [\App\Http\Controllers\AiAssistantController::class, 'chat'])->name('api.ai.chat');
+    Route::get('/occasions', [\App\Http\Controllers\AiAssistantController::class, 'occasions'])->name('api.ai.occasions');
+});
+
 Route::prefix('auth')->middleware('throttle:5,1')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->name('api.auth.login');
     Route::post('/register', [AuthController::class, 'register'])->name('api.auth.register');

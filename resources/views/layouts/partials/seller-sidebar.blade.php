@@ -46,6 +46,16 @@
             <span>Dashboard</span>
         </a>
 
+        <!-- AI Logistics Copilot & Voice -->
+        <a href="{{ route('ai.assistant') }}" 
+           class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition {{ request()->routeIs('ai.assistant*') ? 'bg-emerald-600 text-white font-bold shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+            <i class="fas fa-robot w-4 text-center text-teal-400"></i>
+            <span>AI Logistics Copilot</span>
+            <span class="ml-auto text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                Voice
+            </span>
+        </a>
+
         <!-- 2. Rate Calculator & Inquiry -->
         <a href="{{ route('rates.inquiry') }}" target="_blank" 
            class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition text-slate-300 hover:bg-slate-800 hover:text-emerald-300 group">

@@ -463,5 +463,8 @@
         </div>
     </footer>
 
+    <!-- Omnipresent AI Logistics Copilot (Voice & Text) -->
+    <x-ai-copilot-widget />
+
 </body>
 </html>

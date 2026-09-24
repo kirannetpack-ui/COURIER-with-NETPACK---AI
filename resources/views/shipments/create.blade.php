@@ -599,15 +599,23 @@ document.addEventListener('alpine:init', () => {
                         <i class="fas fa-certificate"></i>
                     </div>
                     <div>
-                        <div class="flex items-center gap-2 mb-0.5">
+                        <div class="flex items-center gap-2 mb-0.5 flex-wrap">
                             <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider bg-teal-500/20 text-teal-300 border border-teal-500/30">
                                 Verified Rate Applied
                             </span>
                             <span class="text-xs text-slate-300 font-bold">{{ request('receiver_country') }}</span>
+                            @if(request('pickup_location_type') === 'outside_ktm')
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                    <i class="fas fa-truck-ramp-box text-[9px] mr-1"></i> Regional Feeder: {{ request('pickup_city') }}
+                                </span>
+                            @endif
                         </div>
                         <p class="text-xs text-slate-300">
                             Quoted Tariff: <span class="text-teal-300 font-mono font-black text-sm">Rs. {{ number_format((float)request('quoted_rate')) }}</span>
                             <span class="text-[11px] text-slate-400 ml-1">({{ request('chargeable_weight', request('weight')) }} KG)</span>
+                            @if((float)request('domestic_feeder_charge') > 0)
+                                <span class="text-amber-300 text-xs ml-1 font-semibold">&bull; Includes Rs. {{ number_format((float)request('domestic_feeder_charge')) }} Feeder Linehaul</span>
+                            @endif
                         </p>
                     </div>
                 </div>

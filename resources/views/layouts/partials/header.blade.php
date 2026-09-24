@@ -66,6 +66,16 @@
                 <i class="fas fa-search-location text-base"></i>
             </a>
 
+            <!-- AI Copilot Quick Launch Button -->
+            <button type="button"
+                    onclick="document.querySelector('#netpack-ai-copilot button[aria-label=\'Open AI Logistics Copilot\']')?.click()"
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 transition shadow-2xs group focus:outline-none"
+                    title="Launch AI Voice & Chat Assistant">
+                <span class="w-2 h-2 rounded-full bg-teal-500 group-hover:animate-ping"></span>
+                <i class="fas fa-robot text-teal-600"></i>
+                <span class="hidden sm:inline">AI Copilot</span>
+            </button>
+
             <!-- Notifications -->
             <a href="{{ route('notifications.index') }}" 
                class="relative p-2 text-slate-500 hover:text-teal-600 hover:bg-slate-100 rounded-lg transition"
