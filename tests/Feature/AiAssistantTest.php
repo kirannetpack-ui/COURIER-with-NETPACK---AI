@@ -294,5 +294,164 @@ class AiAssistantTest extends TestCase
         $response->assertSee('Yes, Guide Me by Voice');
         $response->assertSee('No, I\'ll Type Manually', false);
         $response->assertSee('voice-autofill-header-btn');
+        $response->assertSee('Nepalese Accent Calibrated');
+    }
+
+    public function test_ai_understands_nepglish_and_romanized_nepali_keywords(): void
+    {
+        $user = User::factory()->create(['name' => 'Kiran']);
+
+        // Query with Nepglish/Nepali terms: "bata", "pathaune", "bis kg", "kati lagchha"
+        $response = $this->actingAs($user)->postJson('/ai/chat', [
+            'message' => 'Mero naam Kiran ho, Jhapa bata Poland pathaune bis kg luga cha, kati lagchha ra process k ho?',
+        ]);
+
+        $response->assertStatus(200);
+        $content = $response->json('response');
+
+        // Verify entity recognition from Romanized Nepali
+        $this->assertStringContainsString('Jhapa', $content);
+        $this->assertStringContainsString('Poland', $content);
+        $this->assertStringContainsString('20 kg', $content);
+        $this->assertStringContainsString('Consignment Roadmap', $content);
+        $this->assertStringContainsString('Kiran Ji', $response->json('client_name'));
+
+        // Check speech contains respectful Nepalese greeting and rate/cadence
+        $speech = $response->json('speech_text');
+        $this->assertStringContainsString('Namaste Kiran Ji', $speech);
+    }
+
+    public function test_voice_autofill_parses_nepali_numbers_and_local_commodities(): void
+    {
+        $user = User::factory()->create();
+
+        // 1. Spoken weight with Romanized Nepali word "pachis" (25)
+        $resWeight = $this->actingAs($user)->postJson('/ai/voice-autofill-parse', [
+            'step' => 'weight',
+            'spoken_text' => 'pachis kilo ko cha',
+        ]);
+        $resWeight->assertStatus(200);
+        $this->assertEquals(25.0, $resWeight->json('data.parsed_value'));
+
+        // 2. Spoken phone with Romanized Nepali numbers
+        $resPhone = $this->actingAs($user)->postJson('/ai/voice-autofill-parse', [
+            'step' => 'sender_phone',
+            'spoken_text' => 'mero phone number nau aath char ek dui tin char panch chha sat ho',
+        ]);
+        $resPhone->assertStatus(200);
+        $this->assertEquals('9841234567', $resPhone->json('data.parsed_value'));
+
+        // 3. Spoken commodity "luga" -> "Apparel & Garments"
+        $resDesc = $this->actingAs($user)->postJson('/ai/voice-autofill-parse', [
+            'step' => 'description',
+            'spoken_text' => 'bhari ma sabai luga cha',
+        ]);
+        $resDesc->assertStatus(200);
+        $this->assertEquals('Apparel & Garments', $resDesc->json('data.parsed_value'));
+
+        // 4. Spoken destination with suffix "Poland pathaune"
+        $resDest = $this->actingAs($user)->postJson('/ai/voice-autofill-parse', [
+            'step' => 'destination',
+            'spoken_text' => 'Poland pathaune ho',
+            'mode' => 'international',
+        ]);
+        $resDest->assertStatus(200);
+        $this->assertEquals('Poland', $resDest->json('data.parsed_value'));
+    }
+
+    public function test_admin_operational_intelligence_endpoint_and_win_win_win_generation(): void
+    {
+        $admin = User::factory()->create([
+            'name' => 'General Manager',
+            'user_type' => 'super_admin',
+        ]);
+
+        $response = $this->actingAs($admin)->getJson('/admin/ai/operational-intelligence');
+
+        $response->assertStatus(200);
+        $response->assertJsonStructure([
+            'success',
+            'issues',
+            'critical_count',
+            'warning_count',
+            'report' => [
+                'speech_text',
+                'response',
+            ],
+        ]);
+
+        $issues = $response->json('issues');
+        $this->assertIsArray($issues);
+        $this->assertNotEmpty($issues);
+
+        // Verify each issue contains the Tripartite Win-Win-Win structure
+        foreach ($issues as $iss) {
+            $this->assertArrayHasKey('win_win_win', $iss);
+            $this->assertArrayHasKey('client', $iss['win_win_win']);
+            $this->assertArrayHasKey('operations', $iss['win_win_win']);
+            $this->assertArrayHasKey('company', $iss['win_win_win']);
+            $this->assertNotEmpty($iss['win_win_win']['client']);
+            $this->assertNotEmpty($iss['win_win_win']['operations']);
+            $this->assertNotEmpty($iss['win_win_win']['company']);
+        }
+    }
+
+    public function test_admin_can_execute_win_win_resolution_action(): void
+    {
+        $admin = User::factory()->create([
+            'name' => 'Operations Director',
+            'user_type' => 'super_admin',
+        ]);
+
+        // Create a shipment marked as delayed
+        $shipment = \App\Models\Shipment::create([
+            'customer_id' => $admin->id,
+            'tracking_number' => 'NP-TEST-DELAY-01',
+            'sender_name' => 'Kiran Sender',
+            'receiver_name' => 'Client Receiver',
+            'sender_phone' => '9841000000',
+            'receiver_phone' => '9842000000',
+            'origin_city' => 'Jhapa',
+            'destination_city' => 'Kathmandu',
+            'status' => 'in_transit',
+            'is_delayed' => true,
+            'shipment_type' => 'domestic',
+            'receiver_country' => 'Nepal',
+            'weight' => 2.0,
+        ]);
+
+
+
+        $response = $this->actingAs($admin)->postJson('/admin/ai/resolve-issue-action', [
+            'issue_id' => 'delay-' . $shipment->id,
+            'action_type' => 'notify_and_reroute',
+            'shipment_id' => $shipment->id,
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertTrue($response->json('success'));
+
+        // Verify shipment status was updated
+        $freshShipment = $shipment->fresh();
+        $this->assertFalse((bool) $freshShipment->is_delayed);
+        $this->assertStringContainsString('AI Reassurance triggered', $freshShipment->status_notes);
+    }
+
+    public function test_admin_dashboard_renders_ai_operational_intelligence_hub(): void
+    {
+        $admin = User::factory()->create([
+            'name' => 'Admin User',
+            'user_type' => 'super_admin',
+        ]);
+
+        $response = $this->actingAs($admin)->get('/admin/dashboard');
+
+        $response->assertStatus(200);
+        $response->assertSee('AI Operational Intelligence', false);
+        $response->assertSee('Win-Win-Win Hub', false);
+        $response->assertSee('Nepalese Orientation', false);
+        $response->assertSee('Voice Briefing (Nepali Cadence)', false);
     }
 }
+
+

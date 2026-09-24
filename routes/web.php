@@ -1013,6 +1013,9 @@ Route::get('/ai/greeting', [AiAssistantController::class, 'greeting'])->name('ai
 Route::post('/ai/chat', [AiAssistantController::class, 'chat'])->name('ai.chat');
 Route::get('/ai/occasions', [AiAssistantController::class, 'occasions'])->name('ai.occasions');
 Route::post('/ai/voice-autofill-parse', [AiAssistantController::class, 'voiceAutofillParse'])->name('ai.voice_autofill_parse');
+Route::get('/admin/ai/operational-intelligence', [AiAssistantController::class, 'adminOperationalIntelligence'])->name('admin.ai.operational_intelligence');
+Route::post('/admin/ai/resolve-issue-action', [AiAssistantController::class, 'adminResolveIssueAction'])->name('admin.ai.resolve_issue_action');
+
 
 // =============================================
 // FALLBACK ROUTE

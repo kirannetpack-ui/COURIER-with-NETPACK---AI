@@ -753,9 +753,12 @@ document.addEventListener('alpine:init', () => {
                         <span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-teal-500/20 text-teal-300 border border-teal-500/30">
                             Hands-Free Voice Typing
                         </span>
+                        <span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-1">
+                            <span>🇳🇵</span> Nepalese Accent Calibrated
+                        </span>
                     </div>
                     <p class="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
-                        Namaste <strong>{{ session('ai_preferred_name', explode(' ', Auth::user()->name ?? 'Client')[0]) }} Ji</strong>! Our AI Copilot can speak with you, ask for each consignment detail step-by-step, and auto-type the information directly into the form fields as you answer.
+                        Namaste <strong>{{ session('ai_preferred_name', explode(' ', Auth::user()->name ?? 'Client')[0]) }} Ji</strong>! Our AI Copilot is calibrated for <strong>Nepalese English & Romanized Nepali</strong> (e.g. <em>Jhapa bata</em>, <em>Poland pathaune</em>, <em>20 kg</em>, <em>luga</em>). It speaks with respectful warmth and auto-types every field as you answer.
                     </p>
                 </div>
             </div>
@@ -3308,7 +3311,8 @@ document.addEventListener('alpine:init', () => {
             const rec = new SpeechRecognition();
             rec.continuous = false;
             rec.interimResults = true;
-            rec.lang = 'en-US';
+            // South Asian acoustic model accommodates Nepalese accent and local locations (Jhapa, Kathmandu, etc.)
+            rec.lang = 'en-IN';
 
             rec.onstart = function() {
                 window.aiVoiceAutofill.isListening = true;
@@ -3507,12 +3511,16 @@ document.addEventListener('alpine:init', () => {
         window.speechSynthesis.cancel();
         const clean = text.replace(/[#*`_~[\]()]/g, ' ').replace(/\s+/g, ' ').trim();
         const utterance = new SpeechSynthesisUtterance(clean);
-        utterance.rate = 1.0;
-        utterance.pitch = 1.0;
+        // Nepalese English cadence: measured, polite tempo with warm, respectful pitch
+        utterance.rate = 0.94;
+        utterance.pitch = 1.04;
 
         const voices = window.speechSynthesis.getVoices();
+        // Prioritize Nepali (ne-NP) -> South Asian English (en-IN / hi-IN) -> Natural English fallback
+        const nepaliVoice = voices.find(v => v.lang === 'ne-NP' || v.lang === 'ne_NP' || v.lang.startsWith('ne'));
+        const southAsianVoice = voices.find(v => (v.lang === 'en-IN' || v.lang === 'hi-IN' || v.lang.startsWith('en-IN')) && (v.name.includes('India') || v.name.includes('Hindi') || v.name.includes('Heera') || v.name.includes('Ravi') || v.name.includes('Neerja') || v.name.includes('Google')));
         const naturalVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha')));
-        if (naturalVoice) utterance.voice = naturalVoice;
+        if (nepaliVoice || southAsianVoice || naturalVoice) utterance.voice = nepaliVoice || southAsianVoice || naturalVoice;
 
         let completed = false;
         const finishSpeaking = () => {
@@ -3573,8 +3581,11 @@ document.addEventListener('alpine:init', () => {
 
     function parseSpokenPhoneNumber(text) {
         const wordToDigit = {
-            'zero': '0', 'one': '1', 'two': '2', 'three': '3', 'four': '4',
-            'five': '5', 'six': '6', 'seven': '7', 'eight': '8', 'nine': '9'
+            'sunya': '0', 'zero': '0', 'ek': '1', 'one': '1', 'dui': '2', 'two': '2',
+            'tin': '3', 'teen': '3', 'three': '3', 'char': '4', 'four': '4',
+            'panch': '5', 'paanch': '5', 'five': '5', 'chha': '6', 'six': '6',
+            'sat': '7', 'saat': '7', 'seven': '7', 'aath': '8', 'eight': '8',
+            'nau': '9', 'nine': '9'
         };
         let clean = text.toLowerCase();
         for (let [w, d] of Object.entries(wordToDigit)) {
@@ -3586,10 +3597,14 @@ document.addEventListener('alpine:init', () => {
 
     function parseSpokenWeight(text) {
         const wordToNum = {
-            'one': '1', 'two': '2', 'three': '3', 'four': '4', 'five': '5',
-            'six': '6', 'seven': '7', 'eight': '8', 'nine': '9', 'ten': '10',
-            'fifteen': '15', 'twenty': '20', 'twenty five': '25', 'thirty': '30',
-            'fifty': '50', 'half': '0.5'
+            'ek': '1', 'one': '1', 'dui': '2', 'two': '2', 'tin': '3', 'teen': '3', 'three': '3',
+            'char': '4', 'four': '4', 'panch': '5', 'paanch': '5', 'five': '5',
+            'chha': '6', 'six': '6', 'sat': '7', 'saat': '7', 'seven': '7',
+            'aath': '8', 'eight': '8', 'nau': '9', 'nine': '9', 'das': '10', 'ten': '10',
+            'pandhra': '15', 'fifteen': '15', 'bis': '20', 'bees': '20', 'twenty': '20',
+            'pachis': '25', 'twenty five': '25', 'tis': '30', 'thirty': '30',
+            'pachas': '50', 'fifty': '50', 'saya': '100', 'hundred': '100',
+            'aadha': '0.5', 'half': '0.5'
         };
         let clean = text.toLowerCase().replace(/point/g, '.');
         for (let [w, d] of Object.entries(wordToNum)) {
@@ -3600,7 +3615,11 @@ document.addEventListener('alpine:init', () => {
     }
 
     function parseCountryName(text) {
-        const t = text.toLowerCase();
+        // Strip common Nepali and English destination words
+        let clean = text.toLowerCase().replace(/^(to|for|destination\s+is|shipping\s+to|ma|lai)\s+/i, '');
+        clean = clean.replace(/\s+(pathaune|pathauna|ma|lai|pugne)$/i, '').trim();
+
+        const t = clean;
         const map = {
             'poland': 'Poland',
             'germany': 'Germany',
@@ -3630,7 +3649,7 @@ document.addEventListener('alpine:init', () => {
         for (let [k, v] of Object.entries(map)) {
             if (t.includes(k)) return v;
         }
-        return text.replace(/\b\w/g, l => l.toUpperCase()).trim();
+        return clean.replace(/\b\w/g, l => l.toUpperCase()).trim();
     }
 </script>
 @endpush

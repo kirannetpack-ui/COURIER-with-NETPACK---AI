@@ -123,6 +123,9 @@
                         <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30 uppercase tracking-wider">
                             Voice & Chat
                         </span>
+                        <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-1">
+                            <span>🇳🇵</span> Nepali Cadence
+                        </span>
                     </div>
                     <p class="text-[11px] text-teal-400/80 font-medium truncate flex items-center gap-1.5">
                         <span x-text="statusMessage">Namaste, ready to assist</span>
@@ -357,7 +360,8 @@ function aiCopilotWidget(config) {
                 this.recognition = new SpeechRecognition();
                 this.recognition.continuous = false;
                 this.recognition.interimResults = true;
-                this.recognition.lang = 'en-US';
+                // South Asian acoustic model accommodates Nepalese English accent and local terms (Jhapa, Kathmandu, etc.)
+                this.recognition.lang = 'en-IN';
 
                 this.recognition.onstart = () => {
                     this.isListening = true;
@@ -640,12 +644,15 @@ function aiCopilotWidget(config) {
             if (!cleanText) return;
 
             const utterance = new SpeechSynthesisUtterance(cleanText);
-            utterance.rate = 1.0;
-            utterance.pitch = 1.0;
+            // Nepalese English cadence: measured, polite tempo with warm, respectful pitch
+            utterance.rate = 0.94;
+            utterance.pitch = 1.04;
 
-            // Choose natural English voice if available
+            // Prioritize Nepali (ne-NP) -> South Asian English (en-IN / hi-IN) -> Natural English fallback
             const voices = window.speechSynthesis.getVoices();
-            const preferredVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha')));
+            const nepaliVoice = voices.find(v => v.lang === 'ne-NP' || v.lang === 'ne_NP' || v.lang.startsWith('ne'));
+            const southAsianVoice = voices.find(v => (v.lang === 'en-IN' || v.lang === 'hi-IN' || v.lang.startsWith('en-IN')) && (v.name.includes('India') || v.name.includes('Hindi') || v.name.includes('Heera') || v.name.includes('Ravi') || v.name.includes('Neerja') || v.name.includes('Google')));
+            const preferredVoice = nepaliVoice || southAsianVoice || voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha')));
             if (preferredVoice) {
                 utterance.voice = preferredVoice;
             }

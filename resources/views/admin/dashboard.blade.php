@@ -161,8 +161,227 @@
     </div>
 
     <!-- ============================================================= -->
+    <!-- AI OPERATIONAL INTELLIGENCE & WIN-WIN-WIN RESOLUTION HUB -->
+    <!-- ============================================================= -->
+    <div x-data="adminAiHub()" x-init="initHub()" class="bg-white rounded-3xl shadow-lg border border-slate-200/90 overflow-hidden transition-all duration-300">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-slate-950 via-teal-950 to-slate-900 px-6 py-5 text-white flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-teal-800/40">
+            <div class="flex items-start sm:items-center gap-3.5">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-teal-500 to-emerald-400 p-0.5 shadow-md flex-shrink-0">
+                    <div class="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center text-xl text-teal-300">
+                        <i class="fas fa-brain-circuit" x-show="!loading"></i>
+                        <i class="fas fa-spinner fa-spin text-teal-400" x-show="loading" style="display: none;"></i>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <h2 class="text-base font-black tracking-tight text-white flex items-center gap-2">
+                            <span>AI Operational Intelligence & Win-Win-Win Hub</span>
+                        </h2>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-teal-500/20 text-teal-300 border border-teal-500/30 flex items-center gap-1.5 font-mono">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                            Live Diagnostics
+                        </span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-1">
+                            <span>🇳🇵</span> Nepalese Orientation
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-300 mt-1">
+                        Proactive bottleneck detector across all 7 provinces & TIA air cargo gateway. Recommends verified tripartite solutions for Client, Operations, and NETPACK.
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 flex-wrap self-end md:self-center flex-shrink-0">
+                <!-- Voice Briefing Button -->
+                <button type="button" 
+                        @click="toggleVoiceBriefing()"
+                        :class="speechPlaying ? 'bg-rose-500 hover:bg-rose-600 text-white animate-pulse' : 'bg-teal-500/20 hover:bg-teal-500/30 text-teal-200 border border-teal-500/40'"
+                        class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-xs cursor-pointer">
+                    <i class="fas" :class="speechPlaying ? 'fa-stop' : 'fa-volume-high'"></i>
+                    <span x-text="speechPlaying ? 'Stop Briefing' : 'Voice Briefing (Nepali Cadence)'"></span>
+                </button>
+
+                <!-- Refresh Button -->
+                <button type="button" 
+                        @click="fetchOperationalIntelligence()"
+                        :disabled="loading"
+                        title="Re-scan network exceptions"
+                        class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition border border-slate-700/60 disabled:opacity-50">
+                    <i class="fas fa-arrows-rotate" :class="{ 'fa-spin': loading }"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Metric Badges & Filter Tabs -->
+        <div class="px-6 py-3.5 bg-slate-50 border-b border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div class="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+                <button type="button" 
+                        @click="selectedFilter = 'all'"
+                        :class="selectedFilter === 'all' ? 'bg-slate-900 text-white font-bold shadow-xs' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'"
+                        class="px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 flex-shrink-0">
+                    <span>All Issues</span>
+                    <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono" :class="selectedFilter === 'all' ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-700'" x-text="issues.length">0</span>
+                </button>
+                <button type="button" 
+                        @click="selectedFilter = 'critical'"
+                        :class="selectedFilter === 'critical' ? 'bg-rose-600 text-white font-bold shadow-xs' : 'bg-white text-rose-700 hover:bg-rose-50 border border-rose-200'"
+                        class="px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 flex-shrink-0">
+                    <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                    <span>Critical Holds</span>
+                    <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono" :class="selectedFilter === 'critical' ? 'bg-rose-700 text-white' : 'bg-rose-100 text-rose-800'" x-text="criticalCount">0</span>
+                </button>
+                <button type="button" 
+                        @click="selectedFilter = 'warning'"
+                        :class="selectedFilter === 'warning' ? 'bg-amber-600 text-white font-bold shadow-xs' : 'bg-white text-amber-700 hover:bg-amber-50 border border-amber-200'"
+                        class="px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 flex-shrink-0">
+                    <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                    <span>Operational Attention</span>
+                    <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono" :class="selectedFilter === 'warning' ? 'bg-amber-700 text-white' : 'bg-amber-100 text-amber-800'" x-text="warningCount">0</span>
+                </button>
+            </div>
+
+            <div class="flex items-center gap-2 text-slate-500 text-[11px]">
+                <i class="fas fa-handshake-angle text-teal-600"></i>
+                <span>Every solution guarantees a <strong>Win for Client</strong>, <strong>Win for Operations</strong>, and <strong>Win for NETPACK</strong>.</span>
+            </div>
+        </div>
+
+        <!-- Issues Cards Container -->
+        <div class="p-6">
+            <template x-if="loading && issues.length === 0">
+                <div class="py-12 text-center text-slate-400">
+                    <i class="fas fa-spinner fa-spin text-2xl text-teal-600 mb-2"></i>
+                    <p class="text-xs font-semibold">Scanning 7 provinces & air cargo gateways for operational bottlenecks...</p>
+                </div>
+            </template>
+
+            <template x-if="!loading && filteredIssues.length === 0">
+                <div class="p-8 rounded-2xl bg-emerald-50/60 border border-emerald-200 text-center">
+                    <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-3 text-xl">
+                        <i class="fas fa-check-double"></i>
+                    </div>
+                    <h3 class="text-sm font-black text-emerald-950">Logistics Corridors Operating at Peak Health</h3>
+                    <p class="text-xs text-emerald-800 mt-1 max-w-md mx-auto">
+                        No active bottlenecks matching current filters. All domestic highway linehauls and TIA export consignments are moving on SLA.
+                    </p>
+                </div>
+            </template>
+
+            <div class="space-y-4" x-show="filteredIssues.length > 0">
+                <template x-for="(iss, idx) in filteredIssues" :key="iss.id">
+                    <div class="p-5 rounded-2xl border transition-all duration-300"
+                         :class="{
+                             'bg-rose-50/40 border-rose-200/90 shadow-xs hover:border-rose-300': iss.severity === 'critical' && !isResolved(iss.id),
+                             'bg-amber-50/40 border-amber-200/90 shadow-xs hover:border-amber-300': iss.severity === 'warning' && !isResolved(iss.id),
+                             'bg-emerald-50/40 border-emerald-200/90 opacity-90': isResolved(iss.id)
+                         }">
+                        
+                        <!-- Top Row: Badges, Title, Action Route -->
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b"
+                             :class="isResolved(iss.id) ? 'border-emerald-200' : 'border-slate-200/70'">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider"
+                                      :class="{
+                                          'bg-rose-600 text-white': iss.severity === 'critical' && !isResolved(iss.id),
+                                          'bg-amber-600 text-white': iss.severity === 'warning' && !isResolved(iss.id),
+                                          'bg-emerald-600 text-white': isResolved(iss.id)
+                                      }"
+                                      x-text="isResolved(iss.id) ? 'RESOLVED' : (iss.severity === 'critical' ? 'CRITICAL EXCEPTION' : 'ATTENTION')">
+                                </span>
+
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-white text-slate-700 border border-slate-200 font-mono" x-text="iss.category">
+                                </span>
+
+                                <template x-if="iss.affected_entity">
+                                    <span class="text-xs font-mono font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200" x-text="iss.affected_entity"></span>
+                                </template>
+                            </div>
+
+                            <template x-if="iss.action_route">
+                                <a :href="iss.action_route" class="text-xs font-bold text-teal-700 hover:text-teal-900 flex items-center gap-1 self-start sm:self-auto">
+                                    <span x-text="iss.action_label || 'View Entity'"></span>
+                                    <i class="fas fa-arrow-up-right-from-square text-[10px]"></i>
+                                </a>
+                            </template>
+                        </div>
+
+                        <!-- Title & Root Cause -->
+                        <div class="mt-3">
+                            <h4 class="text-sm font-extrabold text-slate-900 flex items-center gap-2" x-text="iss.title"></h4>
+                            <p class="text-xs text-slate-600 mt-1 flex items-start gap-1.5">
+                                <strong class="text-slate-800 font-semibold flex-shrink-0">Root Cause:</strong>
+                                <span x-text="iss.root_cause"></span>
+                            </p>
+                        </div>
+
+                        <!-- TRI-PARTITE WIN-WIN-WIN RESOLUTION MATRIX -->
+                        <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <!-- Win 1: Client -->
+                            <div class="p-3.5 rounded-xl bg-white border border-emerald-200/90 shadow-2xs">
+                                <div class="flex items-center gap-1.5 text-xs font-black text-emerald-800 uppercase tracking-wide mb-1">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                    <span>🟢 Win for Client</span>
+                                </div>
+                                <p class="text-[11px] text-slate-700 leading-relaxed" x-text="iss.win_win_win ? iss.win_win_win.client : ''"></p>
+                            </div>
+
+                            <!-- Win 2: Operations / Partners -->
+                            <div class="p-3.5 rounded-xl bg-white border border-blue-200/90 shadow-2xs">
+                                <div class="flex items-center gap-1.5 text-xs font-black text-blue-800 uppercase tracking-wide mb-1">
+                                    <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                                    <span>🔵 Win for Operations</span>
+                                </div>
+                                <p class="text-[11px] text-slate-700 leading-relaxed" x-text="iss.win_win_win ? iss.win_win_win.operations : ''"></p>
+                            </div>
+
+                            <!-- Win 3: NETPACK Company -->
+                            <div class="p-3.5 rounded-xl bg-white border border-purple-200/90 shadow-2xs">
+                                <div class="flex items-center gap-1.5 text-xs font-black text-purple-800 uppercase tracking-wide mb-1">
+                                    <span class="w-2 h-2 rounded-full bg-purple-500"></span>
+                                    <span>🟣 Win for NETPACK</span>
+                                </div>
+                                <p class="text-[11px] text-slate-700 leading-relaxed" x-text="iss.win_win_win ? iss.win_win_win.company : ''"></p>
+                            </div>
+                        </div>
+
+                        <!-- Action Bar -->
+                        <div class="mt-4 pt-3 border-t border-slate-200/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div class="text-xs text-slate-700 flex items-center gap-2">
+                                <span class="px-1.5 py-0.5 rounded bg-teal-100 text-teal-900 font-bold font-mono text-[10px]">AI Action</span>
+                                <span x-text="iss.recommended_action"></span>
+                            </div>
+
+                            <div class="flex items-center gap-2 self-end sm:self-auto flex-shrink-0">
+                                <template x-if="!isResolved(iss.id)">
+                                    <button type="button" 
+                                            @click="executeWinWin(iss)"
+                                            :disabled="executingId === iss.id"
+                                            class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-black tracking-wide shadow-sm hover:shadow-teal-500/20 transition flex items-center gap-2 cursor-pointer disabled:opacity-50">
+                                        <i class="fas fa-bolt" x-show="executingId !== iss.id"></i>
+                                        <i class="fas fa-spinner fa-spin" x-show="executingId === iss.id" style="display: none;"></i>
+                                        <span x-text="executingId === iss.id ? 'Applying Win-Win...' : '⚡ Apply Win-Win Protocol'"></span>
+                                    </button>
+                                </template>
+
+                                <template x-if="isResolved(iss.id)">
+                                    <div class="px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center gap-1.5">
+                                        <i class="fas fa-circle-check text-emerald-600"></i>
+                                        <span>Tripartite Protocol Executed</span>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================= -->
     <!-- ACTIVE SHIPMENTS NETWORK TRACKING RADAR (ALWAYS VISIBLE) -->
     <!-- ============================================================= -->
+
     <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 overflow-hidden">
         <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-teal-950 px-6 py-4 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div class="flex items-center gap-3">
@@ -734,3 +953,144 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+function adminAiHub() {
+    return {
+        loading: false,
+        speechPlaying: false,
+        selectedFilter: 'all',
+        issues: [],
+        criticalCount: 0,
+        warningCount: 0,
+        reportSpeechText: '',
+        resolvedIssueIds: [],
+        executingId: null,
+
+        get filteredIssues() {
+            if (this.selectedFilter === 'critical') {
+                return this.issues.filter(i => (i.severity === 'critical'));
+            } else if (this.selectedFilter === 'warning') {
+                return this.issues.filter(i => (i.severity === 'warning'));
+            }
+            return this.issues;
+        },
+
+        isResolved(id) {
+            return this.resolvedIssueIds.includes(id);
+        },
+
+        initHub() {
+            this.fetchOperationalIntelligence();
+        },
+
+        fetchOperationalIntelligence() {
+            this.loading = true;
+            fetch('/admin/ai/operational-intelligence')
+                .then(res => res.json())
+                .then(data => {
+                    this.loading = false;
+                    if (data && data.success) {
+                        this.issues = data.issues || [];
+                        this.criticalCount = data.critical_count || 0;
+                        this.warningCount = data.warning_count || 0;
+                        if (data.report && data.report.speech_text) {
+                            this.reportSpeechText = data.report.speech_text;
+                        }
+                    }
+                })
+                .catch(err => {
+                    this.loading = false;
+                    console.error('Error fetching admin operational intelligence:', err);
+                });
+        },
+
+        executeWinWin(issue) {
+            this.executingId = issue.id;
+            fetch('/admin/ai/resolve-issue-action', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    issue_id: issue.id,
+                    action_type: issue.action_type || 'notify_and_reroute',
+                    shipment_id: issue.shipment_id || null
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                this.executingId = null;
+                if (data && data.success) {
+                    this.resolvedIssueIds.push(issue.id);
+                    // Announce voice confirmation in polite Nepalese cadence
+                    if ('speechSynthesis' in window) {
+                        const utterance = new SpeechSynthesisUtterance("Win-win operational resolution applied successfully.");
+                        utterance.rate = 0.94;
+                        utterance.pitch = 1.04;
+                        const voices = window.speechSynthesis.getVoices();
+                        const nepaliVoice = voices.find(v => v.lang.startsWith('ne'));
+                        const southAsianVoice = voices.find(v => (v.lang === 'en-IN' || v.lang === 'hi-IN') && (v.name.includes('India') || v.name.includes('Hindi') || v.name.includes('Heera') || v.name.includes('Ravi')));
+                        if (nepaliVoice || southAsianVoice) utterance.voice = nepaliVoice || southAsianVoice;
+                        window.speechSynthesis.speak(utterance);
+                    }
+                }
+            })
+            .catch(err => {
+                this.executingId = null;
+                console.error('Error executing win-win action:', err);
+            });
+        },
+
+        toggleVoiceBriefing() {
+            if (this.speechPlaying) {
+                this.stopVoiceBriefing();
+            } else {
+                this.playVoiceBriefing();
+            }
+        },
+
+        playVoiceBriefing() {
+            if (!('speechSynthesis' in window)) {
+                alert('Voice speech synthesis is not supported on this browser.');
+                return;
+            }
+
+            const textToSpeak = this.reportSpeechText || 
+                `Namaste! We currently have ${this.criticalCount} critical exceptions and ${this.warningCount} operational items requiring attention. All win-win-win protocols are ready for one click execution.`;
+
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(textToSpeak);
+            // Nepalese English cadence: slightly measured tempo with warm respectful pitch
+            utterance.rate = 0.94;
+            utterance.pitch = 1.04;
+
+            const voices = window.speechSynthesis.getVoices();
+            const nepaliVoice = voices.find(v => v.lang.startsWith('ne'));
+            const southAsianVoice = voices.find(v => (v.lang === 'en-IN' || v.lang === 'hi-IN') && (v.name.includes('India') || v.name.includes('Hindi') || v.name.includes('Heera') || v.name.includes('Ravi') || v.name.includes('Neerja')));
+            const naturalVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha')));
+
+            utterance.voice = nepaliVoice || southAsianVoice || naturalVoice || null;
+
+            utterance.onstart = () => { this.speechPlaying = true; };
+            utterance.onend = () => { this.speechPlaying = false; };
+            utterance.onerror = () => { this.speechPlaying = false; };
+
+            this.speechPlaying = true;
+            window.speechSynthesis.speak(utterance);
+        },
+
+        stopVoiceBriefing() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+            this.speechPlaying = false;
+        }
+    };
+}
+</script>
+@endpush
+

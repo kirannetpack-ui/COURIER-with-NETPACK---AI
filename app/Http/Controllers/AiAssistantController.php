@@ -100,4 +100,53 @@ class AiAssistantController extends Controller
             'data' => $result,
         ]);
     }
+
+    /**
+     * Fetch active operational intelligence exceptions and Win-Win-Win suggestions for Admins
+     */
+    public function adminOperationalIntelligence(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        if ($user && method_exists($user, 'isSuperAdmin') && !$user->isSuperAdmin() && !$user->isDomesticAdmin() && !$user->isInternationalAdmin() && !in_array($user->user_type ?? '', ['admin', 'staff', 'super_admin'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized access to operational intelligence.',
+            ], 403);
+        }
+
+        $issues = $this->aiService->getAdminOperationalIssuesAndWinWinSolutions();
+        $clientInfo = $this->aiService->resolveClientName($user, 'operational status');
+        $report = $this->aiService->generateAdminOperationalIntelligenceReport($clientInfo, 'status');
+
+        return response()->json([
+            'success' => true,
+            'issues' => $issues,
+            'report' => $report,
+            'critical_count' => count(array_filter($issues, fn($i) => ($i['severity'] ?? '') === 'critical')),
+            'warning_count' => count(array_filter($issues, fn($i) => ($i['severity'] ?? '') === 'warning')),
+        ]);
+    }
+
+    /**
+     * Execute 1-Click Win-Win-Win Operational Action from Admin Panel
+     */
+    public function adminResolveIssueAction(Request $request): JsonResponse
+    {
+        $request->validate([
+            'issue_id' => 'required|string',
+            'action_type' => 'required|string',
+            'shipment_id' => 'nullable|integer',
+            'notes' => 'nullable|string',
+        ]);
+
+        $result = $this->aiService->executeAdminWinWinAction(
+            $request->input('issue_id'),
+            $request->input('action_type'),
+            $request->input('shipment_id'),
+            $request->input('notes')
+        );
+
+        return response()->json($result);
+    }
 }
+
