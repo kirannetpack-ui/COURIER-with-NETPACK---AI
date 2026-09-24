@@ -356,31 +356,49 @@ function aiCopilotWidget(config) {
             if (SpeechRecognition) {
                 this.recognition = new SpeechRecognition();
                 this.recognition.continuous = false;
-                this.recognition.interimResults = false;
+                this.recognition.interimResults = true;
                 this.recognition.lang = 'en-US';
 
                 this.recognition.onstart = () => {
                     this.isListening = true;
-                    this.statusMessage = 'Listening to your voice...';
+                    this.statusMessage = 'Listening to your voice... Speak clearly';
                 };
 
                 this.recognition.onresult = (event) => {
-                    const transcript = event.results[0][0].transcript;
+                    let transcript = '';
+                    let isFinal = false;
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                        transcript += event.results[i][0].transcript;
+                        if (event.results[i].isFinal) isFinal = true;
+                    }
                     if (transcript) {
                         this.inputText = transcript;
-                        this.sendUserMessage();
+                        this.statusMessage = 'Hearing: "' + transcript + '"';
+                    }
+                    if (isFinal) {
+                        setTimeout(() => {
+                            if (this.inputText.trim()) {
+                                this.sendUserMessage();
+                            }
+                        }, 400);
                     }
                 };
 
                 this.recognition.onerror = (event) => {
                     console.log('Speech recognition event:', event.error);
                     this.isListening = false;
-                    this.statusMessage = 'Ready to assist';
+                    if (event.error === 'not-allowed') {
+                        this.statusMessage = 'Microphone permission blocked. Please allow mic in browser.';
+                    } else if (event.error === 'no-speech') {
+                        this.statusMessage = 'No speech detected. Tap mic to try again.';
+                    } else {
+                        this.statusMessage = 'Ready to assist';
+                    }
                 };
 
                 this.recognition.onend = () => {
                     this.isListening = false;
-                    if (!this.isLoading) {
+                    if (!this.isLoading && this.statusMessage.startsWith('Listening')) {
                         this.statusMessage = 'Ready to assist';
                     }
                 };
@@ -561,22 +579,40 @@ function aiCopilotWidget(config) {
             }
         },
 
-        toggleSpeechRecognition() {
+        async toggleSpeechRecognition() {
             if (!this.recognition) {
                 alert('Voice speech recognition is supported in Google Chrome, Microsoft Edge, Safari, and other modern browsers.');
                 return;
             }
 
             if (this.isListening) {
-                this.recognition.stop();
+                try { this.recognition.stop(); } catch(e){}
                 this.isListening = false;
+                this.statusMessage = 'Ready to assist';
             } else {
-                // If assistant is currently speaking, stop it first
                 this.stopSpeaking();
+
+                // Explicitly request microphone stream to guarantee browser permissions
+                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                    try {
+                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        stream.getTracks().forEach(t => t.stop());
+                    } catch(permErr) {
+                        console.warn('Microphone permission check failed:', permErr);
+                        this.statusMessage = 'Microphone access blocked. Click the lock/camera icon in address bar to Allow.';
+                        alert('Microphone access is needed for voice chat. Please click "Allow" on the microphone prompt in your browser.');
+                        return;
+                    }
+                }
+
                 try {
                     this.recognition.start();
                 } catch(e) {
-                    console.log('Recognition start error:', e);
+                    console.log('Recognition start error, attempting restart:', e);
+                    try {
+                        this.recognition.stop();
+                        setTimeout(() => this.recognition.start(), 150);
+                    } catch(err2){}
                 }
             }
         },

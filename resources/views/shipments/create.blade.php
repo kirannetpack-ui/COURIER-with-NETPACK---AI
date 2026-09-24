@@ -809,13 +809,21 @@ document.addEventListener('alpine:init', () => {
 
             <!-- Equalizer & Actions -->
             <div class="flex items-center gap-2 self-end md:self-center flex-shrink-0">
-                <!-- Soundwave Animation -->
-                <div class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-950/80 border border-slate-800" id="ai-voice-equalizer">
-                    <span class="w-1 h-3 bg-teal-400 rounded-full animate-pulse"></span>
-                    <span class="w-1 h-5 bg-emerald-400 rounded-full animate-bounce"></span>
-                    <span class="w-1 h-2 bg-teal-300 rounded-full animate-pulse"></span>
-                    <span class="w-1 h-4 bg-teal-500 rounded-full animate-bounce"></span>
+                <!-- Soundwave Visualizer Bars -->
+                <div class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-950/80 border border-slate-800 h-9" id="ai-voice-equalizer" title="Microphone Audio Volume Meter">
+                    <span class="eq-bar w-1.5 h-3 bg-teal-400 rounded-full transition-all duration-75"></span>
+                    <span class="eq-bar w-1.5 h-5 bg-emerald-400 rounded-full transition-all duration-75"></span>
+                    <span class="eq-bar w-1.5 h-2 bg-teal-300 rounded-full transition-all duration-75"></span>
+                    <span class="eq-bar w-1.5 h-4 bg-teal-500 rounded-full transition-all duration-75"></span>
                 </div>
+
+                <!-- Prominent Tap to Speak Button -->
+                <button type="button" id="ai-voice-mic-btn" onclick="window.toggleVoiceAutofillMic()" 
+                        class="px-3 py-1.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-rose-500/30 cursor-pointer animate-pulse"
+                        title="Click to talk or mute microphone">
+                    <i class="fas fa-microphone text-xs" id="ai-voice-mic-icon"></i>
+                    <span id="ai-voice-mic-text">Listening...</span>
+                </button>
 
                 <button type="button" onclick="window.voiceAssistantReask()" title="Re-ask current question"
                         class="p-2 sm:px-2.5 sm:py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer">
@@ -841,6 +849,23 @@ document.addEventListener('alpine:init', () => {
                     <span>Stop</span>
                 </button>
             </div>
+        </div>
+
+        <!-- Inline Quick Answer / Keyboard Fallback Bar -->
+        <div class="mt-3 pt-3 border-t border-slate-800/80 flex items-center gap-2">
+            <div class="text-[11px] text-slate-400 font-medium flex items-center gap-1.5 flex-shrink-0">
+                <i class="fas fa-keyboard text-teal-400"></i>
+                <span class="hidden sm:inline">Or type answer:</span>
+            </div>
+            <input type="text" id="ai-voice-quick-input" 
+                   placeholder="Speak now into your microphone, or type here and press Enter..." 
+                   onkeydown="if(event.key === 'Enter'){ event.preventDefault(); window.submitManualVoiceStepInput(); }"
+                   class="flex-1 bg-slate-950/70 border border-slate-700 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 text-xs text-white rounded-lg px-3 py-1.5 placeholder-slate-500 outline-none">
+            <button type="button" onclick="window.submitManualVoiceStepInput()"
+                    class="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-slate-950 text-xs font-bold transition flex items-center gap-1 cursor-pointer">
+                <span>Apply</span>
+                <i class="fas fa-arrow-right text-[10px]"></i>
+            </button>
         </div>
     </div>
 
@@ -2860,6 +2885,10 @@ document.addEventListener('alpine:init', () => {
         isListening: false,
         currentStepIndex: 0,
         recognition: null,
+        audioStream: null,
+        audioContext: null,
+        analyser: null,
+        animFrameId: null,
         speechSynthesis: window.speechSynthesis || null,
         clientPreferredName: '{{ session("ai_preferred_name", explode(" ", Auth::user()->name ?? "Client")[0]) }} Ji',
         steps: [
@@ -3084,7 +3113,7 @@ document.addEventListener('alpine:init', () => {
         sessionStorage.setItem('ai_voice_autofill_dismissed', '1');
     };
 
-    window.initiateVoiceAutofillAssistant = function(userExplicitlyClicked = false) {
+    window.initiateVoiceAutofillAssistant = async function(userExplicitlyClicked = false) {
         const banner = document.getElementById('ai-voice-invitation-banner');
         if (banner) banner.style.display = 'none';
 
@@ -3094,20 +3123,148 @@ document.addEventListener('alpine:init', () => {
         window.aiVoiceAutofill.isActive = true;
         window.aiVoiceAutofill.currentStepIndex = 0;
 
-        // Setup speech recognition
+        // 1. Explicitly request microphone stream from user click gesture to avoid browser silent blocking
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                window.aiVoiceAutofill.audioStream = stream;
+                setupAudioVisualizer(stream);
+            } catch(micErr) {
+                console.warn('Microphone permission check warning:', micErr);
+                updateVoiceStatus('Microphone access blocked. Click lock icon in browser address bar to Allow.', 'text-rose-400');
+            }
+        }
+
+        // 2. Setup speech recognition
         initSpeechRecognition();
 
-        // Ask Step 0
+        // 3. Ask Step 0
         executeVoiceStep(0);
+    };
+
+    function setupAudioVisualizer(stream) {
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+
+            if (!window.aiVoiceAutofill.audioContext) {
+                window.aiVoiceAutofill.audioContext = new AudioCtx();
+            }
+            const ctx = window.aiVoiceAutofill.audioContext;
+            if (ctx.state === 'suspended') {
+                ctx.resume();
+            }
+
+            const analyser = ctx.createAnalyser();
+            analyser.fftSize = 64;
+            const source = ctx.createMediaStreamSource(stream);
+            source.connect(analyser);
+            window.aiVoiceAutofill.analyser = analyser;
+
+            const bars = document.querySelectorAll('#ai-voice-equalizer .eq-bar');
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+            function drawMeter() {
+                if (!window.aiVoiceAutofill.isActive) return;
+                window.aiVoiceAutofill.animFrameId = requestAnimationFrame(drawMeter);
+
+                if (window.aiVoiceAutofill.isListening && analyser) {
+                    analyser.getByteFrequencyData(dataArray);
+                    let sum = 0;
+                    for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+                    const avg = sum / dataArray.length;
+
+                    bars.forEach((bar, idx) => {
+                        const h = Math.min(26, Math.max(5, Math.round((avg / 255) * 32 + (idx * 2.5))));
+                        bar.style.height = `${h}px`;
+                    });
+                } else {
+                    bars.forEach((bar, idx) => {
+                        bar.style.height = idx % 2 === 0 ? '8px' : '14px';
+                    });
+                }
+            }
+            drawMeter();
+        } catch(e) {
+            console.log('Audio visualizer setup error:', e);
+        }
+    }
+
+    function updateMicButton(isListening) {
+        const btn = document.getElementById('ai-voice-mic-btn');
+        const text = document.getElementById('ai-voice-mic-text');
+        const icon = document.getElementById('ai-voice-mic-icon');
+        if (!btn) return;
+
+        if (isListening) {
+            btn.className = 'px-3 py-1.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-rose-500/30 cursor-pointer animate-pulse';
+            if (text) text.innerText = 'Listening...';
+            if (icon) icon.className = 'fas fa-microphone text-xs';
+        } else {
+            btn.className = 'px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-slate-950 text-xs font-bold transition flex items-center gap-1.5 shadow-md hover:shadow-teal-500/20 cursor-pointer';
+            if (text) text.innerText = 'Tap to Speak';
+            if (icon) icon.className = 'fas fa-microphone text-xs';
+        }
+    }
+
+    window.toggleVoiceAutofillMic = function() {
+        if (!window.aiVoiceAutofill.isActive) return;
+
+        if (!window.aiVoiceAutofill.recognition) {
+            initSpeechRecognition();
+        }
+
+        if (window.aiVoiceAutofill.isListening) {
+            try { window.aiVoiceAutofill.recognition.stop(); } catch(e){}
+            window.aiVoiceAutofill.isListening = false;
+            updateMicButton(false);
+            updateVoiceStatus('Microphone paused. Tap [Tap to Speak] to continue.', 'text-slate-300');
+        } else {
+            // Cancel TTS if speaking so user can respond immediately
+            if (window.speechSynthesis) window.speechSynthesis.cancel();
+            try {
+                window.aiVoiceAutofill.recognition.start();
+            } catch(e) {
+                console.log('Voice restart notice:', e);
+                try {
+                    window.aiVoiceAutofill.recognition.stop();
+                    setTimeout(() => {
+                        try { window.aiVoiceAutofill.recognition.start(); } catch(err){}
+                    }, 150);
+                } catch(err2){}
+            }
+        }
+    };
+
+    window.submitManualVoiceStepInput = function() {
+        const input = document.getElementById('ai-voice-quick-input');
+        if (!input) return;
+        const val = input.value.trim();
+        if (!val) return;
+        input.value = '';
+        handleUserSpokenAnswer(val);
     };
 
     window.exitVoiceAutofillAssistant = function() {
         window.aiVoiceAutofill.isActive = false;
+
         if (window.aiVoiceAutofill.speechSynthesis) {
             window.aiVoiceAutofill.speechSynthesis.cancel();
         }
         if (window.aiVoiceAutofill.recognition) {
             try { window.aiVoiceAutofill.recognition.stop(); } catch(e){}
+        }
+
+        if (window.aiVoiceAutofill.audioStream) {
+            try {
+                window.aiVoiceAutofill.audioStream.getTracks().forEach(t => t.stop());
+            } catch(e){}
+            window.aiVoiceAutofill.audioStream = null;
+        }
+
+        if (window.aiVoiceAutofill.animFrameId) {
+            cancelAnimationFrame(window.aiVoiceAutofill.animFrameId);
+            window.aiVoiceAutofill.animFrameId = null;
         }
 
         const controller = document.getElementById('ai-voice-active-controller');
@@ -3143,40 +3300,69 @@ document.addEventListener('alpine:init', () => {
     function initSpeechRecognition() {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
-            alert('Your browser does not support Web Speech Recognition. Please use Chrome, Edge, or Safari.');
+            updateVoiceStatus('Speech recognition not available. Please use Chrome/Edge or type in box below.', 'text-amber-300');
             return;
         }
 
         if (!window.aiVoiceAutofill.recognition) {
             const rec = new SpeechRecognition();
             rec.continuous = false;
-            rec.interimResults = false;
+            rec.interimResults = true;
             rec.lang = 'en-US';
 
             rec.onstart = function() {
                 window.aiVoiceAutofill.isListening = true;
-                updateVoiceStatus('🎙️ Listening... Speak now', 'text-rose-400');
-                const eq = document.getElementById('ai-voice-equalizer');
-                if (eq) eq.classList.add('animate-pulse');
+                updateVoiceStatus('🎙️ Listening... Speak now', 'text-rose-400 font-bold');
+                updateMicButton(true);
             };
 
             rec.onresult = function(event) {
-                const transcript = event.results[0][0].transcript;
-                if (transcript) {
-                    handleUserSpokenAnswer(transcript);
+                let interimTranscript = '';
+                let finalTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    const phrase = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += phrase;
+                    } else {
+                        interimTranscript += phrase;
+                    }
+                }
+
+                const liveText = finalTranscript || interimTranscript;
+                if (liveText) {
+                    const previewEl = document.getElementById('ai-voice-transcript-preview');
+                    const textEl = document.getElementById('ai-voice-transcript-text');
+                    if (previewEl && textEl) {
+                        textEl.innerText = liveText;
+                        previewEl.style.display = 'block';
+                    }
+                    const quickInput = document.getElementById('ai-voice-quick-input');
+                    if (quickInput) quickInput.value = liveText;
+                }
+
+                if (finalTranscript.trim()) {
+                    handleUserSpokenAnswer(finalTranscript.trim());
                 }
             };
 
             rec.onerror = function(event) {
-                window.aiVoiceAutofill.isListening = false;
-                updateVoiceStatus('Ready', 'text-teal-300/80');
                 console.log('Voice recognition notice:', event.error);
+                window.aiVoiceAutofill.isListening = false;
+                updateMicButton(false);
+
+                if (event.error === 'not-allowed') {
+                    updateVoiceStatus('Microphone blocked. Please click camera/lock icon in address bar to Allow.', 'text-rose-400 font-bold');
+                } else if (event.error === 'no-speech') {
+                    updateVoiceStatus('Didn’t catch your voice. Tap [Tap to Speak] or type below.', 'text-amber-300');
+                } else {
+                    updateVoiceStatus('Ready. Tap [Tap to Speak] to provide answer.', 'text-teal-300/80');
+                }
             };
 
             rec.onend = function() {
                 window.aiVoiceAutofill.isListening = false;
-                const eq = document.getElementById('ai-voice-equalizer');
-                if (eq) eq.classList.remove('animate-pulse');
+                updateMicButton(false);
             };
 
             window.aiVoiceAutofill.recognition = rec;
@@ -3205,6 +3391,12 @@ document.addEventListener('alpine:init', () => {
         const previewEl = document.getElementById('ai-voice-transcript-preview');
         if (previewEl) previewEl.style.display = 'none';
 
+        const quickInput = document.getElementById('ai-voice-quick-input');
+        if (quickInput) {
+            quickInput.value = '';
+            quickInput.placeholder = `Speak into mic or type answer for "${step.title}" & press Enter...`;
+        }
+
         // Scroll to and highlight target field
         const targetEl = step.targetSelector ? step.targetSelector() : null;
         if (targetEl) {
@@ -3215,9 +3407,8 @@ document.addEventListener('alpine:init', () => {
             targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
-        // Speak question out loud
+        // Speak question out loud, then start listening
         speakVoicePrompt(promptText, function() {
-            // Once speech finishes, trigger speech recognition to listen
             if (window.aiVoiceAutofill.isActive && window.aiVoiceAutofill.recognition) {
                 try {
                     window.aiVoiceAutofill.recognition.start();
@@ -3243,22 +3434,50 @@ document.addEventListener('alpine:init', () => {
 
         updateVoiceStatus('✨ Auto-typing...', 'text-emerald-300 font-bold');
 
-        // Parse and apply value
-        const parsedVal = step.parse ? step.parse(transcript) : transcript;
-        const appliedLabel = step.apply ? step.apply(parsedVal) : parsedVal;
+        const applyAndProceed = (parsedVal, ackPhrase) => {
+            const appliedLabel = step.apply ? step.apply(parsedVal) : parsedVal;
 
-        // Confirm by voice and progress
-        setTimeout(() => {
-            const confirmPhrase = `Got it, ${appliedLabel}!`;
-            speakVoicePrompt(confirmPhrase, function() {
-                const nextStep = stepIndex + 1;
-                if (nextStep < window.aiVoiceAutofill.steps.length) {
-                    executeVoiceStep(nextStep);
-                } else {
-                    completeVoiceAutofill();
-                }
-            });
-        }, 600);
+            setTimeout(() => {
+                const phrase = ackPhrase || `Got it, ${appliedLabel}!`;
+                speakVoicePrompt(phrase, function() {
+                    const nextStep = stepIndex + 1;
+                    if (nextStep < window.aiVoiceAutofill.steps.length) {
+                        executeVoiceStep(nextStep);
+                    } else {
+                        completeVoiceAutofill();
+                    }
+                });
+            }, 500);
+        };
+
+        // Try AI Backend normalization endpoint first
+        fetch('/ai/voice-autofill-parse', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                step: step.id,
+                spoken_text: transcript,
+                mode: document.getElementById('shipment_type')?.value || 'domestic'
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data && data.success && data.data) {
+                applyAndProceed(data.data.parsed_value, data.data.speech_ack);
+            } else {
+                const parsedVal = step.parse ? step.parse(transcript) : transcript;
+                applyAndProceed(parsedVal, null);
+            }
+        })
+        .catch(err => {
+            // Client-side fallback if network error
+            const parsedVal = step.parse ? step.parse(transcript) : transcript;
+            applyAndProceed(parsedVal, null);
+        });
     }
 
     function completeVoiceAutofill() {
@@ -3266,6 +3485,7 @@ document.addEventListener('alpine:init', () => {
         if (promptEl) promptEl.innerText = 'All consignment fields have been successfully auto-typed!';
 
         updateVoiceStatus('✅ Autofill Completed', 'text-emerald-400 font-bold');
+        updateMicButton(false);
 
         // Scroll to submit button and pulse
         const submitBtn = document.querySelector('button[type="submit"]');
@@ -3294,20 +3514,26 @@ document.addEventListener('alpine:init', () => {
         const naturalVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha')));
         if (naturalVoice) utterance.voice = naturalVoice;
 
+        let completed = false;
+        const finishSpeaking = () => {
+            if (!completed) {
+                completed = true;
+                clearTimeout(safetyTimeout);
+                window.aiVoiceAutofill.isSpeaking = false;
+                if (typeof onComplete === 'function') onComplete();
+            }
+        };
+
+        // Safety timeout: Chrome/Edge sometimes drop onend if tab is backgrounded or audio glitch occurs
+        const safetyTimeout = setTimeout(finishSpeaking, 7500);
+
         utterance.onstart = function() {
             window.aiVoiceAutofill.isSpeaking = true;
             updateVoiceStatus('🗣️ Speaking...', 'text-teal-300');
         };
 
-        utterance.onend = function() {
-            window.aiVoiceAutofill.isSpeaking = false;
-            if (typeof onComplete === 'function') onComplete();
-        };
-
-        utterance.onerror = function() {
-            window.aiVoiceAutofill.isSpeaking = false;
-            if (typeof onComplete === 'function') onComplete();
-        };
+        utterance.onend = finishSpeaking;
+        utterance.onerror = finishSpeaking;
 
         window.speechSynthesis.speak(utterance);
     }
