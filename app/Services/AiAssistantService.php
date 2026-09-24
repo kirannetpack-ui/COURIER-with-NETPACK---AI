@@ -1790,8 +1790,105 @@ EOT;
                 $speechAck = "Contents noted as {$value}.";
                 break;
 
+            case 'service_type':
+                if (str_contains($clean, 'flash') || str_contains($clean, 'urgent') || str_contains($clean, 'instant') || str_contains($clean, 'chito')) {
+                    $value = 'flash';
+                    $speechAck = "Selected Flash service.";
+                } elseif (str_contains($clean, 'same day') || str_contains($clean, 'express') || str_contains($clean, 'aajai') || str_contains($clean, 'priority')) {
+                    $value = ($mode === 'international') ? 'express' : 'same_day';
+                    $speechAck = "Selected Express / Same-day service.";
+                } elseif (str_contains($clean, 'himalayan') || str_contains($clean, 'mountain') || str_contains($clean, 'remote')) {
+                    $value = 'himalayan';
+                    $speechAck = "Selected Himalayan Remote District service.";
+                } elseif (str_contains($clean, 'economy') || str_contains($clean, 'cargo')) {
+                    $value = 'economy';
+                    $speechAck = "Selected Economy service.";
+                } else {
+                    $value = ($mode === 'international') ? 'economy' : 'standard';
+                    $speechAck = "Selected Standard transit service.";
+                }
+                break;
+
+            case 'package_type':
+                if (str_contains($clean, 'box') || str_contains($clean, 'carton')) {
+                    $value = 'box';
+                    $speechAck = "Package type set to Box Carton.";
+                } elseif (str_contains($clean, 'envelope') || str_contains($clean, 'document') || str_contains($clean, 'letter') || str_contains($clean, 'kagaj')) {
+                    $value = 'envelope';
+                    $speechAck = "Package type set to Document Envelope.";
+                } elseif (str_contains($clean, 'fragile') || str_contains($clean, 'glass') || str_contains($clean, 'electronic')) {
+                    $value = 'fragile';
+                    $speechAck = "Package flagged as Fragile.";
+                } elseif (str_contains($clean, 'grocery') || str_contains($clean, 'food')) {
+                    $value = 'grocery';
+                    $speechAck = "Package set to Grocery / Perishable.";
+                } else {
+                    $value = 'parcel';
+                    $speechAck = "Package type set to Standard Parcel.";
+                }
+                break;
+
+            case 'dimensions':
+                preg_match_all('/\d+(?:\.\d+)?/', $clean, $matches);
+                if (!empty($matches[0])) {
+                    $dims = array_map('floatval', $matches[0]);
+                    $length = $dims[0] ?? 20.0;
+                    $width = $dims[1] ?? $length;
+                    $height = $dims[2] ?? $width;
+                    $value = ['length' => $length, 'width' => $width, 'height' => $height];
+                    $speechAck = "Dimensions set to {$length} by {$width} by {$height} cm.";
+                } else {
+                    $value = ['length' => 20.0, 'width' => 20.0, 'height' => 20.0];
+                    $speechAck = "Standard dimensions applied.";
+                }
+                break;
+
+            case 'receiver_postal_code':
+                $dig = preg_replace('/\D/', '', $clean);
+                $value = !empty($dig) ? $dig : strtoupper(trim($raw));
+                $speechAck = "Postal code set to {$value}.";
+                break;
+
+            case 'receiver_city':
+                $cleaned = preg_replace('/^(city\s+is|in|at)\s+/i', '', $raw);
+                $value = ucwords(trim($cleaned));
+                $speechAck = "City set to {$value}.";
+                break;
+
+            case 'receiver_country':
+                $entities = $this->parseLogisticsEntities($raw);
+                if (!empty($entities['destination']['name'])) {
+                    $value = $entities['destination']['name'];
+                } else {
+                    $cleaned = preg_replace('/^(to|for|destination\s+is|shipping\s+to|ma|lai)\s+/i', '', $raw);
+                    $cleaned = preg_replace('/\s+(pathaune|pathauna|ma|lai|pugne)$/i', '', $cleaned);
+                    $value = ucwords(trim($cleaned));
+                }
+                $speechAck = "Destination country set to {$value}.";
+                break;
+
+            case 'destination_district':
+                $matchedDistrict = null;
+                foreach (\App\Services\NepalGeographicalService::getAllDistricts() as $dist) {
+                    if (stripos($raw, $dist) !== false) {
+                        $matchedDistrict = $dist;
+                        break;
+                    }
+                }
+                if ($matchedDistrict) {
+                    $value = $matchedDistrict;
+                } else {
+                    $cleaned = preg_replace('/^(please\s+deliver\s+to|deliver\s+to|shipping\s+to|send\s+to|to|for|destination\s+is|district\s+is|ma|lai)\s+/i', '', $raw);
+                    $cleaned = preg_replace('/\s+(pathaune|pathauna|ma|lai|pugne|district|zilla)$/i', '', $cleaned);
+                    $value = ucwords(trim($cleaned));
+                }
+                $speechAck = "Destination district set to {$value}.";
+                break;
+
             case 'pickup_address':
             case 'receiver_address':
+            case 'delivery_address':
+            case 'receiver_street':
             default:
                 $value = ucfirst(trim($raw));
                 $speechAck = "Noted.";

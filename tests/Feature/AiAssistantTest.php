@@ -519,6 +519,74 @@ class AiAssistantTest extends TestCase
 
         $this->assertTrue($entities['is_ecommerce']);
     }
+
+    public function test_voice_autofill_parses_all_consignment_form_fields(): void
+    {
+        $user = User::factory()->create();
+
+        // 1. Service type domestic flash
+        $resSvcDom = $this->actingAs($user)->postJson('/ai/voice-autofill-parse', [
+            'step' => 'service_type',
+            'spoken_text' => 'I need instant flash delivery in 1 hour',
+            'mode' => 'domestic',
+        ]);
+        $resSvcDom->assertStatus(200);
+        $this->assertEquals('flash', $resSvcDom->json('data.parsed_value'));
+
+        // 2. Service type international express
+        $resSvcIntl = $this->actingAs($user)->postJson('/ai/voice-autofill-parse', [
+            'step' => 'service_type',
+            'spoken_text' => 'Priority express service please',
+            'mode' => 'international',
+        ]);
+        $resSvcIntl->assertStatus(200);
+        $this->assertEquals('express', $resSvcIntl->json('data.parsed_value'));
+
+        // 3. Package dimensions
+        $resDims = $this->actingAs($user)->postJson('/ai/voice-autofill-parse', [
+            'step' => 'dimensions',
+            'spoken_text' => 'box is 30 by 25 by 15 centimeters',
+        ]);
+        $resDims->assertStatus(200);
+        $this->assertEquals([
+            'length' => 30.0,
+            'width' => 25.0,
+            'height' => 15.0,
+        ], $resDims->json('data.parsed_value'));
+
+        // 4. Destination District in Nepal
+        $resDist = $this->actingAs($user)->postJson('/ai/voice-autofill-parse', [
+            'step' => 'destination_district',
+            'spoken_text' => 'Please deliver to Jhapa district',
+        ]);
+        $resDist->assertStatus(200);
+        $this->assertEquals('Jhapa', $resDist->json('data.parsed_value'));
+
+        // 5. Overseas City
+        $resCity = $this->actingAs($user)->postJson('/ai/voice-autofill-parse', [
+            'step' => 'receiver_city',
+            'spoken_text' => 'city is Warsaw',
+        ]);
+        $resCity->assertStatus(200);
+        $this->assertEquals('Warsaw', $resCity->json('data.parsed_value'));
+
+        // 6. Postal Code
+        $resZip = $this->actingAs($user)->postJson('/ai/voice-autofill-parse', [
+            'step' => 'receiver_postal_code',
+            'spoken_text' => 'zip code is 00920',
+        ]);
+        $resZip->assertStatus(200);
+        $this->assertEquals('00920', $resZip->json('data.parsed_value'));
+
+        // 7. Verify /shipments/create includes all-field voice concierge
+        $createPage = $this->actingAs($user)->get('/shipments/create');
+        $createPage->assertStatus(200);
+        $createPage->assertSee('buildVoiceStepsForMode');
+        $createPage->assertSee('selectNepalTerritoryDistrict');
+        $createPage->assertSee('NEPAL_DISTRICT_PROVINCE_MAP');
+        $createPage->assertSee('destination_district');
+        $createPage->assertSee('receiver_street');
+    }
 }
 
 

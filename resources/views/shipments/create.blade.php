@@ -2790,6 +2790,8 @@ document.addEventListener('alpine:init', () => {
             } else if (mode === 'domestic') {
                 alpineEl._x_dataStack[0].invoiceCurrency = 'NPR';
             }
+        if (window.aiVoiceAutofill && window.aiVoiceAutofill.isActive && typeof refreshVoiceStepsForActiveMode === 'function') {
+            refreshVoiceStepsForActiveMode(mode, true);
         }
 
         updateSummaryStats();
@@ -2894,30 +2896,115 @@ document.addEventListener('alpine:init', () => {
     // =========================================================================
     // AI VOICE CONCIERGE & AUTO-TYPING ENGINE (ALWAYS ASKS BEFOREHAND TO INITIATE)
     // =========================================================================
-    window.aiVoiceAutofill = {
-        isActive: false,
-        isSpeaking: false,
-        isListening: false,
-        currentStepIndex: 0,
-        recognition: null,
-        audioStream: null,
-        audioContext: null,
-        analyser: null,
-        animFrameId: null,
-        speechSynthesis: window.speechSynthesis || null,
-        clientPreferredName: '{{ session("ai_preferred_name", explode(" ", Auth::user()->name ?? "Client")[0]) }} Ji',
-        steps: [
+    // AI VOICE CONCIERGE & AUTO-TYPING ENGINE (ALWAYS ASKS BEFOREHAND TO INITIATE)
+    // =========================================================================
+    const NEPAL_DISTRICT_PROVINCE_MAP = {
+        'bhojpur': 'Koshi Province', 'dhankuta': 'Koshi Province', 'ilam': 'Koshi Province',
+        'jhapa': 'Koshi Province', 'khotang': 'Koshi Province', 'morang': 'Koshi Province',
+        'okhaldhunga': 'Koshi Province', 'panchthar': 'Koshi Province', 'sankhuwasabha': 'Koshi Province',
+        'solukhumbu': 'Koshi Province', 'sunsari': 'Koshi Province', 'taplejung': 'Koshi Province',
+        'terhathum': 'Koshi Province', 'udayapur': 'Koshi Province',
+        'bara': 'Madhesh Province', 'dhanusha': 'Madhesh Province', 'mahottari': 'Madhesh Province',
+        'parsa': 'Madhesh Province', 'rautahat': 'Madhesh Province', 'saptari': 'Madhesh Province',
+        'sarlahi': 'Madhesh Province', 'siraha': 'Madhesh Province',
+        'bhaktapur': 'Bagmati Province', 'chitwan': 'Bagmati Province', 'dhading': 'Bagmati Province',
+        'dolakha': 'Bagmati Province', 'kathmandu': 'Bagmati Province', 'kavrepalanchok': 'Bagmati Province',
+        'kavre': 'Bagmati Province', 'lalitpur': 'Bagmati Province', 'makwanpur': 'Bagmati Province',
+        'nuwakot': 'Bagmati Province', 'ramechhap': 'Bagmati Province', 'rasuwa': 'Bagmati Province',
+        'sindhuli': 'Bagmati Province', 'sindhupalchok': 'Bagmati Province',
+        'baglung': 'Gandaki Province', 'gorkha': 'Gandaki Province', 'kaski': 'Gandaki Province',
+        'lamjung': 'Gandaki Province', 'manang': 'Gandaki Province', 'mustang': 'Gandaki Province',
+        'myagdi': 'Gandaki Province', 'nawalpur': 'Gandaki Province', 'nawalparasi east': 'Gandaki Province',
+        'parbat': 'Gandaki Province', 'syangja': 'Gandaki Province', 'tanahun': 'Gandaki Province',
+        'arghakhanchi': 'Lumbini Province', 'banke': 'Lumbini Province', 'bardiya': 'Lumbini Province',
+        'dang': 'Lumbini Province', 'gulmi': 'Lumbini Province', 'kapilvastu': 'Lumbini Province',
+        'parasi': 'Lumbini Province', 'nawalparasi west': 'Lumbini Province', 'palpa': 'Lumbini Province',
+        'pyuthan': 'Lumbini Province', 'rolpa': 'Lumbini Province', 'rukum east': 'Lumbini Province',
+        'rupandehi': 'Lumbini Province',
+        'dailekh': 'Karnali Province', 'dolpa': 'Karnali Province', 'humla': 'Karnali Province',
+        'jajarkot': 'Karnali Province', 'jumla': 'Karnali Province', 'kalikot': 'Karnali Province',
+        'mugu': 'Karnali Province', 'salyan': 'Karnali Province', 'surkhet': 'Karnali Province',
+        'rukum west': 'Karnali Province',
+        'achham': 'Sudurpashchim Province', 'baitadi': 'Sudurpashchim Province', 'bajhang': 'Sudurpashchim Province',
+        'bajura': 'Sudurpashchim Province', 'dadeldhura': 'Sudurpashchim Province', 'darchula': 'Sudurpashchim Province',
+        'doti': 'Sudurpashchim Province', 'kailali': 'Sudurpashchim Province', 'kanchanpur': 'Sudurpashchim Province'
+    };
+
+    function selectNepalTerritoryDistrict(pickerPrefix, districtName) {
+        if (!districtName) return null;
+        const lower = districtName.toLowerCase().trim();
+        let canonical = districtName.trim();
+        if (lower.includes('pokhara')) canonical = 'Kaski';
+        else if (lower.includes('biratnagar')) canonical = 'Morang';
+        else if (lower.includes('dharan') || lower.includes('itahari')) canonical = 'Sunsari';
+        else if (lower.includes('butwal') || lower.includes('bhairahawa')) canonical = 'Rupandehi';
+        else if (lower.includes('nepalgunj')) canonical = 'Banke';
+        else if (lower.includes('dhangadhi')) canonical = 'Kailali';
+        else if (lower.includes('birgunj')) canonical = 'Parsa';
+        else if (lower.includes('hetauda')) canonical = 'Makwanpur';
+        else if (lower.includes('damak') || lower.includes('birtamod')) canonical = 'Jhapa';
+        else if (lower.includes('kathmandu')) canonical = 'Kathmandu';
+        else if (lower.includes('lalitpur') || lower.includes('patan')) canonical = 'Lalitpur';
+        else if (lower.includes('bhaktapur')) canonical = 'Bhaktapur';
+        else if (lower.includes('chitwan') || lower.includes('narayangarh')) canonical = 'Chitwan';
+        else {
+            canonical = canonical.charAt(0).toUpperCase() + canonical.slice(1);
+        }
+
+        const prov = NEPAL_DISTRICT_PROVINCE_MAP[canonical.toLowerCase()] || NEPAL_DISTRICT_PROVINCE_MAP[lower];
+        const provSelect = document.getElementById(`${pickerPrefix}_province`);
+        const distSelect = document.getElementById(`${pickerPrefix}_district`);
+        const searchInput = document.getElementById(`${pickerPrefix}_search`);
+
+        if (searchInput) {
+            searchInput.value = canonical;
+            searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        if (prov && provSelect) {
+            for (let opt of provSelect.options) {
+                if (opt.value && opt.value.toLowerCase().includes(prov.toLowerCase())) {
+                    provSelect.value = opt.value;
+                    provSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                    break;
+                }
+            }
+        }
+
+        setTimeout(() => {
+            if (distSelect) {
+                for (let opt of distSelect.options) {
+                    if (opt.value && opt.value.toLowerCase() === canonical.toLowerCase()) {
+                        distSelect.value = opt.value;
+                        distSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                        distSelect.classList.add('ring-2', 'ring-emerald-500', 'bg-emerald-50/20');
+                        setTimeout(() => distSelect.classList.remove('ring-2', 'ring-emerald-500', 'bg-emerald-50/20'), 1500);
+                        break;
+                    }
+                }
+            }
+        }, 150);
+
+        return canonical;
+    }
+
+    function buildVoiceStepsForMode(mode) {
+        const isIntl = mode === 'international';
+        const isEcom = mode === 'ecommerce';
+
+        const steps = [
+            // Field 1: Service Category
             {
                 id: 'mode',
                 title: 'Shipment Service Category',
                 prompt: function(ctx) {
                     return `Namaste ${ctx.clientPreferredName}! Which of our 3 services would you like to book? 1: Domestic Delivery across Nepal, 2: International Air Cargo, or 3: E-Commerce Delivery with Cash on Delivery?`;
                 },
-                targetSelector: function() { 
+                targetSelector: function() {
                     const cur = document.getElementById('shipment_type')?.value;
                     if (cur === 'ecommerce') return document.getElementById('mode-btn-ecommerce');
                     if (cur === 'international') return document.getElementById('mode-btn-international');
-                    return document.getElementById('mode-btn-domestic'); 
+                    return document.getElementById('mode-btn-domestic');
                 },
                 parse: function(text) {
                     const t = text.toLowerCase();
@@ -2931,33 +3018,63 @@ document.addEventListener('alpine:init', () => {
                 },
                 apply: function(val) {
                     if (typeof switchMode === 'function') switchMode(val);
+                    if (typeof refreshVoiceStepsForActiveMode === 'function') refreshVoiceStepsForActiveMode(val, false);
                     if (val === 'ecommerce') return 'E-Commerce Delivery & COD';
                     return val === 'international' ? 'International Air Cargo' : 'Domestic Express Delivery';
                 }
             },
+
+            // Field 2: Service Tier SLA
             {
-                id: 'pickup_city',
-                title: 'Pickup City / District',
+                id: 'service_type',
+                title: isIntl ? 'International Air Courier Mode' : (isEcom ? 'E-Commerce Rider SLA' : 'Domestic Service Tier SLA'),
                 prompt: function() {
-                    return 'What is the pickup city or district in Nepal? For example: Jhapa, Kathmandu, or Pokhara.';
+                    if (isIntl) return 'Which courier mode do you require? 1: Priority Express Service (3-4 working days), or 2: Economy Air Cargo (6-8 working days)?';
+                    if (isEcom) return 'Which rider SLA do you need? 1: Instant Flash Dispatch within 60-90 minutes, 2: Same-Day Delivery, or 3: Standard Next-Day Collection?';
+                    return 'Which delivery speed would you like? 1: Standard 1-2 days normal transit, 2: Flash 1-2 hours urgent, 3: Same-Day express, or 4: Himalayan remote?';
                 },
                 targetSelector: function() {
-                    return document.getElementById('pickup_address_0') || document.querySelector('textarea[name="pickup_address[]"]');
+                    if (isIntl) return document.getElementById('international_service_type');
+                    if (isEcom) return document.getElementById('ecommerce_service_type');
+                    return document.getElementById('domestic_service_type');
                 },
                 parse: function(text) {
-                    return text.replace(/^(pickup|from|in|at|city is|district is)\s+/i, '').trim();
+                    const t = text.toLowerCase();
+                    if (isIntl) {
+                        return (t.includes('express') || t.includes('priority') || t.includes('fast') || t.includes('one') || t.includes('1') || t.includes('ek')) ? 'express' : 'economy';
+                    }
+                    if (isEcom) {
+                        if (t.includes('flash') || t.includes('urgent') || t.includes('instant') || t.includes('60') || t.includes('one') || t.includes('1') || t.includes('ek')) return 'flash';
+                        if (t.includes('same') || t.includes('today') || t.includes('two') || t.includes('2') || t.includes('dui')) return 'same_day';
+                        return 'standard';
+                    }
+                    if (t.includes('flash') || t.includes('urgent') || t.includes('chito') || t.includes('two') || t.includes('2') || t.includes('dui')) return 'flash';
+                    if (t.includes('same') || t.includes('aajai') || t.includes('three') || t.includes('3') || t.includes('tin')) return 'same_day';
+                    if (t.includes('himalayan') || t.includes('remote') || t.includes('mountain') || t.includes('four') || t.includes('4') || t.includes('char')) return 'himalayan';
+                    return 'standard';
                 },
                 apply: function(val) {
-                    const el = document.getElementById('pickup_address_0') || document.querySelector('textarea[name="pickup_address[]"]');
-                    if (el) typeIntoElement(el, val);
+                    const selId = isIntl ? 'international_service_type' : (isEcom ? 'ecommerce_service_type' : 'domestic_service_type');
+                    const sel = document.getElementById(selId);
+                    if (sel) {
+                        sel.value = val;
+                        sel.dispatchEvent(new Event('change', { bubbles: true }));
+                        sel.classList.add('ring-2', 'ring-emerald-500', 'bg-emerald-50/20');
+                        setTimeout(() => sel.classList.remove('ring-2', 'ring-emerald-500', 'bg-emerald-50/20'), 1500);
+                        return sel.options[sel.selectedIndex]?.text || val;
+                    }
                     return val;
                 }
             },
+
+            // Field 3: Sender Contact Person
             {
                 id: 'sender_name',
-                title: 'Sender / Contact Person',
+                title: isEcom ? 'Store / Merchant Contact Name' : 'Sender Contact Person',
                 prompt: function() {
-                    return 'Who is the sender or contact person for parcel pickup?';
+                    return isEcom 
+                        ? 'Who is the store or merchant contact person for package pickup?' 
+                        : 'Who is the sender or contact person for parcel pickup?';
                 },
                 targetSelector: function() {
                     return document.getElementById('pickup_name_0') || document.querySelector('input[name="pickup_name[]"]') || document.querySelector('input[name="sender_name"]');
@@ -2971,11 +3088,13 @@ document.addEventListener('alpine:init', () => {
                     return val;
                 }
             },
+
+            // Field 4: Sender Phone Number
             {
                 id: 'sender_phone',
-                title: 'Sender Phone Number',
+                title: isEcom ? 'Store Contact Mobile Number' : 'Sender Mobile Phone',
                 prompt: function() {
-                    return 'What is the sender contact phone number in Nepal?';
+                    return 'What is the sender contact mobile phone number in Nepal?';
                 },
                 targetSelector: function() {
                     return document.getElementById('pickup_phone_0') || document.querySelector('input[name="pickup_phone[]"]') || document.querySelector('input[name="sender_phone"]');
@@ -2989,20 +3108,22 @@ document.addEventListener('alpine:init', () => {
                     return val;
                 }
             },
+
+            // Field 5: Pickup Street Address & Landmark
             {
                 id: 'pickup_address',
-                title: 'Pickup Street Address / Landmark',
+                title: isEcom ? 'Store / Warehouse Pickup Address' : 'Full Pickup Street Address & Landmark',
                 prompt: function() {
-                    return 'Please state the detailed street address, ward, or landmark for courier collection.';
+                    return 'Please state the detailed street address, ward, or landmark for courier collection in Nepal.';
                 },
                 targetSelector: function() {
-                    return document.getElementById('pickup_address_0') || document.querySelector('textarea[name="pickup_address[]"]');
+                    return document.getElementById('pickup_address_0') || document.querySelector('textarea[name="pickup_address[]"]') || document.querySelector('input[name="sender_address"]');
                 },
                 parse: function(text) {
                     return text.trim();
                 },
                 apply: function(val) {
-                    const el = document.getElementById('pickup_address_0') || document.querySelector('textarea[name="pickup_address[]"]');
+                    const el = document.getElementById('pickup_address_0') || document.querySelector('textarea[name="pickup_address[]"]') || document.querySelector('input[name="sender_address"]');
                     if (el) {
                         const current = el.value.trim();
                         const finalVal = current && !current.toLowerCase().includes(val.toLowerCase()) ? `${val}, ${current}` : val;
@@ -3010,28 +3131,26 @@ document.addEventListener('alpine:init', () => {
                     }
                     return val;
                 }
-            },
-            {
-                id: 'destination',
-                title: 'Delivery Destination',
-                prompt: function() {
-                    const isIntl = document.getElementById('shipment_type')?.value === 'international';
-                    return isIntl 
-                        ? 'Which destination country is this international shipment heading to? For example: Poland, USA, or Germany.' 
-                        : 'Which destination city or district in Nepal is this being delivered to? For example: Pokhara or Biratnagar.';
-                },
-                targetSelector: function() {
-                    const isIntl = document.getElementById('shipment_type')?.value === 'international';
-                    return isIntl ? document.getElementById('receiver_country') : (document.getElementById('delivery_address_0') || document.querySelector('textarea[name="delivery_address[]"]'));
-                },
-                parse: function(text) {
-                    const isIntl = document.getElementById('shipment_type')?.value === 'international';
-                    if (isIntl) return parseCountryName(text);
-                    return text.replace(/^(to|destination is|for)\s+/i, '').trim();
-                },
-                apply: function(val) {
-                    const isIntl = document.getElementById('shipment_type')?.value === 'international';
-                    if (isIntl) {
+            }
+        ];
+
+        // Delivery Destination Fields (Mode-specific)
+        if (isIntl) {
+            steps.push(
+                // Field 6: Destination Country
+                {
+                    id: 'receiver_country',
+                    title: 'Destination Country',
+                    prompt: function() {
+                        return 'Which destination country is this international shipment heading to? For example: Poland, United States, United Kingdom, Australia, or Germany.';
+                    },
+                    targetSelector: function() {
+                        return document.getElementById('receiver_country');
+                    },
+                    parse: function(text) {
+                        return parseCountryName(text);
+                    },
+                    apply: function(val) {
                         const select = document.getElementById('receiver_country');
                         if (select) {
                             let matched = false;
@@ -3051,42 +3170,183 @@ document.addEventListener('alpine:init', () => {
                             select.classList.add('ring-2', 'ring-emerald-500', 'bg-emerald-50/20');
                             setTimeout(() => select.classList.remove('ring-2', 'ring-emerald-500', 'bg-emerald-50/20'), 1500);
                         }
-                    } else {
-                        const el = document.getElementById('delivery_address_0') || document.querySelector('textarea[name="delivery_address[]"]');
-                        if (el) typeIntoElement(el, val);
+                        return val;
                     }
-                    return val;
+                },
+                // Field 7: Receiver Name / Company
+                {
+                    id: 'receiver_name',
+                    title: 'Overseas Recipient Name / Company',
+                    prompt: function() {
+                        return 'What is the full name or company name of the recipient overseas?';
+                    },
+                    targetSelector: function() {
+                        return document.querySelector('input[name="receiver_name"]');
+                    },
+                    parse: function(text) {
+                        return text.replace(/^(the receiver is|receiver is|name is|company is|to)\s+/i, '').trim();
+                    },
+                    apply: function(val) {
+                        const el = document.querySelector('input[name="receiver_name"]');
+                        if (el) typeIntoElement(el, val);
+                        return val;
+                    }
+                },
+                // Field 8: Destination City
+                {
+                    id: 'receiver_city',
+                    title: 'Destination City',
+                    prompt: function() {
+                        return 'What is the destination city overseas? For example: Warsaw, London, or New York.';
+                    },
+                    targetSelector: function() {
+                        return document.querySelector('input[name="receiver_city"]');
+                    },
+                    parse: function(text) {
+                        return text.replace(/^(city is|in|at)\s+/i, '').trim();
+                    },
+                    apply: function(val) {
+                        const el = document.querySelector('input[name="receiver_city"]');
+                        if (el) typeIntoElement(el, val);
+                        return val;
+                    }
+                },
+                // Field 9: Postal / ZIP Code
+                {
+                    id: 'receiver_postal_code',
+                    title: 'Postal / ZIP Code',
+                    prompt: function() {
+                        return 'What is the postal or ZIP code for the destination address? Or say skip if unknown.';
+                    },
+                    targetSelector: function() {
+                        return document.querySelector('input[name="receiver_postal_code"]');
+                    },
+                    parse: function(text) {
+                        if (text.toLowerCase().includes('skip') || text.toLowerCase().includes('unknown')) return '';
+                        return text.replace(/^(zip is|code is|postal code is)\s+/i, '').trim();
+                    },
+                    apply: function(val) {
+                        const el = document.querySelector('input[name="receiver_postal_code"]');
+                        if (el && val) typeIntoElement(el, val);
+                        return val || 'Skipped';
+                    }
+                },
+                // Field 10: Destination Street Address
+                {
+                    id: 'receiver_street',
+                    title: 'Destination Street Address',
+                    prompt: function() {
+                        return 'What is the full street address overseas, including building, suite, or room number?';
+                    },
+                    targetSelector: function() {
+                        return document.querySelector('input[name="receiver_street"]');
+                    },
+                    parse: function(text) {
+                        return text.trim();
+                    },
+                    apply: function(val) {
+                        const el = document.querySelector('input[name="receiver_street"]');
+                        if (el) typeIntoElement(el, val);
+                        return val;
+                    }
                 }
-            },
-            {
-                id: 'receiver_name',
-                title: 'Recipient Name',
-                prompt: function() {
-                    return 'Who is the receiver or consignee at the destination?';
+            );
+        } else {
+            // Domestic or E-Commerce Destination Fields
+            steps.push(
+                // Field 6: Destination District in Nepal
+                {
+                    id: 'destination_district',
+                    title: 'Destination District in Nepal',
+                    prompt: function() {
+                        return 'Which destination district in Nepal is this package heading to? For example: Kathmandu, Jhapa, Morang, Pokhara, or Chitwan.';
+                    },
+                    targetSelector: function() {
+                        return document.getElementById('shipment_deliv_0_search') || document.getElementById('shipment_deliv_0_district') || document.getElementById('delivery_address_0');
+                    },
+                    parse: function(text) {
+                        return text.replace(/^(to|for|destination is|district is|delivered to)\s+/i, '')
+                                   .replace(/\s+(district|zilla|ma|lai|pathaune)$/i, '').trim();
+                    },
+                    apply: function(val) {
+                        const applied = selectNepalTerritoryDistrict('shipment_deliv_0', val);
+                        return applied || val;
+                    }
                 },
-                targetSelector: function() {
-                    const isIntl = document.getElementById('shipment_type')?.value === 'international';
-                    return isIntl 
-                        ? document.querySelector('input[name="receiver_name"]') 
-                        : (document.getElementById('delivery_name_0') || document.querySelector('input[name="delivery_name[]"]'));
+                // Field 7: Recipient Full Name
+                {
+                    id: 'receiver_name',
+                    title: isEcom ? 'Customer Full Name' : 'Recipient Full Name',
+                    prompt: function() {
+                        return isEcom 
+                            ? 'What is the customer’s full name at the delivery destination?' 
+                            : 'What is the full name of the recipient or consignee at the delivery destination?';
+                    },
+                    targetSelector: function() {
+                        return document.getElementById('delivery_name_0') || document.querySelector('input[name="delivery_name[]"]');
+                    },
+                    parse: function(text) {
+                        return text.replace(/^(the receiver is|receiver is|name is|customer is|to)\s+/i, '').trim();
+                    },
+                    apply: function(val) {
+                        const el = document.getElementById('delivery_name_0') || document.querySelector('input[name="delivery_name[]"]');
+                        if (el) typeIntoElement(el, val);
+                        return val;
+                    }
                 },
-                parse: function(text) {
-                    return text.replace(/^(the receiver is|receiver is|name is|to)\s+/i, '').trim();
+                // Field 8: Recipient Phone Number
+                {
+                    id: 'receiver_phone',
+                    title: isEcom ? 'Customer Mobile Phone' : 'Recipient Mobile Phone',
+                    prompt: function() {
+                        return 'What is the recipient’s mobile phone number for delivery coordination in Nepal?';
+                    },
+                    targetSelector: function() {
+                        return document.getElementById('delivery_phone_0') || document.querySelector('input[name="delivery_phone[]"]');
+                    },
+                    parse: function(text) {
+                        return parseSpokenPhoneNumber(text);
+                    },
+                    apply: function(val) {
+                        const el = document.getElementById('delivery_phone_0') || document.querySelector('input[name="delivery_phone[]"]');
+                        if (el) typeIntoElement(el, val);
+                        return val;
+                    }
                 },
-                apply: function(val) {
-                    const isIntl = document.getElementById('shipment_type')?.value === 'international';
-                    const el = isIntl 
-                        ? document.querySelector('input[name="receiver_name"]') 
-                        : (document.getElementById('delivery_name_0') || document.querySelector('input[name="delivery_name[]"]'));
-                    if (el) typeIntoElement(el, val);
-                    return val;
+                // Field 9: Delivery Street Address & Landmark
+                {
+                    id: 'delivery_address',
+                    title: 'Delivery Street Address & Landmark',
+                    prompt: function() {
+                        return 'What is the detailed street address, ward, or landmark for delivery drop-off?';
+                    },
+                    targetSelector: function() {
+                        return document.getElementById('delivery_address_0') || document.querySelector('textarea[name="delivery_address[]"]');
+                    },
+                    parse: function(text) {
+                        return text.trim();
+                    },
+                    apply: function(val) {
+                        const el = document.getElementById('delivery_address_0') || document.querySelector('textarea[name="delivery_address[]"]');
+                        if (el) {
+                            const current = el.value.trim();
+                            const finalVal = current && !current.toLowerCase().includes(val.toLowerCase()) ? `${val}, ${current}` : val;
+                            typeIntoElement(el, finalVal);
+                        }
+                        return val;
+                    }
                 }
-            },
+            );
+        }
+
+        // Section 4 Cargo Specifications (All Modes)
+        steps.push(
+            // Cargo Weight
             {
                 id: 'weight',
-                title: 'Consignment Weight (KG)',
+                title: 'Consignment Gross Weight (KG)',
                 prompt: function() {
-                    return 'What is the package weight in kilograms? For example: 20 kg.';
+                    return 'What is the total weight of the package in kilograms? For example: 2 kg or 20 kg.';
                 },
                 targetSelector: function() {
                     return document.getElementById('weight-input') || document.querySelector('input[name="weight"]');
@@ -3100,16 +3360,61 @@ document.addEventListener('alpine:init', () => {
                         typeIntoElement(el, val.toString(), () => {
                             if (typeof calculateVolumetricWeight === 'function') calculateVolumetricWeight();
                             if (typeof updateSummaryStats === 'function') updateSummaryStats();
+                            const alpineEl = document.querySelector('[x-data]');
+                            if (alpineEl && alpineEl._x_dataStack && alpineEl._x_dataStack[0] && alpineEl._x_dataStack[0].boxes && alpineEl._x_dataStack[0].boxes[0]) {
+                                alpineEl._x_dataStack[0].boxes[0].weight_kg = parseFloat(val);
+                                if (typeof alpineEl._x_dataStack[0].syncCargoWeight === 'function') alpineEl._x_dataStack[0].syncCargoWeight();
+                            }
                         });
                     }
                     return val + ' KG';
                 }
             },
+            // Cargo Dimensions
+            {
+                id: 'dimensions',
+                title: 'Package Dimensions (L x W x H cm)',
+                prompt: function() {
+                    return 'What are the box dimensions in centimeters? For example: 30 by 20 by 15 cm. Or say skip if standard.';
+                },
+                targetSelector: function() {
+                    return document.getElementById('length-input');
+                },
+                parse: function(text) {
+                    return parseSpokenDimensions(text);
+                },
+                apply: function(dims) {
+                    if (!dims || typeof dims !== 'object') return 'Standard dimensions';
+                    const lEl = document.getElementById('length-input');
+                    const wEl = document.getElementById('width-input');
+                    const hEl = document.getElementById('height-input');
+                    if (lEl) lEl.value = dims.length || 20;
+                    if (wEl) wEl.value = dims.width || 20;
+                    if (hEl) hEl.value = dims.height || 20;
+                    [lEl, wEl, hEl].forEach(el => {
+                        if (el) {
+                            el.dispatchEvent(new Event('input', { bubbles: true }));
+                            el.classList.add('ring-2', 'ring-emerald-500');
+                            setTimeout(() => el.classList.remove('ring-2', 'ring-emerald-500'), 1500);
+                        }
+                    });
+                    if (typeof calculateVolumetricWeight === 'function') calculateVolumetricWeight();
+                    const alpineEl = document.querySelector('[x-data]');
+                    if (alpineEl && alpineEl._x_dataStack && alpineEl._x_dataStack[0] && alpineEl._x_dataStack[0].boxes && alpineEl._x_dataStack[0].boxes[0]) {
+                        alpineEl._x_dataStack[0].boxes[0].length_cm = parseFloat(dims.length || 20);
+                        alpineEl._x_dataStack[0].boxes[0].width_cm = parseFloat(dims.width || 20);
+                        alpineEl._x_dataStack[0].boxes[0].height_cm = parseFloat(dims.height || 20);
+                        if (typeof alpineEl._x_dataStack[0].syncCargoWeight === 'function') alpineEl._x_dataStack[0].syncCargoWeight();
+                    }
+                    return `${dims.length} × ${dims.width} × ${dims.height} cm`;
+                }
+            },
+            // Cargo Description
             {
                 id: 'description',
                 title: 'Package Contents Description',
                 prompt: function() {
-                    return 'Briefly describe the contents of the package. For example: apparel, documents, or handicrafts.';
+                    return 'Briefly describe the contents of the package. For example: apparel, documents, foodstuff, or handicrafts.';
                 },
                 targetSelector: function() {
                     return document.querySelector('input[name="description"]');
@@ -3123,7 +3428,48 @@ document.addEventListener('alpine:init', () => {
                     return val;
                 }
             }
-        ]
+        );
+
+        return steps;
+    }
+
+    function refreshVoiceStepsForActiveMode(mode, syncStepBadge = false) {
+        if (!window.aiVoiceAutofill) return;
+        const currentStepId = window.aiVoiceAutofill.steps && window.aiVoiceAutofill.steps[window.aiVoiceAutofill.currentStepIndex]?.id;
+        window.aiVoiceAutofill.steps = buildVoiceStepsForMode(mode);
+        
+        if (currentStepId) {
+            const newIdx = window.aiVoiceAutofill.steps.findIndex(s => s.id === currentStepId);
+            if (newIdx !== -1) {
+                window.aiVoiceAutofill.currentStepIndex = newIdx;
+            }
+        }
+
+        if (syncStepBadge && window.aiVoiceAutofill.isActive) {
+            const stepBadge = document.getElementById('ai-voice-step-badge');
+            if (stepBadge) stepBadge.innerText = `Field ${window.aiVoiceAutofill.currentStepIndex + 1} of ${window.aiVoiceAutofill.steps.length}`;
+            const currentStep = window.aiVoiceAutofill.steps[window.aiVoiceAutofill.currentStepIndex];
+            if (currentStep) {
+                const stepTitle = document.getElementById('ai-voice-step-title');
+                const titleText = typeof currentStep.title === 'function' ? currentStep.title() : currentStep.title;
+                if (stepTitle) stepTitle.innerText = titleText;
+            }
+        }
+    }
+
+    window.aiVoiceAutofill = {
+        isActive: false,
+        isSpeaking: false,
+        isListening: false,
+        currentStepIndex: 0,
+        recognition: null,
+        audioStream: null,
+        audioContext: null,
+        analyser: null,
+        animFrameId: null,
+        speechSynthesis: window.speechSynthesis || null,
+        clientPreferredName: '{{ session("ai_preferred_name", explode(" ", Auth::user()->name ?? "Client")[0]) }} Ji',
+        steps: buildVoiceStepsForMode(document.getElementById('shipment_type')?.value || 'domestic')
     };
 
     // User consent functions
@@ -3407,7 +3753,7 @@ document.addEventListener('alpine:init', () => {
             // 4. Pressing Enter directly inside the form input box
             input.addEventListener('keydown', function(e) {
                 if (!window.aiVoiceAutofill.isActive) return;
-                if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+                if (e.key === 'Enter' && (!e.shiftKey || e.target.tagName !== 'TEXTAREA')) {
                     const currentStep = window.aiVoiceAutofill.steps[window.aiVoiceAutofill.currentStepIndex];
                     if (!currentStep) return;
                     const targetEl = currentStep.targetSelector ? currentStep.targetSelector() : null;
@@ -3523,7 +3869,8 @@ document.addEventListener('alpine:init', () => {
         if (stepBadge) stepBadge.innerText = `Field ${stepIndex + 1} of ${window.aiVoiceAutofill.steps.length}`;
 
         const stepTitle = document.getElementById('ai-voice-step-title');
-        if (stepTitle) stepTitle.innerText = step.title;
+        const titleText = typeof step.title === 'function' ? step.title() : step.title;
+        if (stepTitle) stepTitle.innerText = titleText;
 
         const promptText = typeof step.prompt === 'function' ? step.prompt(window.aiVoiceAutofill) : step.prompt;
         const promptEl = document.getElementById('ai-voice-current-prompt');
@@ -3535,7 +3882,7 @@ document.addEventListener('alpine:init', () => {
         const quickInput = document.getElementById('ai-voice-quick-input');
         if (quickInput) {
             quickInput.value = '';
-            quickInput.placeholder = `Speak into mic or type answer for "${step.title}" & press Enter...`;
+            quickInput.placeholder = `Speak into mic or type answer for "${titleText}" & press Enter...`;
         }
 
         // Scroll to and highlight target field
@@ -3752,6 +4099,31 @@ document.addEventListener('alpine:init', () => {
         }
         const match = clean.match(/(\d+(?:\.\d+)?)/);
         return match ? parseFloat(match[1]) : 1.0;
+    }
+
+    function parseSpokenDimensions(text) {
+        if (!text || text.toLowerCase().includes('skip') || text.toLowerCase().includes('standard') || text.toLowerCase().includes('default')) {
+            return { length: 25, width: 20, height: 15 };
+        }
+        let clean = text.toLowerCase().replace(/x/g, ' by ').replace(/into/g, ' by ');
+        const matches = clean.match(/\d+(?:\.\d+)?/g);
+        if (matches && matches.length >= 3) {
+            return {
+                length: parseFloat(matches[0]),
+                width: parseFloat(matches[1]),
+                height: parseFloat(matches[2])
+            };
+        } else if (matches && matches.length === 2) {
+            return {
+                length: parseFloat(matches[0]),
+                width: parseFloat(matches[1]),
+                height: 15
+            };
+        } else if (matches && matches.length === 1) {
+            const v = parseFloat(matches[0]);
+            return { length: v, width: v, height: v };
+        }
+        return { length: 25, width: 20, height: 15 };
     }
 
     function parseCountryName(text) {
