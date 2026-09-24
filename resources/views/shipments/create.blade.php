@@ -2790,6 +2790,8 @@ document.addEventListener('alpine:init', () => {
             } else if (mode === 'domestic') {
                 alpineEl._x_dataStack[0].invoiceCurrency = 'NPR';
             }
+        }
+
         if (window.aiVoiceAutofill && window.aiVoiceAutofill.isActive && typeof refreshVoiceStepsForActiveMode === 'function') {
             refreshVoiceStepsForActiveMode(mode, true);
         }
