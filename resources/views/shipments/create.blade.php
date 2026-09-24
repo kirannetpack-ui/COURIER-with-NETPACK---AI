@@ -656,9 +656,23 @@ document.addEventListener('alpine:init', () => {
             </button>
         </div>
 
-        <div class="hidden lg:flex items-center gap-2 text-xs text-slate-400 pr-2">
-            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>Single Unified Logistics Console &bull; Auto-Sync</span>
+        <div class="flex items-center gap-3">
+            <!-- AI Voice Autofill Header Trigger -->
+            <button type="button" 
+                    onclick="window.initiateVoiceAutofillAssistant(true)"
+                    id="voice-autofill-header-btn"
+                    title="Start AI Voice-Guided Form Autofill"
+                    class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-teal-500/20 via-emerald-500/20 to-teal-500/10 hover:from-teal-500/30 hover:to-emerald-500/30 text-teal-300 border border-teal-500/40 text-xs font-bold transition flex items-center gap-2 shadow-xs cursor-pointer">
+                <i class="fas fa-microphone-lines text-teal-400 animate-pulse"></i>
+                <span class="hidden sm:inline">AI Voice Autofill</span>
+                <span class="sm:hidden">Voice AI</span>
+                <span class="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-teal-500 text-slate-950">Concierge</span>
+            </button>
+
+            <div class="hidden lg:flex items-center gap-2 text-xs text-slate-400 pr-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>Single Unified Logistics Console &bull; Auto-Sync</span>
+            </div>
         </div>
     </div>
 
@@ -713,6 +727,122 @@ document.addEventListener('alpine:init', () => {
             </button>
         </div>
     @endif
+
+    <!-- ========================================================================= -->
+    <!-- AI VOICE CONCIERGE INVITATION (ASKED BEFOREHAND TO INITIATE) -->
+    <!-- ========================================================================= -->
+    <div id="ai-voice-invitation-banner" 
+         class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 border border-teal-500/40 p-5 sm:p-6 text-white shadow-xl backdrop-blur-xl transition-all duration-300">
+        <div class="absolute -right-8 -bottom-8 w-40 h-40 bg-teal-500/10 rounded-full blur-2xl pointer-events-none"></div>
+        <div class="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div class="flex items-start gap-4">
+                <div class="relative w-12 h-12 rounded-2xl bg-gradient-to-tr from-teal-500 to-emerald-400 p-0.5 shadow-lg flex-shrink-0">
+                    <div class="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center text-xl">
+                        <span>🎙️</span>
+                    </div>
+                    <span class="absolute -top-1 -right-1 flex h-3 w-3">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                    </span>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h4 class="text-sm font-black text-white tracking-wide">
+                            Would you like AI Voice Autofill Assistance?
+                        </h4>
+                        <span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                            Hands-Free Voice Typing
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                        Namaste <strong>{{ session('ai_preferred_name', explode(' ', Auth::user()->name ?? 'Client')[0]) }} Ji</strong>! Our AI Copilot can speak with you, ask for each consignment detail step-by-step, and auto-type the information directly into the form fields as you answer.
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2.5 self-end sm:self-center flex-shrink-0">
+                <button type="button" 
+                        onclick="window.initiateVoiceAutofillAssistant(true)"
+                        class="px-4 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 text-xs font-black tracking-wide shadow-md hover:shadow-teal-500/20 transition flex items-center gap-2 cursor-pointer">
+                    <i class="fas fa-play text-[10px]"></i>
+                    <span>Yes, Guide Me by Voice</span>
+                </button>
+                <button type="button" 
+                        onclick="window.dismissVoiceAutofillInvitation()"
+                        class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold transition cursor-pointer">
+                    <span>No, I'll Type Manually</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ACTIVE VOICE CONCIERGE CONTROLLER (VISIBLE WHEN ASSISTANT IS ACTIVE) -->
+    <div id="ai-voice-active-controller" 
+         style="display: none;" 
+         class="sticky top-4 z-40 rounded-3xl bg-slate-900/95 border-2 border-teal-500/60 p-4 sm:p-5 text-white shadow-2xl backdrop-blur-xl ring-2 ring-teal-500/20 transition-all duration-300">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <!-- Left Info -->
+            <div class="flex items-center gap-3.5 min-w-0">
+                <div class="w-10 h-10 rounded-2xl bg-teal-500/20 border border-teal-500/40 flex items-center justify-center text-lg text-teal-300 flex-shrink-0" id="ai-voice-avatar-icon">
+                    <i class="fas fa-microphone-lines text-teal-400 animate-pulse"></i>
+                </div>
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold font-mono uppercase bg-teal-500 text-slate-950" id="ai-voice-step-badge">
+                            Field 1 of 9
+                        </span>
+                        <span class="text-xs font-black text-white truncate" id="ai-voice-step-title">
+                            Shipment Service Category
+                        </span>
+                        <span class="text-[10px] text-teal-300/80 font-mono" id="ai-voice-status-indicator">
+                            ● Speaking question...
+                        </span>
+                    </div>
+                    <p class="text-xs text-teal-200/90 font-medium mt-0.5 line-clamp-1" id="ai-voice-current-prompt">
+                        Loading question...
+                    </p>
+                    <p class="text-[11px] text-slate-400 font-mono mt-0.5 italic truncate" id="ai-voice-transcript-preview" style="display: none;">
+                        🎙️ Transcribed: <span class="text-emerald-300 font-bold" id="ai-voice-transcript-text"></span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Equalizer & Actions -->
+            <div class="flex items-center gap-2 self-end md:self-center flex-shrink-0">
+                <!-- Soundwave Animation -->
+                <div class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-950/80 border border-slate-800" id="ai-voice-equalizer">
+                    <span class="w-1 h-3 bg-teal-400 rounded-full animate-pulse"></span>
+                    <span class="w-1 h-5 bg-emerald-400 rounded-full animate-bounce"></span>
+                    <span class="w-1 h-2 bg-teal-300 rounded-full animate-pulse"></span>
+                    <span class="w-1 h-4 bg-teal-500 rounded-full animate-bounce"></span>
+                </div>
+
+                <button type="button" onclick="window.voiceAssistantReask()" title="Re-ask current question"
+                        class="p-2 sm:px-2.5 sm:py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer">
+                    <i class="fas fa-rotate-right text-[10px]"></i>
+                    <span class="hidden sm:inline">Repeat</span>
+                </button>
+
+                <button type="button" onclick="window.voiceAssistantPrev()" title="Go to previous field"
+                        class="p-2 sm:px-2.5 sm:py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer">
+                    <i class="fas fa-arrow-left text-[10px]"></i>
+                    <span class="hidden sm:inline">Back</span>
+                </button>
+
+                <button type="button" onclick="window.voiceAssistantNext()" title="Skip to next field"
+                        class="p-2 sm:px-2.5 sm:py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer">
+                    <span class="hidden sm:inline">Skip</span>
+                    <i class="fas fa-arrow-right text-[10px]"></i>
+                </button>
+
+                <button type="button" onclick="window.exitVoiceAutofillAssistant()" title="Stop Voice Assistant"
+                        class="px-2.5 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                    <i class="fas fa-xmark text-[10px]"></i>
+                    <span>Stop</span>
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- ========================================================================= -->
     <!-- UNIFIED SHIPMENT & DOORSTEP PICKUP BOOKING FORM -->
@@ -2713,6 +2843,568 @@ document.addEventListener('alpine:init', () => {
         }
 
         updateSummaryStats();
+
+        // Check if user previously dismissed the Voice Autofill invitation
+        if (sessionStorage.getItem('ai_voice_autofill_dismissed') === '1') {
+            const banner = document.getElementById('ai-voice-invitation-banner');
+            if (banner) banner.style.display = 'none';
+        }
     });
+
+    // =========================================================================
+    // AI VOICE CONCIERGE & AUTO-TYPING ENGINE (ALWAYS ASKS BEFOREHAND TO INITIATE)
+    // =========================================================================
+    window.aiVoiceAutofill = {
+        isActive: false,
+        isSpeaking: false,
+        isListening: false,
+        currentStepIndex: 0,
+        recognition: null,
+        speechSynthesis: window.speechSynthesis || null,
+        clientPreferredName: '{{ session("ai_preferred_name", explode(" ", Auth::user()->name ?? "Client")[0]) }} Ji',
+        steps: [
+            {
+                id: 'mode',
+                title: 'Shipment Service Category',
+                prompt: function(ctx) {
+                    return `Namaste ${ctx.clientPreferredName}! Let's book your shipment. First, is this an International overseas air cargo shipment, or a Domestic delivery within Nepal?`;
+                },
+                targetSelector: function() { return document.getElementById('mode-btn-international'); },
+                parse: function(text) {
+                    const t = text.toLowerCase();
+                    if (t.includes('international') || t.includes('overseas') || t.includes('air cargo') || t.includes('poland') || t.includes('usa') || t.includes('europe') || t.includes('abroad')) {
+                        return 'international';
+                    }
+                    return 'domestic';
+                },
+                apply: function(val) {
+                    if (typeof switchMode === 'function') switchMode(val);
+                    return val === 'international' ? 'International Air Cargo' : 'Domestic Express';
+                }
+            },
+            {
+                id: 'pickup_city',
+                title: 'Pickup City / District',
+                prompt: function() {
+                    return 'What is the pickup city or district in Nepal? For example: Jhapa, Kathmandu, or Pokhara.';
+                },
+                targetSelector: function() {
+                    return document.getElementById('pickup_address_0') || document.querySelector('textarea[name="pickup_address[]"]');
+                },
+                parse: function(text) {
+                    return text.replace(/^(pickup|from|in|at|city is|district is)\s+/i, '').trim();
+                },
+                apply: function(val) {
+                    const el = document.getElementById('pickup_address_0') || document.querySelector('textarea[name="pickup_address[]"]');
+                    if (el) typeIntoElement(el, val);
+                    return val;
+                }
+            },
+            {
+                id: 'sender_name',
+                title: 'Sender / Contact Person',
+                prompt: function() {
+                    return 'Who is the sender or contact person for parcel pickup?';
+                },
+                targetSelector: function() {
+                    return document.getElementById('pickup_name_0') || document.querySelector('input[name="pickup_name[]"]') || document.querySelector('input[name="sender_name"]');
+                },
+                parse: function(text) {
+                    return text.replace(/^(my name is|the name is|contact is|sender is|this is)\s+/i, '').trim();
+                },
+                apply: function(val) {
+                    const el = document.getElementById('pickup_name_0') || document.querySelector('input[name="pickup_name[]"]') || document.querySelector('input[name="sender_name"]');
+                    if (el) typeIntoElement(el, val);
+                    return val;
+                }
+            },
+            {
+                id: 'sender_phone',
+                title: 'Sender Phone Number',
+                prompt: function() {
+                    return 'What is the sender contact phone number in Nepal?';
+                },
+                targetSelector: function() {
+                    return document.getElementById('pickup_phone_0') || document.querySelector('input[name="pickup_phone[]"]') || document.querySelector('input[name="sender_phone"]');
+                },
+                parse: function(text) {
+                    return parseSpokenPhoneNumber(text);
+                },
+                apply: function(val) {
+                    const el = document.getElementById('pickup_phone_0') || document.querySelector('input[name="pickup_phone[]"]') || document.querySelector('input[name="sender_phone"]');
+                    if (el) typeIntoElement(el, val);
+                    return val;
+                }
+            },
+            {
+                id: 'pickup_address',
+                title: 'Pickup Street Address / Landmark',
+                prompt: function() {
+                    return 'Please state the detailed street address, ward, or landmark for courier collection.';
+                },
+                targetSelector: function() {
+                    return document.getElementById('pickup_address_0') || document.querySelector('textarea[name="pickup_address[]"]');
+                },
+                parse: function(text) {
+                    return text.trim();
+                },
+                apply: function(val) {
+                    const el = document.getElementById('pickup_address_0') || document.querySelector('textarea[name="pickup_address[]"]');
+                    if (el) {
+                        const current = el.value.trim();
+                        const finalVal = current && !current.toLowerCase().includes(val.toLowerCase()) ? `${val}, ${current}` : val;
+                        typeIntoElement(el, finalVal);
+                    }
+                    return val;
+                }
+            },
+            {
+                id: 'destination',
+                title: 'Delivery Destination',
+                prompt: function() {
+                    const isIntl = document.getElementById('shipment_type')?.value === 'international';
+                    return isIntl 
+                        ? 'Which destination country is this international shipment heading to? For example: Poland, USA, or Germany.' 
+                        : 'Which destination city or district in Nepal is this being delivered to? For example: Pokhara or Biratnagar.';
+                },
+                targetSelector: function() {
+                    const isIntl = document.getElementById('shipment_type')?.value === 'international';
+                    return isIntl ? document.getElementById('receiver_country') : (document.getElementById('delivery_address_0') || document.querySelector('textarea[name="delivery_address[]"]'));
+                },
+                parse: function(text) {
+                    const isIntl = document.getElementById('shipment_type')?.value === 'international';
+                    if (isIntl) return parseCountryName(text);
+                    return text.replace(/^(to|destination is|for)\s+/i, '').trim();
+                },
+                apply: function(val) {
+                    const isIntl = document.getElementById('shipment_type')?.value === 'international';
+                    if (isIntl) {
+                        const select = document.getElementById('receiver_country');
+                        if (select) {
+                            let matched = false;
+                            for (let opt of select.options) {
+                                if (opt.value.toLowerCase() === val.toLowerCase()) {
+                                    select.value = opt.value;
+                                    matched = true;
+                                    break;
+                                }
+                            }
+                            if (!matched) {
+                                const opt = new Option(val, val, true, true);
+                                select.add(opt);
+                                select.value = val;
+                            }
+                            select.dispatchEvent(new Event('change', { bubbles: true }));
+                            select.classList.add('ring-2', 'ring-emerald-500', 'bg-emerald-50/20');
+                            setTimeout(() => select.classList.remove('ring-2', 'ring-emerald-500', 'bg-emerald-50/20'), 1500);
+                        }
+                    } else {
+                        const el = document.getElementById('delivery_address_0') || document.querySelector('textarea[name="delivery_address[]"]');
+                        if (el) typeIntoElement(el, val);
+                    }
+                    return val;
+                }
+            },
+            {
+                id: 'receiver_name',
+                title: 'Recipient Name',
+                prompt: function() {
+                    return 'Who is the receiver or consignee at the destination?';
+                },
+                targetSelector: function() {
+                    const isIntl = document.getElementById('shipment_type')?.value === 'international';
+                    return isIntl 
+                        ? document.querySelector('input[name="receiver_name"]') 
+                        : (document.getElementById('delivery_name_0') || document.querySelector('input[name="delivery_name[]"]'));
+                },
+                parse: function(text) {
+                    return text.replace(/^(the receiver is|receiver is|name is|to)\s+/i, '').trim();
+                },
+                apply: function(val) {
+                    const isIntl = document.getElementById('shipment_type')?.value === 'international';
+                    const el = isIntl 
+                        ? document.querySelector('input[name="receiver_name"]') 
+                        : (document.getElementById('delivery_name_0') || document.querySelector('input[name="delivery_name[]"]'));
+                    if (el) typeIntoElement(el, val);
+                    return val;
+                }
+            },
+            {
+                id: 'weight',
+                title: 'Consignment Weight (KG)',
+                prompt: function() {
+                    return 'What is the package weight in kilograms? For example: 20 kg.';
+                },
+                targetSelector: function() {
+                    return document.getElementById('weight-input') || document.querySelector('input[name="weight"]');
+                },
+                parse: function(text) {
+                    return parseSpokenWeight(text);
+                },
+                apply: function(val) {
+                    const el = document.getElementById('weight-input') || document.querySelector('input[name="weight"]');
+                    if (el) {
+                        typeIntoElement(el, val.toString(), () => {
+                            if (typeof calculateVolumetricWeight === 'function') calculateVolumetricWeight();
+                            if (typeof updateSummaryStats === 'function') updateSummaryStats();
+                        });
+                    }
+                    return val + ' KG';
+                }
+            },
+            {
+                id: 'description',
+                title: 'Package Contents Description',
+                prompt: function() {
+                    return 'Briefly describe the contents of the package. For example: apparel, documents, or handicrafts.';
+                },
+                targetSelector: function() {
+                    return document.querySelector('input[name="description"]');
+                },
+                parse: function(text) {
+                    return text.trim();
+                },
+                apply: function(val) {
+                    const el = document.querySelector('input[name="description"]');
+                    if (el) typeIntoElement(el, val);
+                    return val;
+                }
+            }
+        ]
+    };
+
+    // User consent functions
+    window.dismissVoiceAutofillInvitation = function() {
+        const banner = document.getElementById('ai-voice-invitation-banner');
+        if (banner) {
+            banner.style.opacity = '0';
+            banner.style.transform = 'translateY(-10px)';
+            setTimeout(() => banner.style.display = 'none', 300);
+        }
+        sessionStorage.setItem('ai_voice_autofill_dismissed', '1');
+    };
+
+    window.initiateVoiceAutofillAssistant = function(userExplicitlyClicked = false) {
+        const banner = document.getElementById('ai-voice-invitation-banner');
+        if (banner) banner.style.display = 'none';
+
+        const controller = document.getElementById('ai-voice-active-controller');
+        if (controller) controller.style.display = 'block';
+
+        window.aiVoiceAutofill.isActive = true;
+        window.aiVoiceAutofill.currentStepIndex = 0;
+
+        // Setup speech recognition
+        initSpeechRecognition();
+
+        // Ask Step 0
+        executeVoiceStep(0);
+    };
+
+    window.exitVoiceAutofillAssistant = function() {
+        window.aiVoiceAutofill.isActive = false;
+        if (window.aiVoiceAutofill.speechSynthesis) {
+            window.aiVoiceAutofill.speechSynthesis.cancel();
+        }
+        if (window.aiVoiceAutofill.recognition) {
+            try { window.aiVoiceAutofill.recognition.stop(); } catch(e){}
+        }
+
+        const controller = document.getElementById('ai-voice-active-controller');
+        if (controller) controller.style.display = 'none';
+
+        // Remove field highlight
+        document.querySelectorAll('.ai-voice-active-field').forEach(el => {
+            el.classList.remove('ai-voice-active-field', 'ring-4', 'ring-teal-500/50', 'border-teal-500');
+        });
+    };
+
+    window.voiceAssistantReask = function() {
+        if (!window.aiVoiceAutofill.isActive) return;
+        executeVoiceStep(window.aiVoiceAutofill.currentStepIndex);
+    };
+
+    window.voiceAssistantPrev = function() {
+        if (!window.aiVoiceAutofill.isActive) return;
+        const prev = Math.max(0, window.aiVoiceAutofill.currentStepIndex - 1);
+        executeVoiceStep(prev);
+    };
+
+    window.voiceAssistantNext = function() {
+        if (!window.aiVoiceAutofill.isActive) return;
+        const next = window.aiVoiceAutofill.currentStepIndex + 1;
+        if (next < window.aiVoiceAutofill.steps.length) {
+            executeVoiceStep(next);
+        } else {
+            completeVoiceAutofill();
+        }
+    };
+
+    function initSpeechRecognition() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            alert('Your browser does not support Web Speech Recognition. Please use Chrome, Edge, or Safari.');
+            return;
+        }
+
+        if (!window.aiVoiceAutofill.recognition) {
+            const rec = new SpeechRecognition();
+            rec.continuous = false;
+            rec.interimResults = false;
+            rec.lang = 'en-US';
+
+            rec.onstart = function() {
+                window.aiVoiceAutofill.isListening = true;
+                updateVoiceStatus('🎙️ Listening... Speak now', 'text-rose-400');
+                const eq = document.getElementById('ai-voice-equalizer');
+                if (eq) eq.classList.add('animate-pulse');
+            };
+
+            rec.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                if (transcript) {
+                    handleUserSpokenAnswer(transcript);
+                }
+            };
+
+            rec.onerror = function(event) {
+                window.aiVoiceAutofill.isListening = false;
+                updateVoiceStatus('Ready', 'text-teal-300/80');
+                console.log('Voice recognition notice:', event.error);
+            };
+
+            rec.onend = function() {
+                window.aiVoiceAutofill.isListening = false;
+                const eq = document.getElementById('ai-voice-equalizer');
+                if (eq) eq.classList.remove('animate-pulse');
+            };
+
+            window.aiVoiceAutofill.recognition = rec;
+        }
+    }
+
+    function executeVoiceStep(stepIndex) {
+        window.aiVoiceAutofill.currentStepIndex = stepIndex;
+        const step = window.aiVoiceAutofill.steps[stepIndex];
+        if (!step) {
+            completeVoiceAutofill();
+            return;
+        }
+
+        // Update UI Badges
+        const stepBadge = document.getElementById('ai-voice-step-badge');
+        if (stepBadge) stepBadge.innerText = `Field ${stepIndex + 1} of ${window.aiVoiceAutofill.steps.length}`;
+
+        const stepTitle = document.getElementById('ai-voice-step-title');
+        if (stepTitle) stepTitle.innerText = step.title;
+
+        const promptText = typeof step.prompt === 'function' ? step.prompt(window.aiVoiceAutofill) : step.prompt;
+        const promptEl = document.getElementById('ai-voice-current-prompt');
+        if (promptEl) promptEl.innerText = promptText;
+
+        const previewEl = document.getElementById('ai-voice-transcript-preview');
+        if (previewEl) previewEl.style.display = 'none';
+
+        // Scroll to and highlight target field
+        const targetEl = step.targetSelector ? step.targetSelector() : null;
+        if (targetEl) {
+            document.querySelectorAll('.ai-voice-active-field').forEach(el => {
+                el.classList.remove('ai-voice-active-field', 'ring-4', 'ring-teal-500/50', 'border-teal-500');
+            });
+            targetEl.classList.add('ai-voice-active-field', 'ring-4', 'ring-teal-500/50', 'border-teal-500');
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Speak question out loud
+        speakVoicePrompt(promptText, function() {
+            // Once speech finishes, trigger speech recognition to listen
+            if (window.aiVoiceAutofill.isActive && window.aiVoiceAutofill.recognition) {
+                try {
+                    window.aiVoiceAutofill.recognition.start();
+                } catch(e) {
+                    // Recognition already active
+                }
+            }
+        });
+    }
+
+    function handleUserSpokenAnswer(transcript) {
+        const stepIndex = window.aiVoiceAutofill.currentStepIndex;
+        const step = window.aiVoiceAutofill.steps[stepIndex];
+        if (!step) return;
+
+        // Show transcript
+        const previewEl = document.getElementById('ai-voice-transcript-preview');
+        const textEl = document.getElementById('ai-voice-transcript-text');
+        if (previewEl && textEl) {
+            textEl.innerText = transcript;
+            previewEl.style.display = 'block';
+        }
+
+        updateVoiceStatus('✨ Auto-typing...', 'text-emerald-300 font-bold');
+
+        // Parse and apply value
+        const parsedVal = step.parse ? step.parse(transcript) : transcript;
+        const appliedLabel = step.apply ? step.apply(parsedVal) : parsedVal;
+
+        // Confirm by voice and progress
+        setTimeout(() => {
+            const confirmPhrase = `Got it, ${appliedLabel}!`;
+            speakVoicePrompt(confirmPhrase, function() {
+                const nextStep = stepIndex + 1;
+                if (nextStep < window.aiVoiceAutofill.steps.length) {
+                    executeVoiceStep(nextStep);
+                } else {
+                    completeVoiceAutofill();
+                }
+            });
+        }, 600);
+    }
+
+    function completeVoiceAutofill() {
+        const promptEl = document.getElementById('ai-voice-current-prompt');
+        if (promptEl) promptEl.innerText = 'All consignment fields have been successfully auto-typed!';
+
+        updateVoiceStatus('✅ Autofill Completed', 'text-emerald-400 font-bold');
+
+        // Scroll to submit button and pulse
+        const submitBtn = document.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            submitBtn.classList.add('ring-4', 'ring-emerald-400', 'animate-bounce');
+            setTimeout(() => submitBtn.classList.remove('ring-4', 'ring-emerald-400', 'animate-bounce'), 4000);
+        }
+
+        speakVoicePrompt(`Wonderful ${window.aiVoiceAutofill.clientPreferredName}! All key shipment details have been auto-typed into your consignment form. Please review and click Submit to finalize your booking.`);
+    }
+
+    function speakVoicePrompt(text, onComplete) {
+        if (!('speechSynthesis' in window)) {
+            if (typeof onComplete === 'function') onComplete();
+            return;
+        }
+
+        window.speechSynthesis.cancel();
+        const clean = text.replace(/[#*`_~[\]()]/g, ' ').replace(/\s+/g, ' ').trim();
+        const utterance = new SpeechSynthesisUtterance(clean);
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+
+        const voices = window.speechSynthesis.getVoices();
+        const naturalVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha')));
+        if (naturalVoice) utterance.voice = naturalVoice;
+
+        utterance.onstart = function() {
+            window.aiVoiceAutofill.isSpeaking = true;
+            updateVoiceStatus('🗣️ Speaking...', 'text-teal-300');
+        };
+
+        utterance.onend = function() {
+            window.aiVoiceAutofill.isSpeaking = false;
+            if (typeof onComplete === 'function') onComplete();
+        };
+
+        utterance.onerror = function() {
+            window.aiVoiceAutofill.isSpeaking = false;
+            if (typeof onComplete === 'function') onComplete();
+        };
+
+        window.speechSynthesis.speak(utterance);
+    }
+
+    function updateVoiceStatus(msg, colorClass) {
+        const el = document.getElementById('ai-voice-status-indicator');
+        if (el) {
+            el.className = `text-[10px] font-mono ${colorClass}`;
+            el.innerText = `● ${msg}`;
+        }
+    }
+
+    // Smooth auto-typing simulation into DOM inputs
+    function typeIntoElement(element, text, callback) {
+        if (!element) return;
+        element.focus();
+        element.value = '';
+        let i = 0;
+        const str = String(text);
+        const speed = 25; // 25ms per character for smooth auto-typing
+        const timer = setInterval(() => {
+            if (i < str.length) {
+                element.value += str.charAt(i);
+                element.dispatchEvent(new Event('input', { bubbles: true }));
+                i++;
+            } else {
+                clearInterval(timer);
+                element.dispatchEvent(new Event('change', { bubbles: true }));
+                element.classList.add('ring-2', 'ring-emerald-500', 'bg-emerald-50/15');
+                setTimeout(() => {
+                    element.classList.remove('ring-2', 'ring-emerald-500', 'bg-emerald-50/15');
+                }, 1400);
+                if (typeof callback === 'function') callback();
+            }
+        }, speed);
+    }
+
+    function parseSpokenPhoneNumber(text) {
+        const wordToDigit = {
+            'zero': '0', 'one': '1', 'two': '2', 'three': '3', 'four': '4',
+            'five': '5', 'six': '6', 'seven': '7', 'eight': '8', 'nine': '9'
+        };
+        let clean = text.toLowerCase();
+        for (let [w, d] of Object.entries(wordToDigit)) {
+            clean = clean.replace(new RegExp('\\b' + w + '\\b', 'g'), d);
+        }
+        const digits = clean.replace(/\D/g, '');
+        return digits.length >= 7 ? digits : text.trim();
+    }
+
+    function parseSpokenWeight(text) {
+        const wordToNum = {
+            'one': '1', 'two': '2', 'three': '3', 'four': '4', 'five': '5',
+            'six': '6', 'seven': '7', 'eight': '8', 'nine': '9', 'ten': '10',
+            'fifteen': '15', 'twenty': '20', 'twenty five': '25', 'thirty': '30',
+            'fifty': '50', 'half': '0.5'
+        };
+        let clean = text.toLowerCase().replace(/point/g, '.');
+        for (let [w, d] of Object.entries(wordToNum)) {
+            clean = clean.replace(new RegExp('\\b' + w + '\\b', 'g'), d);
+        }
+        const match = clean.match(/(\d+(?:\.\d+)?)/);
+        return match ? parseFloat(match[1]) : 1.0;
+    }
+
+    function parseCountryName(text) {
+        const t = text.toLowerCase();
+        const map = {
+            'poland': 'Poland',
+            'germany': 'Germany',
+            'uk': 'United Kingdom',
+            'united kingdom': 'United Kingdom',
+            'england': 'United Kingdom',
+            'britain': 'United Kingdom',
+            'usa': 'United States',
+            'united states': 'United States',
+            'america': 'United States',
+            'australia': 'Australia',
+            'canada': 'Canada',
+            'uae': 'United Arab Emirates',
+            'dubai': 'United Arab Emirates',
+            'japan': 'Japan',
+            'france': 'France',
+            'netherlands': 'Netherlands',
+            'holland': 'Netherlands',
+            'italy': 'Italy',
+            'spain': 'Spain',
+            'switzerland': 'Switzerland',
+            'sweden': 'Sweden',
+            'singapore': 'Singapore',
+            'qatar': 'Qatar',
+            'india': 'India'
+        };
+        for (let [k, v] of Object.entries(map)) {
+            if (t.includes(k)) return v;
+        }
+        return text.replace(/\b\w/g, l => l.toUpperCase()).trim();
+    }
 </script>
 @endpush

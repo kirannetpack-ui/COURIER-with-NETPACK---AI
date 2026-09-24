@@ -1012,6 +1012,7 @@ Route::get('/ai-assistant', [AiAssistantController::class, 'index'])->name('ai.a
 Route::get('/ai/greeting', [AiAssistantController::class, 'greeting'])->name('ai.greeting');
 Route::post('/ai/chat', [AiAssistantController::class, 'chat'])->name('ai.chat');
 Route::get('/ai/occasions', [AiAssistantController::class, 'occasions'])->name('ai.occasions');
+Route::post('/ai/voice-autofill-parse', [AiAssistantController::class, 'voiceAutofillParse'])->name('ai.voice_autofill_parse');
 
 // =============================================
 // FALLBACK ROUTE

@@ -235,4 +235,64 @@ class AiAssistantTest extends TestCase
         $this->assertEquals('Kiran Ji', $res2->json('client_name'));
         $this->assertStringContainsString('Kiran Ji', $res2->json('response'));
     }
+
+    public function test_voice_autofill_parse_endpoint_normalizes_spoken_form_inputs(): void
+    {
+        $user = User::factory()->create();
+
+        // 1. Spoken mode
+        $res1 = $this->actingAs($user)->postJson('/ai/voice-autofill-parse', [
+            'step' => 'mode',
+            'spoken_text' => 'I want to book an international air cargo shipment to Poland',
+        ]);
+        $res1->assertStatus(200);
+        $this->assertEquals('international', $res1->json('data.parsed_value'));
+
+        // 2. Spoken city
+        $res2 = $this->actingAs($user)->postJson('/ai/voice-autofill-parse', [
+            'step' => 'pickup_city',
+            'spoken_text' => 'Please pick it up from Damak Jhapa',
+        ]);
+        $res2->assertStatus(200);
+        $this->assertEquals('Jhapa', $res2->json('data.parsed_value'));
+
+        // 3. Spoken phone number with words
+        $res3 = $this->actingAs($user)->postJson('/ai/voice-autofill-parse', [
+            'step' => 'sender_phone',
+            'spoken_text' => 'phone number is nine eight four one two three four five six seven',
+        ]);
+        $res3->assertStatus(200);
+        $this->assertEquals('9841234567', $res3->json('data.parsed_value'));
+
+        // 4. Spoken country
+        $res4 = $this->actingAs($user)->postJson('/ai/voice-autofill-parse', [
+            'step' => 'destination',
+            'spoken_text' => 'shipping to Poland in Europe',
+            'mode' => 'international',
+        ]);
+        $res4->assertStatus(200);
+        $this->assertEquals('Poland', $res4->json('data.parsed_value'));
+
+        // 5. Spoken weight
+        $res5 = $this->actingAs($user)->postJson('/ai/voice-autofill-parse', [
+            'step' => 'weight',
+            'spoken_text' => 'consignment weight is 20 kg',
+        ]);
+        $res5->assertStatus(200);
+        $this->assertEquals(20.0, $res5->json('data.parsed_value'));
+    }
+
+    public function test_shipment_create_renders_voice_autofill_invitation_beforehand(): void
+    {
+        $user = User::factory()->create(['name' => 'Kiran Sharma']);
+
+        $response = $this->actingAs($user)->get('/shipments/create');
+
+        $response->assertStatus(200);
+        $response->assertSee('ai-voice-invitation-banner');
+        $response->assertSee('Would you like AI Voice Autofill Assistance?');
+        $response->assertSee('Yes, Guide Me by Voice');
+        $response->assertSee('No, I\'ll Type Manually', false);
+        $response->assertSee('voice-autofill-header-btn');
+    }
 }

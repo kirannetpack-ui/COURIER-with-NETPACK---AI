@@ -1236,4 +1236,103 @@ SYSTEM LOGISTICS ARCHITECTURE & WORKFLOW RULES:
 - Important Occasions: Bada Dashain, Tihar, Nepali New Year, Black Friday, Christmas.
 EOT;
     }
+
+    /**
+     * Parse spoken voice input for individual consignment form fields
+     */
+    public function parseVoiceFormField(string $step, string $text, string $mode = 'domestic'): array
+    {
+        $raw = trim($text);
+        $clean = strtolower($raw);
+        $value = $raw;
+        $speechAck = "Got it!";
+
+        switch ($step) {
+            case 'mode':
+                if (str_contains($clean, 'international') || str_contains($clean, 'overseas') || str_contains($clean, 'air cargo') || str_contains($clean, 'abroad') || str_contains($clean, 'poland') || str_contains($clean, 'europe') || str_contains($clean, 'usa')) {
+                    $value = 'international';
+                    $speechAck = "Selected International Air Cargo service.";
+                } else {
+                    $value = 'domestic';
+                    $speechAck = "Selected Domestic Express courier service.";
+                }
+                break;
+
+            case 'pickup_city':
+                $entities = $this->parseLogisticsEntities($raw);
+                if (!empty($entities['origin']['name'])) {
+                    $value = $entities['origin']['name'];
+                } else {
+                    $value = ucwords(preg_replace('/^(pickup\s+from|from|at|in|city\s+is)\s+/i', '', $raw));
+                }
+                $speechAck = "Pickup city set to {$value}.";
+                break;
+
+            case 'sender_name':
+            case 'receiver_name':
+                $value = ucwords(preg_replace('/^(my\s*name\s*is|the\s*name\s*is|contact\s*is|sender\s*is|receiver\s*is|this\s*is|to)\s+/i', '', $raw));
+                $speechAck = "Name set to {$value}.";
+                break;
+
+            case 'sender_phone':
+            case 'receiver_phone':
+                $wordToNum = [
+                    'zero' => '0', 'one' => '1', 'two' => '2', 'three' => '3', 'four' => '4',
+                    'five' => '5', 'six' => '6', 'seven' => '7', 'eight' => '8', 'nine' => '9',
+                ];
+                $dig = $clean;
+                foreach ($wordToNum as $w => $d) {
+                    $dig = preg_replace('/\b' . $w . '\b/', $d, $dig);
+                }
+                $digits = preg_replace('/\D/', '', $dig);
+                $value = !empty($digits) ? $digits : $raw;
+                $speechAck = "Phone number captured.";
+                break;
+
+            case 'destination':
+                if ($mode === 'international') {
+                    $entities = $this->parseLogisticsEntities($raw);
+                    if (!empty($entities['destination']['name'])) {
+                        $value = $entities['destination']['name'];
+                    } else {
+                        $value = ucwords(preg_replace('/^(to|for|destination\s+is|shipping\s+to)\s+/i', '', $raw));
+                    }
+                    $speechAck = "Destination country set to {$value}.";
+                } else {
+                    $entities = $this->parseLogisticsEntities($raw);
+                    if (!empty($entities['destination']['name'])) {
+                        $value = $entities['destination']['name'];
+                    } else {
+                        $value = ucwords(preg_replace('/^(to|for|destination\s+is)\s+/i', '', $raw));
+                    }
+                    $speechAck = "Destination set to {$value}.";
+                }
+                break;
+
+            case 'weight':
+                if (preg_match('/(\d+(?:\.\d+)?)/', $raw, $m)) {
+                    $value = (float) $m[1];
+                } else {
+                    $entities = $this->parseLogisticsEntities($raw);
+                    $value = $entities['weight'] ?? 1.0;
+                }
+                $speechAck = "Weight set to {$value} kilograms.";
+                break;
+
+            case 'description':
+            case 'pickup_address':
+            case 'receiver_address':
+            default:
+                $value = ucfirst(trim($raw));
+                $speechAck = "Noted.";
+                break;
+        }
+
+        return [
+            'step' => $step,
+            'raw_text' => $raw,
+            'parsed_value' => $value,
+            'speech_ack' => $speechAck,
+        ];
+    }
 }

@@ -77,4 +77,27 @@ class AiAssistantController extends Controller
             'current_occasion' => $nearest,
         ]);
     }
+
+    /**
+     * Parse and structure spoken voice text for form field auto-typing
+     */
+    public function voiceAutofillParse(Request $request): JsonResponse
+    {
+        $request->validate([
+            'step' => 'required|string',
+            'spoken_text' => 'required|string|max:1000',
+            'mode' => 'nullable|string',
+        ]);
+
+        $step = $request->input('step');
+        $text = $request->input('spoken_text');
+        $mode = $request->input('mode', 'domestic');
+
+        $result = $this->aiService->parseVoiceFormField($step, $text, $mode);
+
+        return response()->json([
+            'success' => true,
+            'data' => $result,
+        ]);
+    }
 }
