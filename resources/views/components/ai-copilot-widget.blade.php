@@ -503,6 +503,12 @@ function aiCopilotWidget(config) {
                 this.statusMessage = 'Ready to assist';
 
                 if (data && data.response) {
+                    if (data.client_name) {
+                        this.userName = data.client_name;
+                        this.firstName = data.client_name.replace(/\s*Ji\s*$/i, '');
+                        this.statusMessage = 'Assisting ' + data.client_name;
+                    }
+
                     const gestureIcon = data.gesture === 'celebrating' ? '🎉' 
                         : (data.gesture === 'alerting' ? '⚠️' 
                         : (data.gesture === 'thinking' ? '💡' : '🎙️'));

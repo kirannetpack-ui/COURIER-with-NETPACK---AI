@@ -161,4 +161,78 @@ class AiAssistantTest extends TestCase
         $this->assertStringNotContainsString('[Click here]', $clean);
         $this->assertStringContainsString('Step 1: Use Pickup OTP to verify', $clean);
     }
+
+    public function test_ai_chat_parses_user_name_and_tailored_jhapa_to_poland_shipment_process(): void
+    {
+        $user = User::factory()->create(['name' => 'Customer']);
+
+        $query = 'HelloMy name is Kiran. you can call me with that name. I want to book an 20kg shipment for Poland which is to be picked up from Jhapa. Could you please assist me with theprocess to do so. Also show me how the whole process works.';
+
+        $response = $this->actingAs($user)->postJson('/ai/chat', [
+            'message' => $query,
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'success' => true,
+            'client_name' => 'Kiran Ji',
+        ]);
+
+        $content = $response->json('response');
+
+        // Verify personalization
+        $this->assertStringContainsString('Kiran Ji', $content);
+
+        // Verify logistics entity parsing
+        $this->assertStringContainsString('Jhapa', $content);
+        $this->assertStringContainsString('Poland', $content);
+        $this->assertStringContainsString('20', $content);
+
+        // Verify exact 4-stage operational blueprint
+        $this->assertStringContainsString('Stage 1', $content);
+        $this->assertStringContainsString('Feeder Linehaul', $content);
+        $this->assertStringContainsString('Pickup OTP', $content);
+        $this->assertStringContainsString('Biratnagar Central Hub', $content);
+
+        $this->assertStringContainsString('Stage 2', $content);
+        $this->assertStringContainsString('Tribhuvan International Airport', $content);
+        $this->assertStringContainsString('House Air Waybill', $content);
+        $this->assertStringContainsString('Zero-Charges', $content);
+
+        $this->assertStringContainsString('Stage 3', $content);
+        $this->assertStringContainsString('Warsaw Chopin Airport', $content);
+
+        $this->assertStringContainsString('Stage 4', $content);
+        $this->assertStringContainsString('DPD Poland / DHL Express', $content);
+
+        // Verify interactive booking action button
+        $actions = $response->json('actions');
+        $this->assertNotEmpty($actions);
+        $bookingAction = $actions[0];
+        $this->assertStringContainsString('Book 20kg Jhapa to Poland', $bookingAction['label']);
+        $this->assertStringContainsString('/shipments/create?', $bookingAction['url']);
+        $this->assertStringContainsString('receiver_country=Poland', $bookingAction['url']);
+        $this->assertStringContainsString('pickup_city=Jhapa', $bookingAction['url']);
+        $this->assertStringContainsString('pickup_location_type=outside_ktm', $bookingAction['url']);
+    }
+
+    public function test_ai_chat_retains_preferred_name_in_session_across_turns(): void
+    {
+        $user = User::factory()->create(['name' => 'Default Name']);
+
+        // First message introducing name
+        $res1 = $this->actingAs($user)->postJson('/ai/chat', [
+            'message' => 'My name is Kiran. I want to know about shipping.',
+        ]);
+        $res1->assertStatus(200);
+        $this->assertEquals('Kiran Ji', $res1->json('client_name'));
+
+        // Subsequent message without mentioning name
+        $res2 = $this->actingAs($user)->postJson('/ai/chat', [
+            'message' => 'Explain the door to door delivery OTP security.',
+        ]);
+        $res2->assertStatus(200);
+        $this->assertEquals('Kiran Ji', $res2->json('client_name'));
+        $this->assertStringContainsString('Kiran Ji', $res2->json('response'));
+    }
 }

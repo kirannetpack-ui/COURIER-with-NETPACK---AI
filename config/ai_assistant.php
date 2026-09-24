@@ -11,24 +11,37 @@ return [
     | "claude" (Anthropic Claude).
     |
     */
-    'default_provider' => env('AI_PROVIDER', 'builtin'),
+    'default_provider' => env('AI_PROVIDER', 'auto'),
 
     'providers' => [
+        'gemini' => [
+            'api_key' => env('GEMINI_API_KEY'),
+            'model' => env('GEMINI_MODEL', 'gemini-2.0-flash'), // gemini-2.0-flash, gemini-1.5-flash, gemini-1.5-pro
+            'endpoint' => env('GEMINI_ENDPOINT', 'https://generativelanguage.googleapis.com/v1beta/models'),
+        ],
         'openai' => [
             'api_key' => env('OPENAI_API_KEY'),
             'project_id' => env('OPENAI_PROJECT_ID'),
-            'model' => env('OPENAI_TEXT_MODEL', 'gpt-4o'),
+            'model' => env('OPENAI_TEXT_MODEL', 'gpt-4o'), // gpt-4o, gpt-4o-mini
             'realtime_model' => env('OPENAI_REALTIME_MODEL', 'gpt-realtime-2.1'),
             'voice_model' => env('OPENAI_TTS_MODEL', 'tts-1'),
             'voice' => env('OPENAI_VOICE', 'alloy'), // alloy, echo, fable, onyx, nova, shimmer
-        ],
-        'gemini' => [
-            'api_key' => env('GEMINI_API_KEY'),
-            'model' => env('GEMINI_MODEL', 'gemini-2.0-flash'),
+            'base_url' => env('OPENAI_BASE_URL', 'https://api.openai.com/v1'),
         ],
         'claude' => [
             'api_key' => env('ANTHROPIC_API_KEY'),
             'model' => env('ANTHROPIC_MODEL', 'claude-3-5-sonnet-20241022'),
+            'endpoint' => env('ANTHROPIC_ENDPOINT', 'https://api.anthropic.com/v1/messages'),
+        ],
+        'groq' => [
+            'api_key' => env('GROQ_API_KEY'),
+            'model' => env('GROQ_MODEL', 'llama-3.3-70b-versatile'),
+            'base_url' => env('GROQ_BASE_URL', 'https://api.groq.com/openai/v1'),
+        ],
+        'openrouter' => [
+            'api_key' => env('OPENROUTER_API_KEY'),
+            'model' => env('OPENROUTER_MODEL', 'google/gemini-2.0-flash-exp:free'),
+            'base_url' => 'https://openrouter.ai/api/v1',
         ],
         'elevenlabs' => [
             'api_key' => env('ELEVENLABS_API_KEY'),

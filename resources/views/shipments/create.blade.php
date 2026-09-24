@@ -62,17 +62,17 @@ function shipmentConsoleData() {
         activeConsoleView: '{{ $initialView }}',
         activeConsoleTab: '{{ $initialView === 'queue' ? 'queue' : 'consignment' }}',
         hasDoorstepPickup: {{ $hasPickupInitial ? 'true' : 'false' }},
-        pickupScope: 'inside_valley',
-        pickupServiceTier: 'flash',
-        pickupCalcWeight: 1.0,
-        hasKnownDestination: false,
+        pickupScope: '{{ request("pickup_location_type") === "outside_ktm" ? "outside_valley" : request("pickup_scope", "inside_valley") }}',
+        pickupServiceTier: '{{ request("pickup_location_type") === "outside_ktm" ? "express" : "flash" }}',
+        pickupCalcWeight: {{ (float) request('weight', 1.0) }},
+        hasKnownDestination: {{ request('receiver_country') || request('destination_city') ? 'true' : 'false' }},
         savedAddresses: {{ Js::from($savedAddressesJson) }},
         selectedAddressId: '',
         contactPersonName: '{{ addslashes($convertPickup->contact_person_name ?? $defaultName) }}',
         contactPhone: '{{ addslashes($convertPickup->contact_person_phone ?? $defaultPhone) }}',
         pickupAddress: '{{ addslashes($convertPickup->pickup_address ?? $defaultAddress) }}',
         pickupLandmark: '',
-        pickupCity: 'Kathmandu',
+        pickupCity: '{{ addslashes(request("pickup_city", "Kathmandu")) }}',
         saveAddress: true,
         addressLabel: '',
         isSubmittingPickup: false,
@@ -1216,10 +1216,14 @@ document.addEventListener('alpine:init', () => {
                                 <select name="receiver_country" id="receiver_country" class="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-semibold text-slate-900">
                                     <option value="">Select country</option>
                                     @php
-                                        $commonCountries = ['United States', 'United Kingdom', 'Australia', 'United Arab Emirates', 'Canada', 'India', 'Japan', 'Germany', 'France', 'Singapore', 'Qatar', 'Malaysia', 'Saudi Arabia', 'South Korea'];
+                                        $commonCountries = ['Poland', 'United States', 'United Kingdom', 'Australia', 'Germany', 'Canada', 'United Arab Emirates', 'India', 'Japan', 'France', 'Netherlands', 'Italy', 'Spain', 'Switzerland', 'Sweden', 'Singapore', 'Qatar', 'Malaysia', 'Saudi Arabia', 'South Korea'];
+                                        $requestedCountry = request('receiver_country');
                                     @endphp
+                                    @if($requestedCountry && !in_array($requestedCountry, $commonCountries))
+                                        <option value="{{ $requestedCountry }}" selected>{{ $requestedCountry }}</option>
+                                    @endif
                                     @foreach($commonCountries as $c)
-                                        <option value="{{ $c }}" @selected(request('receiver_country') == $c)>{{ $c }}</option>
+                                        <option value="{{ $c }}" @selected(strcasecmp($requestedCountry ?? '', $c) === 0)>{{ $c }}</option>
                                     @endforeach
                                 </select>
                             </div>

@@ -39,11 +39,10 @@ class AiAssistantService
         }
 
         // Format Client Name & Respectful Honorific
-        $clientName = 'Valued Client';
+        $clientInfo = $this->resolveClientName($user, '');
+        $clientName = $clientInfo['honorific'];
         $roleTitle = 'Client';
         if ($user) {
-            $firstName = explode(' ', trim($user->name))[0];
-            $clientName = $firstName . ' Ji';
             if ($user->isRider()) {
                 $roleTitle = 'Rider Captain';
             } elseif ($user->isSeller()) {
@@ -67,7 +66,7 @@ class AiAssistantService
             "Namaste {$clientName}! 📦 I am actively monitoring express dispatches and linehauls. Need help tracking a consignment, estimating rates, or booking a pickup?",
         ];
 
-        // If an active occasion is detected, inject festive greetings!
+        // If an active occasion is detected, inject festive greetings
         $gesture = 'waving';
         $festiveNotice = null;
         if ($upcomingOccasion) {
@@ -84,7 +83,6 @@ class AiAssistantService
             $gesture = 'celebrating';
         }
 
-        // Pick an improvisational greeting
         $selectedGreeting = $greetingVariations[array_rand($greetingVariations)];
 
         return [
@@ -100,6 +98,65 @@ class AiAssistantService
     }
 
     /**
+     * Resolve the client name dynamically from session, user introduction in query, or Auth user.
+     */
+    public function resolveClientName(?User $user = null, string $query = ''): array
+    {
+        $justIntroduced = false;
+        $preferredName = session('ai_preferred_name');
+
+        // Check if query contains an introduction (e.g. "HelloMy name is Kiran", "My name is Kiran", "call me Kiran", "I am Kiran")
+        if (!empty($query)) {
+            $patterns = [
+                '/(?:hello|hi|namaste|hey)?\s*my\s*name\s*is\s+([A-Za-z]{2,25})\b/i',
+                '/(?:call\s*me\s*(?:with\s*that\s*name\s*)?([A-Za-z]{2,25}))/i',
+                '/(?:you\s*can\s*call\s*me\s*(?:with\s*that\s*name\s*)?([A-Za-z]{2,25}))/i',
+                '/\b(?:i\s*am|i[\'’]m|this\s*is)\s+([A-Za-z]{2,25})\b/i',
+            ];
+
+            foreach ($patterns as $pattern) {
+                if (preg_match($pattern, $query, $matches)) {
+                    $matched = trim($matches[1]);
+                    // Ignore common false positives
+                    if (!in_array(strtolower($matched), ['interested', 'looking', 'trying', 'here', 'writing', 'asking', 'planning', 'ready', 'sending', 'booking', 'with', 'that', 'name'])) {
+                        $preferredName = ucfirst(strtolower($matched));
+                        session(['ai_preferred_name' => $preferredName]);
+                        $justIntroduced = true;
+                        break;
+                    }
+                }
+            }
+
+            // Also check for "HelloMy name is Kiran" without space
+            if (!$justIntroduced && preg_match('/(?:hello|hi|namaste)?my\s*name\s*is\s+([A-Za-z]{2,25})\b/i', $query, $matches)) {
+                $matched = trim($matches[1]);
+                if (!in_array(strtolower($matched), ['interested', 'looking', 'with', 'that', 'name'])) {
+                    $preferredName = ucfirst(strtolower($matched));
+                    session(['ai_preferred_name' => $preferredName]);
+                    $justIntroduced = true;
+                }
+            }
+        }
+
+        if (empty($preferredName)) {
+            if ($user && !empty($user->name)) {
+                $firstName = explode(' ', trim($user->name))[0];
+                $preferredName = ucfirst($firstName);
+            } else {
+                $preferredName = 'Valued Client';
+            }
+        }
+
+        $honorific = ($preferredName === 'Valued Client') ? 'Valued Client' : "{$preferredName} Ji";
+
+        return [
+            'name' => $preferredName,
+            'honorific' => $honorific,
+            'just_introduced' => $justIntroduced,
+        ];
+    }
+
+    /**
      * Get contextual quick suggestion chips based on user role
      */
     public function getQuickSuggestions(?User $user = null): array
@@ -108,6 +165,7 @@ class AiAssistantService
 
         $common = [
             ['label' => '📍 Track Consignment', 'prompt' => 'I would like to track my consignment. How does tracking work?'],
+            ['label' => '✈️ Jhapa to Poland 20kg', 'prompt' => 'I want to book a 20kg shipment for Poland picked up from Jhapa. How does the whole process work?'],
             ['label' => '💰 Calculate Delivery Rate', 'prompt' => 'How can I calculate door-to-door delivery and cargo rates?'],
             ['label' => '🗓️ Holiday & Festival Cutoffs', 'prompt' => 'What are the upcoming festivals and delivery cutoff dates?'],
         ];
@@ -135,7 +193,144 @@ class AiAssistantService
     }
 
     /**
-     * Process query through the AI Engine (OpenAI, Gemini, Claude, or Built-in Expert Engine)
+     * Deep NLU Entity & Intent Parser for Logistics Queries
+     */
+    public function parseLogisticsEntities(string $query): array
+    {
+        $q = strtolower($query);
+
+        // 1. Weight Extraction
+        $weight = null;
+        if (preg_match('/(\d+(?:\.\d+)?)\s*(?:kg|kgs|kilo|kilos|kilogram|kilograms)\b/i', $query, $wMatch)) {
+            $weight = (float) $wMatch[1];
+        } elseif (preg_match('/(\d+(?:\.\d+)?)\s*(?:gm|gms|gram|grams)\b/i', $query, $wMatch)) {
+            $weight = round(((float) $wMatch[1]) / 1000, 2);
+        }
+
+        // 2. Global Countries Master Dictionary
+        $countries = [
+            'poland' => ['name' => 'Poland', 'region' => 'European Union', 'airport' => 'Warsaw Chopin Airport (WAW)', 'courier' => 'DPD Poland / DHL Express / FedEx Europe'],
+            'germany' => ['name' => 'Germany', 'region' => 'European Union', 'airport' => 'Frankfurt Airport (FRA)', 'courier' => 'DHL Express Europe'],
+            'united kingdom' => ['name' => 'United Kingdom', 'region' => 'United Kingdom', 'airport' => 'London Heathrow (LHR)', 'courier' => 'Royal Mail / DPD / DHL'],
+            'uk' => ['name' => 'United Kingdom', 'region' => 'United Kingdom', 'airport' => 'London Heathrow (LHR)', 'courier' => 'Royal Mail / DPD / DHL'],
+            'england' => ['name' => 'United Kingdom', 'region' => 'United Kingdom', 'airport' => 'London Heathrow (LHR)', 'courier' => 'Royal Mail / DPD / DHL'],
+            'united states' => ['name' => 'United States', 'region' => 'North America', 'airport' => 'JFK New York / LAX Los Angeles', 'courier' => 'FedEx Express / UPS / USPS'],
+            'usa' => ['name' => 'United States', 'region' => 'North America', 'airport' => 'JFK New York / LAX Los Angeles', 'courier' => 'FedEx Express / UPS / USPS'],
+            'america' => ['name' => 'United States', 'region' => 'North America', 'airport' => 'JFK New York / LAX Los Angeles', 'courier' => 'FedEx Express / UPS / USPS'],
+            'australia' => ['name' => 'Australia', 'region' => 'Oceania', 'airport' => 'Sydney Airport (SYD)', 'courier' => 'Australia Post / DHL Express'],
+            'canada' => ['name' => 'Canada', 'region' => 'North America', 'airport' => 'Toronto Pearson (YYZ)', 'courier' => 'Canada Post / FedEx Express'],
+            'united arab emirates' => ['name' => 'United Arab Emirates', 'region' => 'Middle East', 'airport' => 'Dubai International (DXB)', 'courier' => 'Aramex / DHL Express'],
+            'uae' => ['name' => 'United Arab Emirates', 'region' => 'Middle East', 'airport' => 'Dubai International (DXB)', 'courier' => 'Aramex / DHL Express'],
+            'dubai' => ['name' => 'United Arab Emirates', 'region' => 'Middle East', 'airport' => 'Dubai International (DXB)', 'courier' => 'Aramex / DHL Express'],
+            'japan' => ['name' => 'Japan', 'region' => 'East Asia', 'airport' => 'Tokyo Narita (NRT)', 'courier' => 'Japan Post / Yamato Transport / DHL'],
+            'france' => ['name' => 'France', 'region' => 'European Union', 'airport' => 'Paris Charles de Gaulle (CDG)', 'courier' => 'Chronopost / DHL Express'],
+            'netherlands' => ['name' => 'Netherlands', 'region' => 'European Union', 'airport' => 'Amsterdam Schiphol (AMS)', 'courier' => 'PostNL / DHL Express'],
+            'italy' => ['name' => 'Italy', 'region' => 'European Union', 'airport' => 'Milan Malpensa (MXP)', 'courier' => 'Poste Italiane / DHL Express'],
+            'spain' => ['name' => 'Spain', 'region' => 'European Union', 'airport' => 'Madrid-Barajas (MAD)', 'courier' => 'Correos / DHL Express'],
+            'switzerland' => ['name' => 'Switzerland', 'region' => 'Europe', 'airport' => 'Zurich Airport (ZRH)', 'courier' => 'Swiss Post / DHL Express'],
+            'sweden' => ['name' => 'Sweden', 'region' => 'European Union', 'airport' => 'Stockholm Arlanda (ARN)', 'courier' => 'PostNord / DHL Express'],
+            'singapore' => ['name' => 'Singapore', 'region' => 'Southeast Asia', 'airport' => 'Singapore Changi (SIN)', 'courier' => 'Singapore Post / DHL Express'],
+            'qatar' => ['name' => 'Qatar', 'region' => 'Middle East', 'airport' => 'Hamad International (DOH)', 'courier' => 'Qatar Post / DHL Express'],
+            'india' => ['name' => 'India', 'region' => 'South Asia', 'airport' => 'Indira Gandhi International (DEL)', 'courier' => 'Blue Dart / Delhivery / DHL'],
+        ];
+
+        // 3. Nepal Geographical Locations & Regional Hub Mapping
+        $nepalLocations = [
+            'jhapa' => ['name' => 'Jhapa', 'district' => 'Jhapa', 'province' => 'Koshi Province', 'regional_hub' => 'Biratnagar Central Hub', 'is_outside_ktm' => true],
+            'birtamod' => ['name' => 'Birtamod', 'district' => 'Jhapa', 'province' => 'Koshi Province', 'regional_hub' => 'Biratnagar Central Hub', 'is_outside_ktm' => true],
+            'damak' => ['name' => 'Damak', 'district' => 'Jhapa', 'province' => 'Koshi Province', 'regional_hub' => 'Biratnagar Central Hub', 'is_outside_ktm' => true],
+            'bhadrapur' => ['name' => 'Bhadrapur', 'district' => 'Jhapa', 'province' => 'Koshi Province', 'regional_hub' => 'Biratnagar Central Hub', 'is_outside_ktm' => true],
+            'biratnagar' => ['name' => 'Biratnagar', 'district' => 'Morang', 'province' => 'Koshi Province', 'regional_hub' => 'Biratnagar Central Hub', 'is_outside_ktm' => true],
+            'morang' => ['name' => 'Morang', 'district' => 'Morang', 'province' => 'Koshi Province', 'regional_hub' => 'Biratnagar Central Hub', 'is_outside_ktm' => true],
+            'dharan' => ['name' => 'Dharan', 'district' => 'Sunsari', 'province' => 'Koshi Province', 'regional_hub' => 'Biratnagar Central Hub', 'is_outside_ktm' => true],
+            'itahari' => ['name' => 'Itahari', 'district' => 'Sunsari', 'province' => 'Koshi Province', 'regional_hub' => 'Biratnagar Central Hub', 'is_outside_ktm' => true],
+            'sunsari' => ['name' => 'Sunsari', 'district' => 'Sunsari', 'province' => 'Koshi Province', 'regional_hub' => 'Biratnagar Central Hub', 'is_outside_ktm' => true],
+            'ilam' => ['name' => 'Ilam', 'district' => 'Ilam', 'province' => 'Koshi Province', 'regional_hub' => 'Biratnagar Central Hub', 'is_outside_ktm' => true],
+            'kathmandu' => ['name' => 'Kathmandu', 'district' => 'Kathmandu', 'province' => 'Bagmati Province', 'regional_hub' => 'Kathmandu Central Sorting Hub & TIA Gateway', 'is_outside_ktm' => false],
+            'lalitpur' => ['name' => 'Lalitpur', 'district' => 'Lalitpur', 'province' => 'Bagmati Province', 'regional_hub' => 'Kathmandu Valley Central Hub', 'is_outside_ktm' => false],
+            'bhaktapur' => ['name' => 'Bhaktapur', 'district' => 'Bhaktapur', 'province' => 'Bagmati Province', 'regional_hub' => 'Kathmandu Valley Central Hub', 'is_outside_ktm' => false],
+            'pokhara' => ['name' => 'Pokhara', 'district' => 'Kaski', 'province' => 'Gandaki Province', 'regional_hub' => 'Pokhara Regional Sorting Hub', 'is_outside_ktm' => true],
+            'kaski' => ['name' => 'Kaski', 'district' => 'Kaski', 'province' => 'Gandaki Province', 'regional_hub' => 'Pokhara Regional Sorting Hub', 'is_outside_ktm' => true],
+            'chitwan' => ['name' => 'Chitwan', 'district' => 'Chitwan', 'province' => 'Bagmati Province', 'regional_hub' => 'Bharatpur / Narayangarh Hub', 'is_outside_ktm' => true],
+            'bharatpur' => ['name' => 'Bharatpur', 'district' => 'Chitwan', 'province' => 'Bagmati Province', 'regional_hub' => 'Bharatpur / Narayangarh Hub', 'is_outside_ktm' => true],
+            'butwal' => ['name' => 'Butwal', 'district' => 'Rupandehi', 'province' => 'Lumbini Province', 'regional_hub' => 'Butwal Regional Sorting Hub', 'is_outside_ktm' => true],
+            'bhairahawa' => ['name' => 'Bhairahawa', 'district' => 'Rupandehi', 'province' => 'Lumbini Province', 'regional_hub' => 'Butwal Regional Sorting Hub', 'is_outside_ktm' => true],
+            'nepalgunj' => ['name' => 'Nepalgunj', 'district' => 'Banke', 'province' => 'Lumbini Province', 'regional_hub' => 'Nepalgunj Hub', 'is_outside_ktm' => true],
+            'surkhet' => ['name' => 'Surkhet', 'district' => 'Surkhet', 'province' => 'Karnali Province', 'regional_hub' => 'Birendranagar Hub', 'is_outside_ktm' => true],
+            'dhangadhi' => ['name' => 'Dhangadhi', 'district' => 'Kailali', 'province' => 'Sudurpashchim Province', 'regional_hub' => 'Dhangadhi Hub', 'is_outside_ktm' => true],
+            'birgunj' => ['name' => 'Birgunj', 'district' => 'Parsa', 'province' => 'Madhesh Province', 'regional_hub' => 'Birgunj / Parsa Hub', 'is_outside_ktm' => true],
+            'janakpur' => ['name' => 'Janakpur', 'district' => 'Dhanusha', 'province' => 'Madhesh Province', 'regional_hub' => 'Janakpur Hub', 'is_outside_ktm' => true],
+            'hetauda' => ['name' => 'Hetauda', 'district' => 'Makwanpur', 'province' => 'Bagmati Province', 'regional_hub' => 'Hetauda Hub', 'is_outside_ktm' => true],
+        ];
+
+        // 4. Extract Origin
+        $origin = null;
+        // Patterns for explicit pickup location: "picked up from Jhapa", "pickup from Jhapa", "from Jhapa"
+        if (preg_match('/(?:picked\s*up\s*(?:from|in|at)|pickup\s*(?:from|at|in)|from)\s+([a-zA-Z\s]+?)(?:\s+which|\s+to|\s+for|\s+and|\s*,|\s*\.|\s*$)/i', $query, $oMatch)) {
+            $candidate = strtolower(trim($oMatch[1]));
+            foreach ($nepalLocations as $key => $loc) {
+                if (str_contains($candidate, $key)) {
+                    $origin = $loc;
+                    break;
+                }
+            }
+        }
+
+        // If not found in regex, scan entire query for known Nepal locations
+        if (!$origin) {
+            foreach ($nepalLocations as $key => $loc) {
+                if (preg_match('/\b' . preg_quote($key, '/') . '\b/i', $query)) {
+                    $origin = $loc;
+                    break;
+                }
+            }
+        }
+
+        // 5. Extract Destination
+        $destination = null;
+        $isInternational = false;
+
+        // Check for country matches (e.g. "for Poland", "to Poland", "in Poland")
+        foreach ($countries as $key => $countryData) {
+            if (preg_match('/\b' . preg_quote($key, '/') . '\b/i', $query)) {
+                $destination = array_merge($countryData, ['type' => 'international']);
+                $isInternational = true;
+                break;
+            }
+        }
+
+        // If no international match, check for domestic destination (different from origin)
+        if (!$destination) {
+            if (preg_match('/(?:to|for|destination)\s+([a-zA-Z\s]+?)(?:\s+which|\s+from|\s+and|\s*,|\s*\.|\s*$)/i', $query, $dMatch)) {
+                $candidate = strtolower(trim($dMatch[1]));
+                foreach ($nepalLocations as $key => $loc) {
+                    if (str_contains($candidate, $key) && (!$origin || $loc['name'] !== $origin['name'])) {
+                        $destination = array_merge($loc, ['type' => 'domestic']);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // 6. Intent Classification
+        $isBookingRequest = (bool) preg_match('/\b(book|booking|shipment|ship|dispatch|send|order|pickup)\b/i', $query);
+        $isProcessInquiry = (bool) preg_match('/\b(how.*works|process|procedure|steps|workflow|guide|assist\s*me)\b/i', $query);
+        $isRateInquiry = (bool) preg_match('/\b(rate|rates|price|cost|how\s*much|tariff|quote)\b/i', $query);
+
+        return [
+            'weight' => $weight,
+            'origin' => $origin,
+            'destination' => $destination,
+            'is_international' => $isInternational,
+            'requires_feeder' => ($isInternational && $origin && !empty($origin['is_outside_ktm'])),
+            'is_booking_request' => $isBookingRequest,
+            'is_process_inquiry' => $isProcessInquiry,
+            'is_rate_inquiry' => $isRateInquiry,
+        ];
+    }
+
+    /**
+     * Process query through the AI Engine (Gemini, OpenAI, Claude, Groq, or Built-in Expert Engine)
      */
     public function ask(string $query, ?User $user = null, array $conversationHistory = []): array
     {
@@ -149,51 +344,159 @@ class AiAssistantService
             ];
         }
 
-        // 1. Tool execution check: Check if query contains a tracking number or rate request
+        // 1. Resolve and store preferred user name (e.g., Kiran)
+        $clientInfo = $this->resolveClientName($user, $query);
+        $clientName = $clientInfo['honorific'];
+
+        // 2. Parse Logistics Entities (Origin, Destination, Weight, Feeder, etc.)
+        $entities = $this->parseLogisticsEntities($query);
+
+        // 3. Tool execution check: Check if query contains a tracking number
         $trackingResult = $this->tryLookupTracking($query);
         if ($trackingResult) {
+            $trackingResult['client_name'] = $clientName;
             return $trackingResult;
         }
 
-        $rateResult = $this->tryCalculateQuickRate($query);
-        if ($rateResult) {
-            return $rateResult;
-        }
-
-        // 2. Check configured external provider
-        $provider = config('ai_assistant.default_provider', 'builtin');
-        $openaiKey = config('ai_assistant.providers.openai.api_key');
-
-        if ($provider === 'openai' && !empty($openaiKey)) {
-            try {
-                $externalResponse = $this->queryOpenAi($query, $user, $conversationHistory);
-                if ($externalResponse) {
-                    return $externalResponse;
-                }
-            } catch (\Throwable $e) {
-                Log::warning('OpenAI AI Assistant call failed, gracefully falling back to Built-in Engine: ' . $e->getMessage());
+        // 4. Quick rate calculation pattern check (for simple "rate from X to Y")
+        if ($entities['is_rate_inquiry'] && !$entities['is_process_inquiry'] && !$entities['is_booking_request']) {
+            $rateResult = $this->tryCalculateQuickRate($query);
+            if ($rateResult) {
+                $rateResult['client_name'] = $clientName;
+                return $rateResult;
             }
         }
 
-        // 3. Built-in Local Autonomous Logistics Expert Engine
-        return $this->queryBuiltinEngine($query, $user);
+        // 5. Check external provider configurations
+        $provider = config('ai_assistant.default_provider', 'auto');
+        $geminiKey = config('ai_assistant.providers.gemini.api_key');
+        $openaiKey = config('ai_assistant.providers.openai.api_key');
+        $claudeKey = config('ai_assistant.providers.claude.api_key');
+        $groqKey = config('ai_assistant.providers.groq.api_key');
+
+        // External Provider Auto-Discovery
+        if ($provider === 'auto' || $provider === 'gemini') {
+            if (!empty($geminiKey)) {
+                try {
+                    $extRes = $this->queryGemini($query, $user, $conversationHistory, $entities, $clientName);
+                    if ($extRes) return $extRes;
+                } catch (\Throwable $e) {
+                    Log::warning('Gemini call failed, falling back: ' . $e->getMessage());
+                }
+            }
+        }
+
+        if ($provider === 'auto' || $provider === 'openai') {
+            if (!empty($openaiKey)) {
+                try {
+                    $extRes = $this->queryOpenAi($query, $user, $conversationHistory, $entities, $clientName);
+                    if ($extRes) return $extRes;
+                } catch (\Throwable $e) {
+                    Log::warning('OpenAI call failed, falling back: ' . $e->getMessage());
+                }
+            }
+        }
+
+        if ($provider === 'auto' || $provider === 'claude') {
+            if (!empty($claudeKey)) {
+                try {
+                    $extRes = $this->queryClaude($query, $user, $conversationHistory, $entities, $clientName);
+                    if ($extRes) return $extRes;
+                } catch (\Throwable $e) {
+                    Log::warning('Claude call failed, falling back: ' . $e->getMessage());
+                }
+            }
+        }
+
+        if ($provider === 'auto' || $provider === 'groq') {
+            if (!empty($groqKey)) {
+                try {
+                    $extRes = $this->queryGroq($query, $user, $conversationHistory, $entities, $clientName);
+                    if ($extRes) return $extRes;
+                } catch (\Throwable $e) {
+                    Log::warning('Groq call failed, falling back: ' . $e->getMessage());
+                }
+            }
+        }
+
+        // 6. Enhanced Built-in Autonomous Logistics Expert Engine
+        return $this->queryBuiltinEngine($query, $user, $clientInfo, $entities);
+    }
+
+    /**
+     * Query Google Gemini 2.0 Flash REST API (Ultra-Fast & Free Tier Accessible)
+     */
+    protected function queryGemini(string $query, ?User $user, array $history, array $entities, string $clientName): ?array
+    {
+        $apiKey = config('ai_assistant.providers.gemini.api_key');
+        if (empty($apiKey)) return null;
+
+        $model = config('ai_assistant.providers.gemini.model', 'gemini-2.0-flash');
+        $endpoint = config('ai_assistant.providers.gemini.endpoint', 'https://generativelanguage.googleapis.com/v1beta/models');
+        $url = rtrim($endpoint, '/') . "/{$model}:generateContent?key={$apiKey}";
+
+        $systemPrompt = $this->buildSystemKnowledgePrompt($user, $clientName, $entities);
+
+        $contents = [];
+        foreach (array_slice($history, -6) as $msg) {
+            if (isset($msg['role'], $msg['content'])) {
+                $contents[] = [
+                    'role' => $msg['role'] === 'user' ? 'user' : 'model',
+                    'parts' => [['text' => $msg['content']]],
+                ];
+            }
+        }
+        $contents[] = [
+            'role' => 'user',
+            'parts' => [['text' => $query]],
+        ];
+
+        $response = Http::timeout(15)
+            ->post($url, [
+                'system_instruction' => [
+                    'parts' => [['text' => $systemPrompt]],
+                ],
+                'contents' => $contents,
+                'generationConfig' => [
+                    'temperature' => 0.7,
+                    'maxOutputTokens' => 1200,
+                ],
+            ]);
+
+        if ($response->successful()) {
+            $data = $response->json();
+            $reply = $data['candidates'][0]['content']['parts'][0]['text'] ?? null;
+            if ($reply) {
+                return [
+                    'success' => true,
+                    'provider' => 'gemini (' . $model . ')',
+                    'client_name' => $clientName,
+                    'response' => $reply,
+                    'speech_text' => $this->sanitizeForSpeech($reply),
+                    'gesture' => $this->detectGesture($reply),
+                    'actions' => $this->extractActions($reply, $entities),
+                ];
+            }
+        }
+
+        return null;
     }
 
     /**
      * Query OpenAI with System Context & Knowledge Base
      */
-    protected function queryOpenAi(string $query, ?User $user, array $history): ?array
+    protected function queryOpenAi(string $query, ?User $user, array $history, array $entities, string $clientName): ?array
     {
         $apiKey = config('ai_assistant.providers.openai.api_key');
         $model = config('ai_assistant.providers.openai.model', 'gpt-4o');
+        $baseUrl = config('ai_assistant.providers.openai.base_url', 'https://api.openai.com/v1');
 
-        $systemPrompt = $this->buildSystemKnowledgePrompt($user);
+        $systemPrompt = $this->buildSystemKnowledgePrompt($user, $clientName, $entities);
 
         $messages = [
             ['role' => 'system', 'content' => $systemPrompt],
         ];
 
-        // Append recent history (up to last 6 messages)
         foreach (array_slice($history, -6) as $msg) {
             if (isset($msg['role'], $msg['content'])) {
                 $messages[] = [
@@ -207,11 +510,11 @@ class AiAssistantService
 
         $response = Http::withToken($apiKey)
             ->timeout(20)
-            ->post('https://api.openai.com/v1/chat/completions', [
+            ->post(rtrim($baseUrl, '/') . '/chat/completions', [
                 'model' => $model,
                 'messages' => $messages,
                 'temperature' => 0.7,
-                'max_tokens' => 800,
+                'max_tokens' => 1000,
             ]);
 
         if ($response->successful()) {
@@ -220,11 +523,108 @@ class AiAssistantService
             if ($reply) {
                 return [
                     'success' => true,
-                    'provider' => 'openai',
+                    'provider' => 'openai (' . $model . ')',
+                    'client_name' => $clientName,
                     'response' => $reply,
                     'speech_text' => $this->sanitizeForSpeech($reply),
                     'gesture' => $this->detectGesture($reply),
-                    'actions' => $this->extractActions($reply),
+                    'actions' => $this->extractActions($reply, $entities),
+                ];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Query Anthropic Claude API
+     */
+    protected function queryClaude(string $query, ?User $user, array $history, array $entities, string $clientName): ?array
+    {
+        $apiKey = config('ai_assistant.providers.claude.api_key');
+        $model = config('ai_assistant.providers.claude.model', 'claude-3-5-sonnet-20241022');
+        $endpoint = config('ai_assistant.providers.claude.endpoint', 'https://api.anthropic.com/v1/messages');
+
+        $systemPrompt = $this->buildSystemKnowledgePrompt($user, $clientName, $entities);
+
+        $messages = [];
+        foreach (array_slice($history, -6) as $msg) {
+            if (isset($msg['role'], $msg['content'])) {
+                $messages[] = [
+                    'role' => $msg['role'] === 'user' ? 'user' : 'assistant',
+                    'content' => $msg['content'],
+                ];
+            }
+        }
+        $messages[] = ['role' => 'user', 'content' => $query];
+
+        $response = Http::withHeaders([
+            'x-api-key' => $apiKey,
+            'anthropic-version' => '2023-06-01',
+            'content-type' => 'application/json',
+        ])->timeout(20)->post($endpoint, [
+            'model' => $model,
+            'max_tokens' => 1200,
+            'system' => $systemPrompt,
+            'messages' => $messages,
+        ]);
+
+        if ($response->successful()) {
+            $data = $response->json();
+            $reply = $data['content'][0]['text'] ?? null;
+            if ($reply) {
+                return [
+                    'success' => true,
+                    'provider' => 'claude (' . $model . ')',
+                    'client_name' => $clientName,
+                    'response' => $reply,
+                    'speech_text' => $this->sanitizeForSpeech($reply),
+                    'gesture' => $this->detectGesture($reply),
+                    'actions' => $this->extractActions($reply, $entities),
+                ];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Query Groq (Ultra-Fast Llama-3.3-70b)
+     */
+    protected function queryGroq(string $query, ?User $user, array $history, array $entities, string $clientName): ?array
+    {
+        $apiKey = config('ai_assistant.providers.groq.api_key');
+        $model = config('ai_assistant.providers.groq.model', 'llama-3.3-70b-versatile');
+        $baseUrl = config('ai_assistant.providers.groq.base_url', 'https://api.groq.com/openai/v1');
+
+        $systemPrompt = $this->buildSystemKnowledgePrompt($user, $clientName, $entities);
+
+        $messages = [
+            ['role' => 'system', 'content' => $systemPrompt],
+            ['role' => 'user', 'content' => $query],
+        ];
+
+        $response = Http::withToken($apiKey)
+            ->timeout(15)
+            ->post(rtrim($baseUrl, '/') . '/chat/completions', [
+                'model' => $model,
+                'messages' => $messages,
+                'temperature' => 0.6,
+                'max_tokens' => 1000,
+            ]);
+
+        if ($response->successful()) {
+            $data = $response->json();
+            $reply = $data['choices'][0]['message']['content'] ?? null;
+            if ($reply) {
+                return [
+                    'success' => true,
+                    'provider' => 'groq (' . $model . ')',
+                    'client_name' => $clientName,
+                    'response' => $reply,
+                    'speech_text' => $this->sanitizeForSpeech($reply),
+                    'gesture' => $this->detectGesture($reply),
+                    'actions' => $this->extractActions($reply, $entities),
                 ];
             }
         }
@@ -234,14 +634,27 @@ class AiAssistantService
 
     /**
      * Built-in Autonomous Logistics Knowledge-Base Neural Engine
-     * Instant, zero-latency, 100% reliable domain intelligence
      */
-    public function queryBuiltinEngine(string $query, ?User $user = null): array
+    public function queryBuiltinEngine(string $query, ?User $user = null, ?array $clientInfo = null, ?array $entities = null): array
     {
         $q = strtolower($query);
-        $clientName = $user ? explode(' ', trim($user->name))[0] . ' Ji' : 'Valued Client';
 
-        // 1. Door-to-Door Delivery Mechanics & OTP Protocols
+        if (!$clientInfo) {
+            $clientInfo = $this->resolveClientName($user, $query);
+        }
+        if (!$entities) {
+            $entities = $this->parseLogisticsEntities($query);
+        }
+
+        $clientName = $clientInfo['honorific'];
+        $justIntroduced = $clientInfo['just_introduced'] ?? false;
+
+        // 1. Dynamic Logistics Plan: When Origin and/or Destination or specific shipment request is parsed
+        if (($entities['origin'] && $entities['destination']) || ($entities['destination'] && $entities['weight']) || ($entities['origin'] && $entities['is_booking_request'])) {
+            return $this->generateTailoredLogisticsPlan($entities, $clientInfo);
+        }
+
+        // 2. Door-to-Door Delivery Mechanics & OTP Protocols
         if (str_contains($q, 'door to door') || str_contains($q, 'doorstep') || str_contains($q, 'otp') || str_contains($q, 'handover') || str_contains($q, 'direct rider')) {
             $reply = "### 🚪 Door-to-Door Delivery & Dual-OTP Security Protocol\n\n"
                 . "Namaste {$clientName}! At **COURIER with NETPACK**, our door-to-door delivery is safeguarded by cryptographic **Dual-OTP Verification**:\n\n"
@@ -259,6 +672,7 @@ class AiAssistantService
             return [
                 'success' => true,
                 'provider' => 'builtin_expert',
+                'client_name' => $clientName,
                 'response' => $reply,
                 'speech_text' => "Namaste {$clientName}! Our door-to-door delivery uses dual OTP security. The seller provides a 6-digit Pickup OTP when the rider arrives, and the recipient provides a 6-digit Delivery OTP upon doorstep handover with COD cash collection.",
                 'gesture' => 'speaking',
@@ -268,7 +682,7 @@ class AiAssistantService
             ];
         }
 
-        // 2. COD (Cash On Delivery) & Limits
+        // 3. COD (Cash On Delivery) & Limits
         if (str_contains($q, 'cod') || str_contains($q, 'cash on delivery') || str_contains($q, 'limit') || str_contains($q, 'cash in hand')) {
             $reply = "### 💵 Tiered Cash On Delivery (COD) & Financial Segregation\n\n"
                 . "Namaste {$clientName}! NETPACK enforces a strictly segregated financial ledger system for all COD transactions:\n\n"
@@ -284,6 +698,7 @@ class AiAssistantService
             return [
                 'success' => true,
                 'provider' => 'builtin_expert',
+                'client_name' => $clientName,
                 'response' => $reply,
                 'speech_text' => "NETPACK separates rider earnings from COD cash collected. We enforce tiered COD limits from Level 0 up to Level 4 for trusted riders, with automated digital remittance to sellers via bank, eSewa, or Khalti.",
                 'gesture' => 'speaking',
@@ -291,13 +706,15 @@ class AiAssistantService
             ];
         }
 
-        // 3. Occasions, Festivals & Holiday Deadlines
+        // 4. Occasions, Festivals & Holiday Deadlines
         if (str_contains($q, 'festival') || str_contains($q, 'occasion') || str_contains($q, 'dashain') || str_contains($q, 'tihar') || str_contains($q, 'holiday') || str_contains($q, 'cutoff') || str_contains($q, 'schedule')) {
-            return $this->buildOccasionsAndSchedulesResponse($clientName);
+            $occRes = $this->buildOccasionsAndSchedulesResponse($clientName);
+            $occRes['client_name'] = $clientName;
+            return $occRes;
         }
 
-        // 4. Domestic Express Nepal & 7 Provinces
-        if (str_contains($q, 'nepal') || str_contains($q, 'province') || str_contains($q, 'district') || str_contains($q, 'pokhara') || str_contains($q, 'biratnagar') || str_contains($q, 'chitwan') || str_contains($q, 'koshi') || str_contains($q, 'bagmati') || str_contains($q, 'gandaki') || str_contains($q, 'lumbini') || str_contains($q, 'karnali') || str_contains($q, 'sudurpashchim') || str_contains($q, 'madhesh')) {
+        // 5. Domestic Express Nepal & 7 Provinces
+        if (str_contains($q, 'nepal') || str_contains($q, 'province') || str_contains($q, 'district') || str_contains($q, 'pokhara') || str_contains($q, 'biratnagar') || str_contains($q, 'chitwan') || str_contains($q, 'jhapa') || str_contains($q, 'koshi') || str_contains($q, 'bagmati') || str_contains($q, 'gandaki') || str_contains($q, 'lumbini') || str_contains($q, 'karnali') || str_contains($q, 'sudurpashchim') || str_contains($q, 'madhesh')) {
             $reply = "### 🇳🇵 Nepal Domestic Express Network (7 Provinces & 77 Districts)\n\n"
                 . "Namaste {$clientName}! NETPACK connects all 7 Provinces with rapid road linehauls, regional sorting hubs, and ward-level dispatch:\n\n"
                 . "* **Koshi Province (P1)**: Central Sorting Hub in Biratnagar covering Jhapa, Morang, Sunsari, Ilam, Dhankuta, and Eastern hills.\n"
@@ -312,6 +729,7 @@ class AiAssistantService
             return [
                 'success' => true,
                 'provider' => 'builtin_expert',
+                'client_name' => $clientName,
                 'response' => $reply,
                 'speech_text' => "Namaste! Our domestic network covers all 7 Provinces and 77 Districts across Nepal. We operate central sorting hubs in Biratnagar, Janakpur, Kathmandu, Pokhara, Butwal, Surkhet, and Dhangadhi with nylon bag QR manifest tracking.",
                 'gesture' => 'speaking',
@@ -321,26 +739,27 @@ class AiAssistantService
             ];
         }
 
-        // 5. International Air Cargo & Feeder Linehauls
-        if (str_contains($q, 'international') || str_contains($q, 'air cargo') || str_contains($q, 'feeder') || str_contains($q, 'hawb') || str_contains($q, 'mawb') || str_contains($q, 'customs') || str_contains($q, 'tia') || str_contains($q, 'airport') || str_contains($q, 'volumetric')) {
+        // 6. International Air Cargo & Feeder Linehauls
+        if (str_contains($q, 'international') || str_contains($q, 'air cargo') || str_contains($q, 'feeder') || str_contains($q, 'hawb') || str_contains($q, 'mawb') || str_contains($q, 'customs') || str_contains($q, 'tia') || str_contains($q, 'airport') || str_contains($q, 'volumetric') || str_contains($q, 'poland') || str_contains($q, 'europe') || str_contains($q, 'usa')) {
             $reply = "### ✈️ International Air Cargo & Domestic Feeder Linehaul\n\n"
                 . "Namaste {$clientName}! NETPACK operates global air cargo freight departing from Tribhuvan International Airport (TIA) Cargo Terminal (KTM):\n\n"
                 . "1. **Outside Kathmandu Valley Feeder Linehaul**:\n"
-                . "   - Originating outside Kathmandu (e.g. Pokhara, Biratnagar, Birgunj, Chitwan, Butwal)?\n"
+                . "   - Originating outside Kathmandu (e.g. Jhapa, Biratnagar, Pokhara, Chitwan, Butwal)?\n"
                 . "   - Our automated feeder linehaul engine routes parcels to the KTM Cargo Terminal, bundling feeder transport with international air freight.\n"
                 . "2. **Official Zero-Charges HAWB**:\n"
                 . "   - Generates compliant 3-part House Air Waybills (Consignee Copy, Customs Copy, Carrier Copy) with monetary rates hidden to strictly comply with export customs clearance regulations.\n"
                 . "3. **Volumetric Weight Formula**:\n"
                 . "   - Chargeable weight = Higher of Gross Actual Weight vs. Volumetric Weight: `(Length × Width × Height in cm) ÷ 5000`.\n"
                 . "4. **Global Corridors & Carrier Telemetry**:\n"
-                . "   - Direct hub connections to DXB (Dubai), LHR (London), JFK (New York), SYD (Sydney).\n"
-                . "   - Real-time carrier telemetry integration with FedEx, DHL, UPS, Royal Mail, Australia Post, DPD, and Aramex.";
+                . "   - Direct hub connections to DXB (Dubai), LHR (London), JFK (New York), WAW (Warsaw), SYD (Sydney).\n"
+                . "   - Real-time carrier telemetry integration with DPD, DHL, FedEx, UPS, Royal Mail, Australia Post, and Aramex.";
 
             return [
                 'success' => true,
                 'provider' => 'builtin_expert',
+                'client_name' => $clientName,
                 'response' => $reply,
-                'speech_text' => "Our international air cargo connects Tribhuvan International Airport with Dubai, London, New York, and Sydney. Consignments outside Kathmandu are brought via domestic feeder linehaul, with automated zero-charge HAWBs and volumetric weight calculations.",
+                'speech_text' => "Our international air cargo connects Tribhuvan International Airport with European and global corridors. Consignments outside Kathmandu are brought via domestic feeder linehaul, with automated zero-charge HAWBs and volumetric weight calculations.",
                 'gesture' => 'speaking',
                 'actions' => [
                     ['label' => 'Rate Calculator', 'url' => '/rates/inquiry'],
@@ -348,7 +767,7 @@ class AiAssistantService
             ];
         }
 
-        // 6. Prohibited & Hazardous Goods
+        // 7. Prohibited & Hazardous Goods
         if (str_contains($q, 'prohibited') || str_contains($q, 'restricted') || str_contains($q, 'allowed') || str_contains($q, 'battery') || str_contains($q, 'liquid') || str_contains($q, 'dangerous')) {
             $reply = "### 🚫 Prohibited & Restricted Shipping Guidelines\n\n"
                 . "To ensure flight safety and compliance with Nepal Customs & ICAO regulations:\n\n"
@@ -364,6 +783,7 @@ class AiAssistantService
             return [
                 'success' => true,
                 'provider' => 'builtin_expert',
+                'client_name' => $clientName,
                 'response' => $reply,
                 'speech_text' => "Strictly prohibited items include loose lithium batteries, aerosols, flammable liquids, untaxed precious metals, and explosives. Electronic devices with built-in batteries require IATA compliant packaging.",
                 'gesture' => 'alerting',
@@ -371,23 +791,141 @@ class AiAssistantService
             ];
         }
 
-        // 7. General Assistant Fallback
-        $reply = "Namaste {$clientName}! 🙏 I am your NETPACK AI Logistics Copilot.\n\n"
+        // 8. General Conversational Assistant Fallback
+        $introText = $justIntroduced
+            ? "Namaste {$clientName}! 🙏 A warm welcome! I have registered your name and will address you as {$clientName} in our conversations.\n\n"
+            : "Namaste {$clientName}! 🙏 I am your NETPACK AI Logistics Copilot.\n\n";
+
+        $reply = $introText
             . "I am equipped to provide instantaneous assistance on:\n"
+            . "* **Consignment Booking & Routing**: Specify your pickup district (e.g. Jhapa, Pokhara, Kathmandu), destination (Poland, USA, domestic), and weight to get a complete step-by-step roadmap.\n"
             . "* **Door-to-Door Delivery**: Direct rider dispatch, 6-digit Pickup & Delivery OTP handovers, COD cash limits, and doorstep POD.\n"
             . "* **Domestic Nepal Express**: Coverage across all 7 Provinces & 77 Districts with regional sorting hub routing.\n"
             . "* **International Air Cargo**: Tribhuvan International Airport (TIA) Gateway, domestic feeder linehauls from outside Kathmandu, zero-charge HAWBs, and volumetric weight calculations.\n"
             . "* **Important Occasions & Deadlines**: Dashain, Tihar, New Year, Black Friday, and daily cargo cutoff schedules.\n"
             . "* **Real-Time Consignment Tracking**: Provide any tracking code (e.g. `NP-2026-...`) to check live telemetry.\n\n"
-            . "How can I help you right now?";
+            . "How may I tailor your logistics today?";
 
         return [
             'success' => true,
             'provider' => 'builtin_expert',
+            'client_name' => $clientName,
             'response' => $reply,
-            'speech_text' => "Namaste {$clientName}! I can help you with door-to-door delivery, tracking your shipment, calculating rates, OTP handovers, or festival shipping schedules. What would you like to know?",
+            'speech_text' => "Namaste {$clientName}! I can help you book shipments, guide you through domestic feeder linehauls and international air cargo, calculate tariffs, or track packages. How can I assist you right now?",
             'gesture' => 'waving',
-            'actions' => [],
+            'actions' => [
+                ['label' => 'Book Consignment', 'url' => '/shipments/create'],
+                ['label' => 'Rate Calculator', 'url' => '/rates/inquiry'],
+            ],
+        ];
+    }
+
+    /**
+     * Generate Tailored Step-by-Step Logistics Blueprint matching what we built in NETPACK
+     */
+    public function generateTailoredLogisticsPlan(array $entities, array $clientInfo): array
+    {
+        $clientName = $clientInfo['honorific'];
+        $justIntroduced = $clientInfo['just_introduced'] ?? false;
+
+        $originName = $entities['origin']['name'] ?? 'Nepal Hub';
+        $originProvince = $entities['origin']['province'] ?? 'Koshi Province';
+        $regionalHub = $entities['origin']['regional_hub'] ?? 'Regional Hub';
+        $destName = $entities['destination']['name'] ?? 'International Destination';
+        $destRegion = $entities['destination']['region'] ?? 'Overseas Corridor';
+        $destAirport = $entities['destination']['airport'] ?? 'International Gateway Airport';
+        $destCourier = $entities['destination']['courier'] ?? 'Tier-1 International Partner';
+        $weight = $entities['weight'] ?? 1.0;
+        $isOutsideKtm = $entities['requires_feeder'] || ($entities['origin']['is_outside_ktm'] ?? false);
+
+        // Pre-filled booking URL parameters
+        $bookingParams = [
+            'shipment_type' => $entities['is_international'] ? 'international' : 'domestic',
+            'weight' => $weight,
+            'pickup_city' => $originName,
+            'pickup_location_type' => $isOutsideKtm ? 'outside_ktm' : 'inside_ktm',
+        ];
+        if ($entities['is_international']) {
+            $bookingParams['receiver_country'] = $destName;
+        } else {
+            $bookingParams['destination_city'] = $destName;
+        }
+
+        $bookingUrl = '/shipments/create?' . http_build_query($bookingParams);
+
+        $greetingPrefix = $justIntroduced
+            ? "Namaste **{$clientName}**! 🙏 It is an absolute pleasure to assist you. I have locked in your preferred name and will address you as **{$clientName}** throughout our logistics interactions.\n\n"
+            : "Namaste **{$clientName}**! 🙏 Thank you for reaching out to **COURIER with NETPACK**.\n\n";
+
+        $reply = $greetingPrefix;
+
+        if ($entities['is_international']) {
+            $reply .= "### ✈️ Consignment Roadmap: {$originName} (Nepal) &rarr; {$destName} ({$destRegion}) &middot; {$weight} kg Air Cargo\n\n"
+                . "I have configured the exact end-to-end operational process engineered into our NETPACK logistics platform for your **{$weight} kg shipment from {$originName} to {$destName}**:\n\n"
+                . "---\n\n"
+                . "#### 📍 Stage 1: Doorstep Collection & Feeder Linehaul ({$originName} &rarr; TIA Kathmandu)\n"
+                . "* **Ward-Level Doorstep Collection**: Our local dispatch fleet in **{$originName}** will collect the package directly from your home or warehouse.\n"
+                . "* **Cryptographic 6-Digit Pickup OTP**: When our pickup rider arrives at your doorstep, you present the secret 6-digit Pickup OTP generated in your NETPACK console. Submitting this OTP verifies custody transfer legally and prevents unauthorized pickups.\n";
+
+            if ($isOutsideKtm) {
+                $reply .= "* **{$originProvince} Feeder Linehaul**: Because {$originName} is located outside Kathmandu Valley, your consignment is transferred to our **{$regionalHub}**, secured in a heavy-duty **Nylon Bag tagged with a unique QR manifest**, and boarded onto our nightly express highway feeder truck direct to the **Tribhuvan International Airport (TIA) Cargo Terminal (KTM)**.\n\n";
+            } else {
+                $reply .= "* **Direct Gateway Transfer**: Your consignment is routed directly through our Kathmandu Central Sorting Hub to the **Tribhuvan International Airport (TIA) Cargo Terminal (KTM)**.\n\n";
+            }
+
+            $reply .= "#### 📑 Stage 2: TIA Export Cargo Terminal, 3-Copy HAWB & Nepal Customs Clearance\n"
+                . "* **Volumetric vs Actual Weight Audit**: At the Kathmandu Cargo Terminal, your parcel undergoes gross weight audit and volumetric calculation (`(L × W × H in cm) ÷ 5000`). If actual weight ({$weight} kg) is higher than dimensional weight, chargeable weight remains **{$weight} kg**.\n"
+                . "* **Compliant Zero-Charges 3-Copy House Air Waybill (HAWB)**: NETPACK automatically generates official 3-part HAWBs (**Consignee Copy**, **Customs Copy**, and **Carrier Copy**) with monetary rates concealed, strictly complying with export valuation guidelines under the Nepal Customs Act.\n"
+                . "* **Export Documentation Checklist**:\n"
+                . "  - Shipper PAN Card copy or Citizenship KYC verification\n"
+                . "  - Commercial Invoice (itemized with HS codes and declared values)\n"
+                . "  - Packing List & non-hazardous declaration (no loose lithium batteries or restricted liquids)\n"
+                . "* **Airport Security & Customs X-Ray Clearance**: Cleared by Nepal Customs and airport security at TIA.\n\n"
+                . "#### 🛫 Stage 3: International Air Cargo Freight (KTM &rarr; {$destAirport})\n"
+                . "* **Scheduled Airline Corridor**: Assigned to a scheduled international air carrier departing TIA (connecting through major freight hubs such as Doha, Dubai, or Istanbul) directly to **{$destAirport}**.\n"
+                . "* **Live Airway Bill Telemetry**: You can track the aircraft departure, transit hub scan, and flight arrival milestones in real-time on our NETPACK radar.\n\n"
+                . "#### 🚪 Stage 4: {$destName} Customs Clearance & Doorstep Handover\n"
+                . "* **Destination Import Clearance**: Cleared through local customs in {$destName} under DAP/DDP incoterms.\n"
+                . "* **European Tier-1 Courier Delivery**: Handed over to our premier destination partner (**{$destCourier}**) for expedited last-mile transport.\n"
+                . "* **Final Doorstep Handover & POD**: Delivered directly to the recipient's doorstep in {$destName} with digital signature and electronic Proof of Delivery (POD).\n\n"
+                . "---\n\n"
+                . "#### 💡 Estimated Tariff & Turnaround Time\n"
+                . "* **Transit Time**: **5 &ndash; 8 Business Days** (inclusive of {$originName} feeder pickup, customs processing, international flight, and final European doorstep handover).\n"
+                . "* **Tariff Estimate ({$weight} kg Tier)**: International air freight + regional feeder surcharge (approx. **Rs. 24,000 &ndash; Rs. 32,000 / $180 &ndash; $240**, subject to final package volume and cargo classification).\n";
+        } else {
+            // Domestic Process
+            $reply .= "### 🚚 Consignment Roadmap: {$originName} &rarr; {$destName} &middot; {$weight} kg Domestic Express\n\n"
+                . "Here is the operational process for your **{$weight} kg domestic shipment from {$originName} to {$destName}**:\n\n"
+                . "* **Stage 1: Pickup Rider & 6-Digit Pickup OTP**: Booked via NETPACK; our rider arrives at your doorstep in {$originName}. The handover is secured by a secret 6-digit Pickup OTP.\n"
+                . "* **Stage 2: Regional Sorting & Highway Linehaul**: Transported to {$regionalHub}, consolidated in a QR-manifested nylon bag, and dispatched via our nightly inter-district highway truck.\n"
+                . "* **Stage 3: Destination Hub & Last-Mile Delivery Rider**: Received at the destination sorting depot and assigned to a delivery rider.\n"
+                . "* **Stage 4: Doorstep Delivery OTP & COD Collection**: The recipient provides the secret 6-digit Delivery OTP upon inspection and settles COD cash (if applicable).\n\n"
+                . "* **Transit Time**: **24 &ndash; 48 Hours**.\n";
+        }
+
+        $actions = [
+            [
+                'label' => "🚀 Book {$weight}kg {$originName} to {$destName} Now",
+                'url' => $bookingUrl,
+            ],
+            [
+                'label' => '📋 Doorstep Pickup Guide',
+                'url' => '/shipments/create?pickup=1',
+            ],
+            [
+                'label' => '💰 Cargo Tariff Calculator',
+                'url' => '/rates/inquiry',
+            ],
+        ];
+
+        return [
+            'success' => true,
+            'provider' => 'builtin_expert',
+            'client_name' => $clientName,
+            'response' => $reply,
+            'speech_text' => "Namaste {$clientName}! I have prepared the complete logistics roadmap for your {$weight} kg shipment from {$originName} to {$destName}. Our fleet collects the parcel at your doorstep in {$originName} with a 6-digit pickup OTP, transports it via feeder linehaul to Kathmandu airport for customs and zero-charge HAWB generation, flies it to {$destAirport}, and delivers it directly to the recipient's doorstep in {$destName}.",
+            'gesture' => 'speaking',
+            'actions' => $actions,
         ];
     }
 
@@ -426,6 +964,7 @@ class AiAssistantService
         return [
             'success' => true,
             'provider' => 'builtin_expert',
+            'client_name' => $clientName,
             'response' => $reply,
             'speech_text' => "Namaste {$clientName}! During Dashain and Tihar, highway linehauls experience severe peak traffic. We recommend booking remote district parcels at least 5 days in advance. For same day delivery, daily bookings cut off at 12 noon.",
             'gesture' => 'celebrating',
@@ -440,11 +979,9 @@ class AiAssistantService
      */
     protected function tryLookupTracking(string $query): ?array
     {
-        // Match tracking numbers like NP-..., AWB-..., HAWB-..., or 8+ digit alphanumeric codes
         if (preg_match('/\b(NP[-\w\d]+|[A-Z]{2,4}[-\d]{4,15}|\d{8,14})\b/i', $query, $matches)) {
             $candidateNumber = trim($matches[1]);
 
-            // Query Shipment model
             try {
                 $shipment = Shipment::where('tracking_number', $candidateNumber)
                     ->orWhere('hawb_number', $candidateNumber)
@@ -478,7 +1015,6 @@ class AiAssistantService
                     ];
                 }
 
-                // Check PickupRequest
                 $pickup = PickupRequest::where('tracking_number', $candidateNumber)->first();
                 if ($pickup) {
                     $status = ucfirst(str_replace('_', ' ', $pickup->status ?? 'pending'));
@@ -513,21 +1049,16 @@ class AiAssistantService
      */
     protected function tryCalculateQuickRate(string $query): ?array
     {
-        $q = strtolower($query);
-
-        // Pattern matching: e.g. "rate from kathmandu to pokhara" or "cost from pokhara to kathmandu"
         if (preg_match('/(?:rate|cost|price|quote|how much)\s+(?:from|for)?\s*([a-zA-Z\s]+)\s+to\s+([a-zA-Z\s]+)/i', $query, $matches)) {
             $origin = trim($matches[1]);
             $dest = trim($matches[2]);
 
-            // Extract weight if specified, e.g. "2 kg" or "5kg"
             $weight = 1.0;
             if (preg_match('/(\d+(?:\.\d+)?)\s*(?:kg|kilo|gram)/i', $query, $wMatch)) {
                 $weight = (float) $wMatch[1];
             }
 
-            // Estimate base rate based on standard domestic tier
-            $basePrice = 120; // NPR base
+            $basePrice = 120;
             $isIntercity = (strtolower($origin) !== strtolower($dest));
             if ($isIntercity) {
                 $basePrice = 220 + max(0, ($weight - 1)) * 80;
@@ -566,7 +1097,6 @@ class AiAssistantService
         $now = Carbon::now('Asia/Kathmandu');
         $month = $now->month;
 
-        // Map months to major festive occasions
         if ($month == 9 || $month == 10) {
             return $occasions[0] ?? null; // Dashain
         } elseif ($month == 11) {
@@ -577,7 +1107,7 @@ class AiAssistantService
             return $occasions[3] ?? null; // Nepali New Year
         }
 
-        return $occasions[0] ?? null; // Default to Dashain reference
+        return $occasions[0] ?? null;
     }
 
     /**
@@ -585,12 +1115,14 @@ class AiAssistantService
      */
     public function sanitizeForSpeech(string $markdown): string
     {
-        // Remove markdown headings, bold, bullet asterisks, code blocks
         $text = preg_replace('/^#+\s+/m', '', $markdown);
         $text = preg_replace('/\*\*(.*?)\*\*/', '$1', $text);
         $text = preg_replace('/\*([^*]+)\*/', '$1', $text);
         $text = preg_replace('/`([^`]+)`/', '$1', $text);
         $text = preg_replace('/\[([^\]]+)\]\([^)]+\)/', '$1', $text);
+        $text = preg_replace('/&rarr;/', 'to', $text);
+        $text = preg_replace('/&middot;/', ',', $text);
+        $text = preg_replace('/&ndash;/', '-', $text);
         $text = preg_replace('/^\s*[\*\-]\s+/m', '', $text);
         $text = strip_tags($text);
         $text = preg_replace('/\s+/', ' ', $text);
@@ -619,45 +1151,89 @@ class AiAssistantService
     /**
      * Extract call-to-action buttons if suggested in reply
      */
-    protected function extractActions(string $content): array
+    protected function extractActions(string $content, array $entities = []): array
     {
         $actions = [];
-        if (str_contains($content, 'tracking') || str_contains($content, 'radar')) {
-            $actions[] = ['label' => 'Universal Tracking', 'url' => '/tracking'];
+
+        // If origin and destination were extracted, generate a direct prefilled booking button!
+        if (!empty($entities['destination']['name']) && !empty($entities['origin']['name'])) {
+            $origin = $entities['origin']['name'];
+            $dest = $entities['destination']['name'];
+            $weight = $entities['weight'] ?? 1.0;
+            $isOutside = $entities['requires_feeder'] || ($entities['origin']['is_outside_ktm'] ?? false);
+
+            $params = [
+                'shipment_type' => $entities['is_international'] ? 'international' : 'domestic',
+                'weight' => $weight,
+                'pickup_city' => $origin,
+                'pickup_location_type' => $isOutside ? 'outside_ktm' : 'inside_ktm',
+            ];
+            if ($entities['is_international']) {
+                $params['receiver_country'] = $dest;
+            } else {
+                $params['destination_city'] = $dest;
+            }
+
+            $actions[] = [
+                'label' => "🚀 Book {$weight}kg {$origin} to {$dest} Now",
+                'url' => '/shipments/create?' . http_build_query($params),
+            ];
+        } else {
+            $actions[] = ['label' => 'Book Shipment', 'url' => '/shipments/create'];
         }
-        if (str_contains($content, 'rate') || str_contains($content, 'tariff')) {
+
+        if (str_contains($content, 'rate') || str_contains($content, 'tariff') || str_contains($content, 'cost')) {
             $actions[] = ['label' => 'Rate Calculator', 'url' => '/rates/inquiry'];
         }
+        if (str_contains($content, 'tracking') || str_contains($content, 'telemetry') || str_contains($content, 'radar')) {
+            $actions[] = ['label' => 'Consignment Tracking', 'url' => '/tracking'];
+        }
+
         return $actions;
     }
 
     /**
-     * Build comprehensive system prompt for external LLM models
+     * Build comprehensive system prompt for external LLM models (Gemini, OpenAI, Claude, Groq)
      */
-    protected function buildSystemKnowledgePrompt(?User $user = null): string
+    protected function buildSystemKnowledgePrompt(?User $user, string $clientName, array $entities = []): string
     {
-        $clientName = $user ? $user->name : 'Valued Client';
         $userRole = $user ? $user->user_type : 'guest';
+        $entityContext = '';
+        if (!empty($entities['origin']) || !empty($entities['destination'])) {
+            $originName = $entities['origin']['name'] ?? 'Nepal';
+            $destName = $entities['destination']['name'] ?? 'Destination';
+            $weight = $entities['weight'] ?? 'declared';
+            $feederReq = ($entities['requires_feeder'] ?? false) ? 'YES (Outside KTM Feeder to TIA Cargo Gateway)' : 'Direct';
+            $entityContext = "\nDETECTED USER SHIPMENT PARAMETERS:\n- Client Name: {$clientName}\n- Origin: {$originName}\n- Destination: {$destName}\n- Declared Weight: {$weight} kg\n- Feeder Linehaul Required: {$feederReq}\n";
+        }
 
         return <<<EOT
 You are NETPACK AI Logistics Copilot, the official conversational AI assistant of "COURIER with NETPACK" (Nepal's premier logistics, e-commerce, and international air cargo management platform).
 The user interacting with you is {$clientName} (Role: {$userRole}).
-
+{$entityContext}
 YOUR PERSONALITY & TONE:
-1. Always greet the client warmly and politely using their name or honorifics ("Namaste {$clientName} Ji!").
-2. Your tone is respectful, professional, welcoming, energetic, and highly knowledgeable. Avoid monotonous, robotic, or dry responses; improvise your phrasing naturally.
-3. Be culturally attuned to Nepal and international business logistics.
-4. Keep answers clear, structured with markdown bullet points, and directly actionable.
+1. Always address the client warmly and politely using their preferred name: "Namaste {$clientName}!". If the user introduced themselves, acknowledge their name enthusiastically.
+2. Tone: Highly intelligent, authoritative on logistics, culturally attuned to Nepal and international air corridors, energetic, and professional. Avoid robotic or dry boilerplate!
+3. Format: Clean GitHub-flavored markdown with structured bullet points, clear stage breakdown, and direct calls-to-action.
 
-CORE LOGISTICS DOMAIN KNOWLEDGE:
-- E-Commerce Door-to-Door Delivery:
-  * Direct Rider Intra-City: Instant fee quote, 6-digit cryptographic Pickup OTP (Seller -> Rider), 6-digit Delivery OTP (Customer -> Rider), and POD photo.
-  * Cash On Delivery (COD): Segregated from rider pay. Tiered rider limits: Level 0 (Rs 0), Level 1 (Rs 5,000), Level 2 (Rs 20,000), Level 3 (Rs 50,000), Level 4 (custom).
-- Hybrid Multi-Leg Courier: Leg 1 (Pickup rider) -> Leg 2 (Highway road linehaul with nylon bag QR manifests) -> Leg 3 (Depot rider to doorstep).
-- Domestic Nepal Coverage: 7 Provinces (Koshi, Madhesh, Bagmati, Gandaki, Lumbini, Karnali, Sudurpashchim) & 77 Districts.
-- International Air Cargo: Tribhuvan International Airport (TIA) Cargo Terminal (KTM). Outside Kathmandu Valley domestic feeder linehauls connect regional hubs (Pokhara, Birgunj, Biratnagar, Chitwan, etc.) with the air gateway. Volumetric weight = (L x W x H in cm) / 5000. Multi-part HAWBs strictly omit monetary charges to comply with customs export clearance regulations.
-- Operational Schedules: Same-Day pickup cutoff is 12:00 PM; TIA cargo intake cutoff is 3:00 PM; Night inter-district highway linehauls depart 7:00 PM.
-- Festivals & Occasions: Bada Dashain, Tihar / Deepawali, Chhath, Nepali New Year, Black Friday, Christmas. Always warn clients to book remote deliveries 4-5 days ahead of festival cutoffs due to highway congestion.
+SYSTEM LOGISTICS ARCHITECTURE & WORKFLOW RULES:
+- When the user asks to book or explains a shipment (e.g. from Jhapa to Poland, 20kg):
+  1. DO NOT give a generic boilerplate or random answer.
+  2. Walk them through the EXACT 4-stage logistics process built in NETPACK:
+     * Stage 1: Doorstep Collection in Origin (e.g. Jhapa) via local courier rider with secret 6-digit Pickup OTP. Consignment transferred to Regional Hub (e.g. Biratnagar Hub for Koshi Province), packed in QR-manifested Nylon Bag, and moved via highway feeder truck to Tribhuvan International Airport (TIA) Cargo Terminal, Kathmandu.
+     * Stage 2: TIA Export Gateway, Zero-Charges 3-Copy HAWB (Consignee, Customs, Carrier copies with rates omitted per customs export rules), export documentation (Shipper PAN/Citizenship KYC, Commercial Invoice with HS codes, Packing list), and airport X-ray clearance.
+     * Stage 3: Scheduled air cargo flight departure from KTM (via Doha/Dubai/Istanbul corridor) to destination gateway (e.g. Warsaw Chopin Airport WAW for Poland) with live air telemetry.
+     * Stage 4: Destination customs clearance (DAP/DDP) and European Tier-1 courier partner delivery (DPD Poland / DHL Express / FedEx Europe) directly to consignee doorstep with verified digital POD.
+  3. Mention estimated turnaround time (5-8 business days) and realistic pricing guide.
+- E-Commerce & Door-to-Door Delivery Security:
+  * 6-digit cryptographic Pickup OTP (Seller to Rider)
+  * 6-digit cryptographic Delivery OTP (Rider to Customer with COD collection)
+  * Proof of Delivery (POD) photo capture.
+- Cash On Delivery (COD) Ledgers:
+  * 100% segregated from rider earnings. Tiered limits: Level 0 (Rs 0), Level 1 (Rs 5,000), Level 2 (Rs 20,000), Level 3 (Rs 50,000). Automated remittance to eSewa/Khalti/Bank.
+- Operational Schedules:
+  * Same-day pickup cutoff: 12:00 PM; TIA cargo cutoff: 3:00 PM; Night linehauls depart: 7:00 PM.
+- Important Occasions: Bada Dashain, Tihar, Nepali New Year, Black Friday, Christmas.
 EOT;
     }
 }
