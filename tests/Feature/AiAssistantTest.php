@@ -452,6 +452,73 @@ class AiAssistantTest extends TestCase
         $response->assertSee('Nepalese Orientation', false);
         $response->assertSee('Voice Briefing (Nepali Cadence)', false);
     }
+
+    public function test_voice_autofill_parses_all_three_services_including_ecommerce(): void
+    {
+        $service = app(AiAssistantService::class);
+
+        // 1. E-Commerce & COD service recognition
+        $ecomResult = $service->parseVoiceFormField('mode', 'I want e-commerce delivery with cash on delivery');
+        $this->assertEquals('ecommerce', $ecomResult['parsed_value']);
+        $this->assertStringContainsString('E-Commerce and Cash on Delivery', $ecomResult['speech_ack']);
+
+        $ecomResult2 = $service->parseVoiceFormField('mode', 'service 3 online store rider dispatch');
+        $this->assertEquals('ecommerce', $ecomResult2['parsed_value']);
+
+        // 2. International Air Cargo service recognition
+        $intlResult = $service->parseVoiceFormField('mode', 'Send international air cargo overseas to Poland');
+        $this->assertEquals('international', $intlResult['parsed_value']);
+        $this->assertStringContainsString('International Air Cargo', $intlResult['speech_ack']);
+
+        // 3. Domestic Express service recognition
+        $domResult = $service->parseVoiceFormField('mode', 'Domestic delivery in Nepal');
+        $this->assertEquals('domestic', $domResult['parsed_value']);
+        $this->assertStringContainsString('Domestic Express', $domResult['speech_ack']);
+    }
+
+    public function test_ai_identifies_all_three_services_overview_and_ecommerce_guidance(): void
+    {
+        $user = User::factory()->create(['name' => 'Kiran User']);
+
+        // Test asking for all 3 services
+        $response = $this->actingAs($user)->postJson('/ai/chat', [
+            'message' => 'What are the 3 services that NETPACK provides?',
+        ]);
+
+        $response->assertStatus(200);
+        $content = $response->json('response');
+        $this->assertStringContainsString('Domestic Express Delivery', $content);
+        $this->assertStringContainsString('International Air Cargo', $content);
+        $this->assertStringContainsString('E-Commerce & Cash on Delivery', $content);
+
+        // Verify actions contain direct links to all 3 modes
+        $actions = $response->json('actions');
+        $this->assertCount(3, $actions);
+        $urls = array_column($actions, 'url');
+        $this->assertContains('/shipments/create?mode=domestic', $urls);
+        $this->assertContains('/shipments/create?mode=international', $urls);
+        $this->assertContains('/shipments/create?mode=ecommerce', $urls);
+
+        // Test dedicated E-Commerce inquiry
+        $ecomResponse = $this->actingAs($user)->postJson('/ai/chat', [
+            'message' => 'How does the ecommerce delivery and COD payout work for online sellers?',
+        ]);
+
+        $ecomResponse->assertStatus(200);
+        $ecomContent = $ecomResponse->json('response');
+        $this->assertStringContainsString('E-Commerce Express', $ecomContent);
+        $this->assertStringContainsString('Pickup OTP', $ecomContent);
+        $this->assertStringContainsString('Delivery OTP', $ecomContent);
+        $this->assertStringContainsString('Bank Account, eSewa, or Khalti', $ecomContent);
+    }
+
+    public function test_ai_parses_ecommerce_logistics_intent(): void
+    {
+        $service = app(AiAssistantService::class);
+        $entities = $service->parseLogisticsEntities('I run an online store and need COD pickup for my customer');
+
+        $this->assertTrue($entities['is_ecommerce']);
+    }
 }
 
 

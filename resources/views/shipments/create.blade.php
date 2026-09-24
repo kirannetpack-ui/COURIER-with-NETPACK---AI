@@ -779,10 +779,10 @@ document.addEventListener('alpine:init', () => {
         </div>
     </div>
 
-    <!-- ACTIVE VOICE CONCIERGE CONTROLLER (VISIBLE WHEN ASSISTANT IS ACTIVE) -->
+    <!-- ACTIVE VOICE CONCIERGE CONTROLLER (FIXED BOTTOM DOCKED COCKPIT - NEVER LEFT BEHIND) -->
     <div id="ai-voice-active-controller" 
          style="display: none;" 
-         class="sticky top-4 z-40 rounded-3xl bg-slate-900/95 border-2 border-teal-500/60 p-4 sm:p-5 text-white shadow-2xl backdrop-blur-xl ring-2 ring-teal-500/20 transition-all duration-300">
+         class="fixed bottom-5 left-1/2 -translate-x-1/2 w-[95%] max-w-4xl z-50 rounded-3xl bg-slate-950/95 border-2 border-teal-500/70 p-4 sm:p-5 text-white shadow-[0_20px_60px_rgba(0,0,0,0.85)] backdrop-blur-2xl ring-4 ring-teal-500/20 transition-all duration-300">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <!-- Left Info -->
             <div class="flex items-center gap-3.5 min-w-0">
@@ -819,6 +819,15 @@ document.addEventListener('alpine:init', () => {
                     <span class="eq-bar w-1.5 h-2 bg-teal-300 rounded-full transition-all duration-75"></span>
                     <span class="eq-bar w-1.5 h-4 bg-teal-500 rounded-full transition-all duration-75"></span>
                 </div>
+
+                <!-- 1-Click Allow Microphone Button (Appears if permission was blocked) -->
+                <button type="button" id="ai-voice-unblock-mic-btn" onclick="window.requestMicrophoneAccess()" 
+                        style="display: none;"
+                        class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black transition flex items-center gap-1.5 shadow-lg shadow-amber-500/30 cursor-pointer animate-bounce"
+                        title="Click to allow microphone in your browser">
+                    <i class="fas fa-lock-open text-xs"></i>
+                    <span>Allow Mic</span>
+                </button>
 
                 <!-- Prominent Tap to Speak Button -->
                 <button type="button" id="ai-voice-mic-btn" onclick="window.toggleVoiceAutofillMic()" 
@@ -861,7 +870,7 @@ document.addEventListener('alpine:init', () => {
                 <span class="hidden sm:inline">Or type answer:</span>
             </div>
             <input type="text" id="ai-voice-quick-input" 
-                   placeholder="Speak now into your microphone, or type here and press Enter..." 
+                   placeholder="Speak now into your microphone, or type directly into form boxes..." 
                    onkeydown="if(event.key === 'Enter'){ event.preventDefault(); window.submitManualVoiceStepInput(); }"
                    class="flex-1 bg-slate-950/70 border border-slate-700 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 text-xs text-white rounded-lg px-3 py-1.5 placeholder-slate-500 outline-none">
             <button type="button" onclick="window.submitManualVoiceStepInput()"
@@ -869,6 +878,9 @@ document.addEventListener('alpine:init', () => {
                 <span>Apply</span>
                 <i class="fas fa-arrow-right text-[10px]"></i>
             </button>
+            <span class="hidden lg:inline text-[10px] text-teal-300/80 font-mono ml-1">
+                Tip: Direct typing in form boxes is also accepted!
+            </span>
         </div>
     </div>
 
@@ -2899,19 +2911,28 @@ document.addEventListener('alpine:init', () => {
                 id: 'mode',
                 title: 'Shipment Service Category',
                 prompt: function(ctx) {
-                    return `Namaste ${ctx.clientPreferredName}! Let's book your shipment. First, is this an International overseas air cargo shipment, or a Domestic delivery within Nepal?`;
+                    return `Namaste ${ctx.clientPreferredName}! Which of our 3 services would you like to book? 1: Domestic Delivery across Nepal, 2: International Air Cargo, or 3: E-Commerce Delivery with Cash on Delivery?`;
                 },
-                targetSelector: function() { return document.getElementById('mode-btn-international'); },
+                targetSelector: function() { 
+                    const cur = document.getElementById('shipment_type')?.value;
+                    if (cur === 'ecommerce') return document.getElementById('mode-btn-ecommerce');
+                    if (cur === 'international') return document.getElementById('mode-btn-international');
+                    return document.getElementById('mode-btn-domestic'); 
+                },
                 parse: function(text) {
                     const t = text.toLowerCase();
-                    if (t.includes('international') || t.includes('overseas') || t.includes('air cargo') || t.includes('poland') || t.includes('usa') || t.includes('europe') || t.includes('abroad')) {
+                    if (t.includes('ecommerce') || t.includes('e-commerce') || t.includes('cod') || t.includes('cash on delivery') || t.includes('seller') || t.includes('merchant') || t.includes('store') || t.includes('shop') || t.includes('rider') || t.includes('daraz') || t.includes('kinbech') || t.includes('online') || t.includes('three') || t.includes('3') || t.includes('tesro') || t.includes('tin')) {
+                        return 'ecommerce';
+                    }
+                    if (t.includes('international') || t.includes('overseas') || t.includes('air cargo') || t.includes('poland') || t.includes('usa') || t.includes('europe') || t.includes('abroad') || t.includes('two') || t.includes('2') || t.includes('dosro') || t.includes('dui') || t.includes('bidesh')) {
                         return 'international';
                     }
                     return 'domestic';
                 },
                 apply: function(val) {
                     if (typeof switchMode === 'function') switchMode(val);
-                    return val === 'international' ? 'International Air Cargo' : 'Domestic Express';
+                    if (val === 'ecommerce') return 'E-Commerce Delivery & COD';
+                    return val === 'international' ? 'International Air Cargo' : 'Domestic Express Delivery';
                 }
             },
             {
@@ -3123,75 +3144,105 @@ document.addEventListener('alpine:init', () => {
         const controller = document.getElementById('ai-voice-active-controller');
         if (controller) controller.style.display = 'block';
 
+        // Add bottom padding so floating docked controller never obscures bottom fields
+        const mainContainer = document.querySelector('form#shipment-form') || document.body;
+        if (mainContainer) mainContainer.classList.add('pb-44');
+
         window.aiVoiceAutofill.isActive = true;
         window.aiVoiceAutofill.currentStepIndex = 0;
 
-        // 1. Explicitly request microphone stream from user click gesture to avoid browser silent blocking
+        // 1. Explicitly request microphone stream from user click gesture to grant permission,
+        // and immediately release tracks so the physical device is NOT locked away from SpeechRecognition!
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                window.aiVoiceAutofill.audioStream = stream;
-                setupAudioVisualizer(stream);
+                // Crucial fix: release tracks immediately so SpeechRecognition has uncontested hardware access!
+                stream.getTracks().forEach(t => t.stop());
+                hideMicBlockedWarning();
             } catch(micErr) {
-                console.warn('Microphone permission check warning:', micErr);
-                updateVoiceStatus('Microphone access blocked. Click lock icon in browser address bar to Allow.', 'text-rose-400');
+                console.warn('Microphone permission check notice:', micErr);
+                showMicBlockedWarning();
             }
         }
 
-        // 2. Setup speech recognition
+        // 2. Start smooth animated soundwave visualizer (doesn't hold hardware mic lock!)
+        startEqualizerAnimation();
+
+        // 3. Setup bi-directional direct form typing acceptance
+        setupDirectFormTypingSync();
+
+        // 4. Setup speech recognition
         initSpeechRecognition();
 
-        // 3. Ask Step 0
+        // 5. Ask Step 0
         executeVoiceStep(0);
     };
 
-    function setupAudioVisualizer(stream) {
-        try {
-            const AudioCtx = window.AudioContext || window.webkitAudioContext;
-            if (!AudioCtx) return;
+    function startEqualizerAnimation() {
+        if (window.aiVoiceAutofill.animFrameId) return;
+        const bars = document.querySelectorAll('#ai-voice-equalizer .eq-bar');
+        if (!bars.length) return;
 
-            if (!window.aiVoiceAutofill.audioContext) {
-                window.aiVoiceAutofill.audioContext = new AudioCtx();
+        let tick = 0;
+        function renderBars() {
+            if (!window.aiVoiceAutofill.isActive) {
+                window.aiVoiceAutofill.animFrameId = null;
+                return;
             }
-            const ctx = window.aiVoiceAutofill.audioContext;
-            if (ctx.state === 'suspended') {
-                ctx.resume();
+            window.aiVoiceAutofill.animFrameId = requestAnimationFrame(renderBars);
+            tick++;
+
+            if (window.aiVoiceAutofill.isListening) {
+                bars.forEach((bar, idx) => {
+                    const wave = Math.sin(tick * 0.28 + idx * 1.3) * 0.5 + 0.5;
+                    const height = Math.round(6 + wave * 20);
+                    bar.style.height = `${height}px`;
+                });
+            } else {
+                bars.forEach((bar, idx) => {
+                    bar.style.height = (idx % 2 === 0) ? '8px' : '14px';
+                });
             }
-
-            const analyser = ctx.createAnalyser();
-            analyser.fftSize = 64;
-            const source = ctx.createMediaStreamSource(stream);
-            source.connect(analyser);
-            window.aiVoiceAutofill.analyser = analyser;
-
-            const bars = document.querySelectorAll('#ai-voice-equalizer .eq-bar');
-            const dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-            function drawMeter() {
-                if (!window.aiVoiceAutofill.isActive) return;
-                window.aiVoiceAutofill.animFrameId = requestAnimationFrame(drawMeter);
-
-                if (window.aiVoiceAutofill.isListening && analyser) {
-                    analyser.getByteFrequencyData(dataArray);
-                    let sum = 0;
-                    for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
-                    const avg = sum / dataArray.length;
-
-                    bars.forEach((bar, idx) => {
-                        const h = Math.min(26, Math.max(5, Math.round((avg / 255) * 32 + (idx * 2.5))));
-                        bar.style.height = `${h}px`;
-                    });
-                } else {
-                    bars.forEach((bar, idx) => {
-                        bar.style.height = idx % 2 === 0 ? '8px' : '14px';
-                    });
-                }
-            }
-            drawMeter();
-        } catch(e) {
-            console.log('Audio visualizer setup error:', e);
         }
+        renderBars();
     }
+
+    function showMicBlockedWarning() {
+        updateVoiceStatus('Microphone blocked. Click [Allow Mic] or lock icon in address bar.', 'text-rose-400 font-bold');
+        const unblockBtn = document.getElementById('ai-voice-unblock-mic-btn');
+        if (unblockBtn) unblockBtn.style.display = 'inline-flex';
+    }
+
+    function hideMicBlockedWarning() {
+        const unblockBtn = document.getElementById('ai-voice-unblock-mic-btn');
+        if (unblockBtn) unblockBtn.style.display = 'none';
+    }
+
+    window.requestMicrophoneAccess = async function() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            alert('Your browser does not support audio capture. Please use Chrome or Edge.');
+            return;
+        }
+
+        try {
+            updateVoiceStatus('Requesting microphone permission...', 'text-amber-300 font-bold');
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            stream.getTracks().forEach(t => t.stop());
+            hideMicBlockedWarning();
+            updateVoiceStatus('Microphone enabled! Tap [Tap to Speak] to continue.', 'text-emerald-400 font-bold');
+            if (!window.aiVoiceAutofill.recognition) {
+                initSpeechRecognition();
+            }
+            setTimeout(() => {
+                if (window.aiVoiceAutofill.isActive && window.aiVoiceAutofill.recognition) {
+                    try { window.aiVoiceAutofill.recognition.start(); } catch(e){}
+                }
+            }, 300);
+        } catch(err) {
+            console.error('Microphone request error:', err);
+            alert('Microphone is blocked by your browser settings.\n\nTo allow it:\n1. Click the lock or camera icon on the left side of the address bar at the top of the browser.\n2. Turn "Microphone" to ON / Allow.\n3. Reload the page or tap [Allow Mic].');
+        }
+    };
 
     function updateMicButton(isListening) {
         const btn = document.getElementById('ai-voice-mic-btn');
@@ -3273,6 +3324,9 @@ document.addEventListener('alpine:init', () => {
         const controller = document.getElementById('ai-voice-active-controller');
         if (controller) controller.style.display = 'none';
 
+        const mainContainer = document.querySelector('form#shipment-form') || document.body;
+        if (mainContainer) mainContainer.classList.remove('pb-44');
+
         // Remove field highlight
         document.querySelectorAll('.ai-voice-active-field').forEach(el => {
             el.classList.remove('ai-voice-active-field', 'ring-4', 'ring-teal-500/50', 'border-teal-500');
@@ -3300,10 +3354,76 @@ document.addEventListener('alpine:init', () => {
         }
     };
 
+    // =========================================================================
+    // BI-DIRECTIONAL DIRECT FORM TYPING & ACTIVE FIELD SYNC
+    // =========================================================================
+    function setupDirectFormTypingSync() {
+        if (window.aiVoiceAutofill._syncSetupDone) return;
+        window.aiVoiceAutofill._syncSetupDone = true;
+
+        // 1. Direct clicks on Mode Selector Buttons on the page
+        ['mode-btn-domestic', 'mode-btn-international', 'mode-btn-ecommerce'].forEach(id => {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            btn.addEventListener('click', function() {
+                if (!window.aiVoiceAutofill.isActive) return;
+                if (window.aiVoiceAutofill.currentStepIndex === 0) {
+                    const mode = id === 'mode-btn-ecommerce' ? 'ecommerce' : (id === 'mode-btn-international' ? 'international' : 'domestic');
+                    const label = id === 'mode-btn-ecommerce' ? 'E-Commerce and Cash on Delivery' : (id === 'mode-btn-international' ? 'International Air Cargo' : 'Domestic Express Delivery');
+                    speakVoicePrompt(`Selected ${label}.`, function() {
+                        executeVoiceStep(1);
+                    });
+                }
+            });
+        });
+
+        // 2. Direct click/focus on ANY form field jumps AI assistant to that field
+        document.querySelectorAll('#shipment-form input, #shipment-form textarea, #shipment-form select').forEach(input => {
+            input.addEventListener('focus', function(e) {
+                if (!window.aiVoiceAutofill.isActive) return;
+                const activeIdx = window.aiVoiceAutofill.steps.findIndex(s => {
+                    try {
+                        const el = s.targetSelector ? s.targetSelector() : null;
+                        return el === e.target;
+                    } catch(err) { return false; }
+                });
+                if (activeIdx !== -1 && activeIdx !== window.aiVoiceAutofill.currentStepIndex) {
+                    executeVoiceStep(activeIdx, false /* don't steal focus */);
+                }
+            });
+
+            // 3. User typing directly into the form field box on the page
+            input.addEventListener('input', function(e) {
+                if (!window.aiVoiceAutofill.isActive) return;
+                const currentStep = window.aiVoiceAutofill.steps[window.aiVoiceAutofill.currentStepIndex];
+                if (!currentStep) return;
+                const targetEl = currentStep.targetSelector ? currentStep.targetSelector() : null;
+                if (targetEl === e.target) {
+                    const quickInput = document.getElementById('ai-voice-quick-input');
+                    if (quickInput) quickInput.value = e.target.value;
+                }
+            });
+
+            // 4. Pressing Enter directly inside the form input box
+            input.addEventListener('keydown', function(e) {
+                if (!window.aiVoiceAutofill.isActive) return;
+                if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+                    const currentStep = window.aiVoiceAutofill.steps[window.aiVoiceAutofill.currentStepIndex];
+                    if (!currentStep) return;
+                    const targetEl = currentStep.targetSelector ? currentStep.targetSelector() : null;
+                    if (targetEl === e.target && e.target.value.trim()) {
+                        e.preventDefault();
+                        handleUserSpokenAnswer(e.target.value.trim());
+                    }
+                }
+            });
+        });
+    }
+
     function initSpeechRecognition() {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
-            updateVoiceStatus('Speech recognition not available. Please use Chrome/Edge or type in box below.', 'text-amber-300');
+            updateVoiceStatus('Speech recognition not available. Please use Chrome/Edge or type directly.', 'text-amber-300');
             return;
         }
 
@@ -3311,13 +3431,16 @@ document.addEventListener('alpine:init', () => {
             const rec = new SpeechRecognition();
             rec.continuous = false;
             rec.interimResults = true;
-            // South Asian acoustic model accommodates Nepalese accent and local locations (Jhapa, Kathmandu, etc.)
-            rec.lang = 'en-IN';
+            rec.maxAlternatives = 1;
+            
+            const browserLang = (navigator.language || 'en-US');
+            rec.lang = (browserLang.startsWith('en') || browserLang.startsWith('ne')) ? browserLang : 'en-US';
 
             rec.onstart = function() {
                 window.aiVoiceAutofill.isListening = true;
                 updateVoiceStatus('🎙️ Listening... Speak now', 'text-rose-400 font-bold');
                 updateMicButton(true);
+                hideMicBlockedWarning();
             };
 
             rec.onresult = function(event) {
@@ -3343,6 +3466,17 @@ document.addEventListener('alpine:init', () => {
                     }
                     const quickInput = document.getElementById('ai-voice-quick-input');
                     if (quickInput) quickInput.value = liveText;
+
+                    // Real-time live auto-typing directly into the active form fillup box:
+                    const currentStep = window.aiVoiceAutofill.steps[window.aiVoiceAutofill.currentStepIndex];
+                    if (currentStep && currentStep.id !== 'mode') {
+                        const targetEl = currentStep.targetSelector ? currentStep.targetSelector() : null;
+                        if (targetEl && ('value' in targetEl)) {
+                            targetEl.value = liveText;
+                            targetEl.dispatchEvent(new Event('input', { bubbles: true }));
+                            targetEl.classList.add('ring-2', 'ring-teal-400');
+                        }
+                    }
                 }
 
                 if (finalTranscript.trim()) {
@@ -3351,14 +3485,17 @@ document.addEventListener('alpine:init', () => {
             };
 
             rec.onerror = function(event) {
-                console.log('Voice recognition notice:', event.error);
+                console.warn('Voice recognition notice:', event.error);
                 window.aiVoiceAutofill.isListening = false;
                 updateMicButton(false);
 
                 if (event.error === 'not-allowed') {
-                    updateVoiceStatus('Microphone blocked. Please click camera/lock icon in address bar to Allow.', 'text-rose-400 font-bold');
+                    showMicBlockedWarning();
                 } else if (event.error === 'no-speech') {
                     updateVoiceStatus('Didn’t catch your voice. Tap [Tap to Speak] or type below.', 'text-amber-300');
+                } else if (event.error === 'language-not-supported' || event.error === 'network') {
+                    rec.lang = 'en-US';
+                    updateVoiceStatus('Ready in English. Tap [Tap to Speak] to provide answer.', 'text-teal-300');
                 } else {
                     updateVoiceStatus('Ready. Tap [Tap to Speak] to provide answer.', 'text-teal-300/80');
                 }
@@ -3373,7 +3510,7 @@ document.addEventListener('alpine:init', () => {
         }
     }
 
-    function executeVoiceStep(stepIndex) {
+    function executeVoiceStep(stepIndex, focusElement = true) {
         window.aiVoiceAutofill.currentStepIndex = stepIndex;
         const step = window.aiVoiceAutofill.steps[stepIndex];
         if (!step) {
@@ -3409,6 +3546,9 @@ document.addEventListener('alpine:init', () => {
             });
             targetEl.classList.add('ai-voice-active-field', 'ring-4', 'ring-teal-500/50', 'border-teal-500');
             targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (focusElement && typeof targetEl.focus === 'function' && targetEl.tagName !== 'BUTTON') {
+                targetEl.focus();
+            }
         }
 
         // Speak question out loud, then start listening

@@ -340,12 +340,14 @@ class AiAssistantService
         $isTrackingInquiry = (bool) preg_match('/\b(track|tracking|status|telemetry|kaha\s*pugyo|kahile\s*pugchha|kahile\s*aauchha|where\s*is|locate)\b/i', $query);
         $isIssueInquiry = (bool) preg_match('/\b(delay|delayed|adhkiyo|samasya|problem|issue|complain|damage|lost|hold|customs\s*hold|chhutyo)\b/i', $query);
         $isAdminOperationalInquiry = (bool) preg_match('/\b(operational\s*issue|admin\s*issue|bottleneck|win-win|win\s*win|held\s*consignment|pending\s*pickup|operations\s*health|network\s*delay)\b/i', $query);
+        $isEcommerce = (bool) preg_match('/\b(ecommerce|e-commerce|cod|cash\s*on\s*delivery|seller|merchant|online\s*store|online\s*order|daraz|kinbech|rto|rider\s*dispatch)\b/i', $query);
 
         return [
             'weight' => $weight,
             'origin' => $origin,
             'destination' => $destination,
             'is_international' => $isInternational,
+            'is_ecommerce' => $isEcommerce,
             'requires_feeder' => ($isInternational && $origin && !empty($origin['is_outside_ktm'])),
             'is_booking_request' => $isBookingRequest,
             'is_process_inquiry' => $isProcessInquiry,
@@ -742,8 +744,94 @@ class AiAssistantService
             ];
         }
 
-        // 3. COD (Cash On Delivery) & Limits
-        if (str_contains($q, 'cod') || str_contains($q, 'cash on delivery') || str_contains($q, 'limit') || str_contains($q, 'cash in hand')) {
+        // 2.5 All 3 Core Logistics Services Overview (Domestic, International, E-Commerce & COD)
+        if (str_contains($q, '3 service') || str_contains($q, 'three service') || str_contains($q, 'teen service') || str_contains($q, 'all services') || str_contains($q, 'all service') || str_contains($q, 'service category') || str_contains($q, 'services do you offer') || str_contains($q, 'what services') || str_contains($q, 'service list') || str_contains($q, 'services available')) {
+            $reply = "### 🌐 NETPACK 3 Core Logistics Services\n\n"
+                . "Namaste {$clientName}! At **COURIER with NETPACK**, our unified logistics infrastructure covers **all 3 core services**:\n\n"
+                . "1. 🇳🇵 **Domestic Express Delivery**:\n"
+                . "   - Inter-city, inter-district, and intra-valley courier across all **7 Provinces and 77 Districts** of Nepal.\n"
+                . "   - Highway truck linehauls with nylon bags and QR manifest scanning connecting Biratnagar, Janakpur, Kathmandu, Pokhara, Butwal, Surkhet, and Dhangadhi.\n\n"
+                . "2. ✈️ **International Air Cargo & Feeder Logistics**:\n"
+                . "   - Global export air cargo departing Tribhuvan International Airport (TIA) Cargo Terminal to Poland, Europe, USA, UK, UAE, and 220+ countries.\n"
+                . "   - Automated domestic feeder linehaul linking outer districts (Jhapa, Morang, etc.) with TIA Cargo Terminal.\n"
+                . "   - Zero-charge 3-copy HAWB export documents and Tier-1 carrier tracking (DPD, DHL, FedEx, UPS).\n\n"
+                . "3. 📦 **E-Commerce & Cash on Delivery (COD) Rider Delivery**:\n"
+                . "   - Purpose-built for online stores, Daraz sellers, Instagram merchants, and retail brands.\n"
+                . "   - Instant rider dispatch with secret **6-digit Pickup OTP** and **6-digit Delivery OTP**.\n"
+                . "   - Daily automated COD cash settlement directly to merchant bank accounts, eSewa, or Khalti.\n"
+                . "   - Real-time RTO (Return to Origin) management, door-to-door exchanges, and verified POD photo capture.\n\n"
+                . "Which service would you like to explore or book?";
+
+            return [
+                'success' => true,
+                'provider' => 'builtin_expert',
+                'client_name' => $clientName,
+                'response' => $reply,
+                'speech_text' => "Namaste {$clientName}! NETPACK offers three complete services: Domestic Express Delivery across Nepal's 77 districts, International Air Cargo departing Tribhuvan International Airport, and E-Commerce Deliveries with Cash on Delivery and dual OTP security.",
+                'gesture' => 'speaking',
+                'actions' => [
+                    ['label' => '🇳🇵 Book Domestic', 'url' => '/shipments/create?mode=domestic'],
+                    ['label' => '✈️ Book International', 'url' => '/shipments/create?mode=international'],
+                    ['label' => '📦 Book E-Commerce COD', 'url' => '/shipments/create?mode=ecommerce'],
+                ],
+            ];
+        }
+
+        // 2.7 COD (Cash On Delivery) Limits, Tiers & Financial Segregation
+        if (str_contains($q, 'limit') || str_contains($q, 'cash in hand') || str_contains($q, 'tiered') || (str_contains($q, 'cod') && (str_contains($q, 'ledger') || str_contains($q, 'rule') || str_contains($q, 'policy')))) {
+            $reply = "### 💵 Tiered Cash On Delivery (COD) & Financial Segregation\n\n"
+                . "Namaste {$clientName}! NETPACK enforces a strictly segregated financial ledger system for all COD transactions:\n\n"
+                . "* **Strict Segregation**: Rider delivery fee earnings (`rider_earnings_ledgers`) are 100% separated from COD cash collected (`rider_cod_ledgers`). Cash in hand belongs strictly to the company and seller.\n"
+                . "* **Tiered COD Rider Authorization**:\n"
+                . "  - **Level 0**: Rs. 0 (Prepaid orders only, probationary)\n"
+                . "  - **Level 1**: Rs. 5,000 (New verified rider)\n"
+                . "  - **Level 2**: Rs. 20,000 (Proven 50+ successful deliveries)\n"
+                . "  - **Level 3**: Rs. 50,000 (Trusted high-volume veteran rider)\n"
+                . "  - **Level 4**: Custom authorized enterprise limit\n"
+                . "* **Settlement & Payouts**: Riders deposit cash via bank transfer or office cash desks; Sellers receive automated electronic remittance to eSewa, Khalti, or bank accounts.";
+
+            return [
+                'success' => true,
+                'provider' => 'builtin_expert',
+                'client_name' => $clientName,
+                'response' => $reply,
+                'speech_text' => "NETPACK separates rider earnings from COD cash collected. We enforce tiered COD limits from Level 0 up to Level 4 for trusted riders, with automated digital remittance to sellers via bank, eSewa, or Khalti.",
+                'gesture' => 'speaking',
+                'actions' => [],
+            ];
+        }
+
+        // 2.8 E-Commerce Delivery & Multi-Vendor Merchant Solutions
+        if (!empty($entities['is_ecommerce']) || str_contains($q, 'ecommerce') || str_contains($q, 'e-commerce') || str_contains($q, 'online store') || str_contains($q, 'merchant') || str_contains($q, 'seller') || str_contains($q, 'daraz') || str_contains($q, 'kinbech') || str_contains($q, 'rto')) {
+            $reply = "### 📦 E-Commerce Express & Cash On Delivery (COD) Management\n\n"
+                . "Namaste {$clientName}! NETPACK's dedicated **E-Commerce Delivery Service** is optimized specifically for online merchants, social commerce sellers, and retail platforms across Nepal:\n\n"
+                . "1. **Doorstep Merchant Pickup & Pickup OTP**:\n"
+                . "   - Book directly from your merchant console. A nearby rider is dispatched immediately to your store or warehouse.\n"
+                . "   - Handover is secured with a cryptographic 6-digit **Pickup OTP**.\n\n"
+                . "2. **Cash on Delivery (COD) Collections & Guaranteed Payouts**:\n"
+                . "   - Riders collect cash at the buyer's doorstep upon 6-digit **Delivery OTP** verification.\n"
+                . "   - Payouts are digitally remitted via automated batch transfers to your **Bank Account, eSewa, or Khalti** with detailed ledger statements.\n\n"
+                . "3. **Reverse Logistics & RTO Management**:\n"
+                . "   - Non-delivered or exchanged parcels are marked with clear reason codes (customer uncontactable, rejected, rescheduled) and returned safely to merchant inventory.\n\n"
+                . "4. **Customer Live Telemetry & SMS Alerts**:\n"
+                . "   - End customers receive live rider tracking links and SMS alerts with accurate ETA.";
+
+            return [
+                'success' => true,
+                'provider' => 'builtin_expert',
+                'client_name' => $clientName,
+                'response' => $reply,
+                'speech_text' => "Namaste {$clientName}! Our E-Commerce delivery service offers instant rider dispatch, dual OTP verification, same-day delivery, and automated Cash on Delivery payouts to your bank, eSewa, or Khalti.",
+                'gesture' => 'speaking',
+                'actions' => [
+                    ['label' => '📦 Book E-Commerce Delivery', 'url' => '/shipments/create?mode=ecommerce'],
+                    ['label' => '💳 COD Settlement Guide', 'url' => '/rates/inquiry'],
+                ],
+            ];
+        }
+
+        // 3. COD (Cash On Delivery) General Guidance
+        if (str_contains($q, 'cod') || str_contains($q, 'cash on delivery')) {
             $reply = "### 💵 Tiered Cash On Delivery (COD) & Financial Segregation\n\n"
                 . "Namaste {$clientName}! NETPACK enforces a strictly segregated financial ledger system for all COD transactions:\n\n"
                 . "* **Strict Segregation**: Rider delivery fee earnings (`rider_earnings_ledgers`) are 100% separated from COD cash collected (`rider_cod_ledgers`). Cash in hand belongs strictly to the company and seller.\n"
@@ -857,25 +945,24 @@ class AiAssistantService
             : "Namaste {$clientName}! 🙏 I am your NETPACK AI Logistics Copilot.\n\n";
 
         $reply = $introText
-            . "I am equipped to provide instantaneous assistance on:\n"
-            . "* **Consignment Booking & Routing**: Specify your pickup district (e.g. Jhapa, Pokhara, Kathmandu), destination (Poland, USA, domestic), and weight to get a complete step-by-step roadmap.\n"
-            . "* **Door-to-Door Delivery**: Direct rider dispatch, 6-digit Pickup & Delivery OTP handovers, COD cash limits, and doorstep POD.\n"
-            . "* **Domestic Nepal Express**: Coverage across all 7 Provinces & 77 Districts with regional sorting hub routing.\n"
-            . "* **International Air Cargo**: Tribhuvan International Airport (TIA) Gateway, domestic feeder linehauls from outside Kathmandu, zero-charge HAWBs, and volumetric weight calculations.\n"
-            . "* **Important Occasions & Deadlines**: Dashain, Tihar, New Year, Black Friday, and daily cargo cutoff schedules.\n"
-            . "* **Real-Time Consignment Tracking**: Provide any tracking code (e.g. `NP-2026-...`) to check live telemetry.\n\n"
-            . "How may I tailor your logistics today?";
+            . "I am equipped to provide instantaneous assistance on **all 3 core NETPACK logistics services**:\n\n"
+            . "1. 🇳🇵 **Domestic Express Delivery**: Doorstep delivery spanning all 7 Provinces & 77 Districts of Nepal with regional sorting hub linehauls.\n"
+            . "2. ✈️ **International Air Cargo**: Tribhuvan International Airport (TIA) Gateway export cargo to 220+ countries, with domestic feeder linehauls and zero-charge HAWBs.\n"
+            . "3. 📦 **E-Commerce & Cash on Delivery (COD)**: Multi-vendor seller fulfillment, same-day rider dispatch with secret 6-digit Pickup & Delivery OTPs, automated digital COD remittances, and RTO return handling.\n\n"
+            . "Additionally, I provide real-time consignment tracking, operational win-win-win intelligence, and holiday schedule cutoffs.\n\n"
+            . "Which service would you like to explore today?";
 
         return [
             'success' => true,
             'provider' => 'builtin_expert',
             'client_name' => $clientName,
             'response' => $reply,
-            'speech_text' => "Namaste {$clientName}! I can help you book shipments, guide you through domestic feeder linehauls and international air cargo, calculate tariffs, or track packages. How can I assist you right now?",
+            'speech_text' => "Namaste {$clientName}! I can assist you with all three services: Domestic Express Delivery across Nepal, International Air Cargo departing Kathmandu, or E-Commerce Deliveries with Cash on Delivery. How can I assist you right now?",
             'gesture' => 'waving',
             'actions' => [
-                ['label' => 'Book Consignment', 'url' => '/shipments/create'],
-                ['label' => 'Rate Calculator', 'url' => '/rates/inquiry'],
+                ['label' => '🇳🇵 Domestic', 'url' => '/shipments/create?mode=domestic'],
+                ['label' => '✈️ International', 'url' => '/shipments/create?mode=international'],
+                ['label' => '📦 E-Commerce COD', 'url' => '/shipments/create?mode=ecommerce'],
             ],
         ];
     }
@@ -1570,6 +1657,11 @@ YOUR PERSONALITY & TONE:
 3. Format: Clean GitHub-flavored markdown with structured bullet points, clear stage breakdown, and direct calls-to-action.
 
 SYSTEM LOGISTICS ARCHITECTURE & WORKFLOW RULES:
+- THE 3 CORE SERVICES OF NETPACK:
+  1. Domestic Express Delivery: Doorstep parcel delivery across all 7 Provinces & 77 Districts of Nepal. Regional sorting hubs in Biratnagar, Janakpur, Kathmandu, Pokhara, Butwal, Surkhet, Dhangadhi with nylon QR manifests.
+  2. International Air Cargo & Feeder Logistics: Global air freight departing Tribhuvan International Airport (TIA) Cargo Terminal, with automatic feeder linehaul linking outer districts (Jhapa, Chitwan, etc.) with Kathmandu airport, zero-charge HAWBs, and Tier-1 carrier tracking (DPD, DHL, FedEx, UPS).
+  3. E-Commerce & Cash on Delivery (COD) Delivery: Online seller & merchant fulfillment, same-day rider dispatch, 6-digit Pickup OTP (Seller to Rider) and 6-digit Delivery OTP (Rider to Customer), automated digital COD payout to Bank/eSewa/Khalti, and RTO return management.
+
 - When the user asks to book or explains a shipment (e.g. from Jhapa to Poland, 20kg):
   1. DO NOT give a generic boilerplate or random answer.
   2. Walk them through the EXACT 4-stage logistics process built in NETPACK:
@@ -1602,14 +1694,18 @@ EOT;
 
         switch ($step) {
             case 'mode':
-                if (str_contains($clean, 'international') || str_contains($clean, 'overseas') || str_contains($clean, 'air cargo') || str_contains($clean, 'abroad') || str_contains($clean, 'bidesh') || str_contains($clean, 'poland') || str_contains($clean, 'europe') || str_contains($clean, 'usa')) {
+                if (str_contains($clean, 'ecommerce') || str_contains($clean, 'e-commerce') || str_contains($clean, 'cod') || str_contains($clean, 'cash on delivery') || str_contains($clean, 'online store') || str_contains($clean, 'merchant') || str_contains($clean, 'seller') || str_contains($clean, 'store') || str_contains($clean, 'shop')) {
+                    $value = 'ecommerce';
+                    $speechAck = "Selected E-Commerce and Cash on Delivery service.";
+                } elseif (str_contains($clean, 'international') || str_contains($clean, 'overseas') || str_contains($clean, 'air cargo') || str_contains($clean, 'abroad') || str_contains($clean, 'bidesh') || str_contains($clean, 'poland') || str_contains($clean, 'europe') || str_contains($clean, 'usa')) {
                     $value = 'international';
                     $speechAck = "Selected International Air Cargo service.";
                 } else {
                     $value = 'domestic';
-                    $speechAck = "Selected Domestic Express courier service.";
+                    $speechAck = "Selected Domestic Express courier service within Nepal.";
                 }
                 break;
+
 
             case 'pickup_city':
                 $entities = $this->parseLogisticsEntities($raw);
