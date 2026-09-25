@@ -888,8 +888,8 @@ document.addEventListener('alpine:init', () => {
     <!-- UNIFIED SHIPMENT & DOORSTEP PICKUP BOOKING FORM -->
     <!-- ========================================================================= -->
     <div x-show="activeConsoleView === 'booking' || activeConsoleTab === 'consignment'" x-transition class="space-y-6">
-        <form action="{{ route('shipments.store') }}" method="POST" enctype="multipart/form-data" id="shipment-form" 
-              @submit="if (!validatePackingListSubmission($event)) { $event.preventDefault(); return false; }"
+        <form action="{{ route('shipments.store') }}" method="POST" enctype="multipart/form-data" id="shipment-form" novalidate
+              @submit="return validateAndSubmitConsignment($event)"
               class="space-y-6">
             @csrf
             @if(request()->filled('quoted_rate'))
@@ -1327,21 +1327,21 @@ document.addEventListener('alpine:init', () => {
                             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                 <div>
                                     <label class="block text-[10px] font-bold text-slate-500 mb-1">Sender Name</label>
-                                    <input type="text" name="sender_name" 
+                                    <input type="text" name="sender_name" id="sender_name_input"
                                            :disabled="hasDoorstepPickup"
                                            value="{{ old('sender_name', Auth::user()->name ?? '') }}"
                                            class="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-teal-500">
                                 </div>
                                 <div>
                                     <label class="block text-[10px] font-bold text-slate-500 mb-1">Sender Phone</label>
-                                    <input type="text" name="sender_phone" 
+                                    <input type="text" name="sender_phone" id="sender_phone_input"
                                            :disabled="hasDoorstepPickup"
                                            value="{{ old('sender_phone', Auth::user()->phone ?? '') }}"
                                            class="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono font-medium text-slate-900 focus:ring-2 focus:ring-teal-500">
                                 </div>
                                 <div>
                                     <label class="block text-[10px] font-bold text-slate-500 mb-1">Sender Address / Station</label>
-                                    <input type="text" name="sender_address" 
+                                    <input type="text" name="sender_address" id="sender_address_input"
                                            :disabled="hasDoorstepPickup"
                                            value="{{ old('sender_address', Auth::user()->address ?? Auth::user()->permanent_address ?? 'Netpack Station Drop-off') }}"
                                            class="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-teal-500">
@@ -1400,28 +1400,28 @@ document.addEventListener('alpine:init', () => {
 
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Receiver Name / Company <span class="text-rose-500">*</span></label>
-                                <input type="text" name="receiver_name" class="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-medium text-slate-900" placeholder="Full name or company">
+                                <input type="text" name="receiver_name" id="receiver_name" value="{{ old('receiver_name') }}" class="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-medium text-slate-900" placeholder="Full name or company">
                             </div>
                         </div>
 
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">City <span class="text-rose-500">*</span></label>
-                                <input type="text" name="receiver_city" class="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-medium" placeholder="City">
+                                <input type="text" name="receiver_city" id="receiver_city" value="{{ old('receiver_city') }}" class="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-medium" placeholder="City">
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">State / Province</label>
-                                <input type="text" name="receiver_state" class="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-medium" placeholder="State / Province">
+                                <input type="text" name="receiver_state" id="receiver_state" value="{{ old('receiver_state') }}" class="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-medium" placeholder="State / Province">
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Postal / ZIP Code</label>
-                                <input type="text" name="receiver_postal_code" class="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-mono" placeholder="ZIP code">
+                                <input type="text" name="receiver_postal_code" id="receiver_postal_code" value="{{ old('receiver_postal_code') }}" class="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-mono" placeholder="ZIP code">
                             </div>
                         </div>
 
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Street Address <span class="text-rose-500">*</span></label>
-                            <input type="text" name="receiver_street" class="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-medium" placeholder="Street line 1, suite, building">
+                            <input type="text" name="receiver_street" id="receiver_street" value="{{ old('receiver_street') }}" class="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-medium" placeholder="Street line 1, suite, building">
                         </div>
 
                         <div class="space-y-2 pt-2">
@@ -2143,12 +2143,15 @@ document.addEventListener('alpine:init', () => {
                     @endif
                 </div>
 
-                <button type="submit" id="submit-btn"
+                <!-- Live Interactive Validation Guidance Banner -->
+                <div id="consignment-validation-errors" class="hidden transition-all duration-300"></div>
+
+                <button type="button" id="submit-btn" onclick="validateAndSubmitConsignment(event)"
                         :disabled="totalBoxes > 1 && hasOverAllocatedItems"
                         :class="totalBoxes > 1 && hasOverAllocatedItems ? 'opacity-50 cursor-not-allowed filter grayscale' : ''"
                         class="w-full py-4 bg-gradient-to-r from-teal-400 to-emerald-400 hover:from-teal-300 hover:to-emerald-300 text-slate-950 font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer">
-                    <i class="fas fa-circle-check"></i>
-                    <span>Confirm & Book Consignment (Issue HAWB)</span>
+                    <i class="fas fa-circle-check" id="submit-btn-icon"></i>
+                    <span id="submit-btn-text">Confirm & Book Consignment (Issue HAWB)</span>
                 </button>
 
                 <p class="text-[10px] text-slate-400 text-center leading-relaxed">
@@ -2768,13 +2771,40 @@ document.addEventListener('alpine:init', () => {
             deliveryMultiple.classList.add('hidden');
             deliveryIntl.classList.remove('hidden');
             if (addDeliveryBtn) addDeliveryBtn.classList.add('hidden');
+
+            // Disable hidden domestic inputs & enable international inputs
+            deliveryMultiple.querySelectorAll('input, select, textarea').forEach(el => el.disabled = true);
+            deliveryIntl.querySelectorAll('input, select, textarea').forEach(el => el.disabled = false);
+
+            document.getElementById('domestic_service_type')?.removeAttribute('name');
+            document.getElementById('ecommerce_service_type')?.removeAttribute('name');
+            document.getElementById('international_service_type')?.setAttribute('name', 'service_type');
+
             setTimeout(() => {
                 if (!internationalMap) initIntlMap();
             }, 100);
+        } else if (mode === 'ecommerce') {
+            deliveryMultiple.classList.remove('hidden');
+            deliveryIntl.classList.add('hidden');
+            if (addDeliveryBtn) addDeliveryBtn.classList.remove('hidden');
+
+            deliveryMultiple.querySelectorAll('input, select, textarea').forEach(el => el.disabled = false);
+            deliveryIntl.querySelectorAll('input, select, textarea').forEach(el => el.disabled = true);
+
+            document.getElementById('ecommerce_service_type')?.setAttribute('name', 'service_type');
+            document.getElementById('domestic_service_type')?.removeAttribute('name');
+            document.getElementById('international_service_type')?.removeAttribute('name');
         } else {
             deliveryMultiple.classList.remove('hidden');
             deliveryIntl.classList.add('hidden');
             if (addDeliveryBtn) addDeliveryBtn.classList.remove('hidden');
+
+            deliveryMultiple.querySelectorAll('input, select, textarea').forEach(el => el.disabled = false);
+            deliveryIntl.querySelectorAll('input, select, textarea').forEach(el => el.disabled = true);
+
+            document.getElementById('domestic_service_type')?.setAttribute('name', 'service_type');
+            document.getElementById('ecommerce_service_type')?.removeAttribute('name');
+            document.getElementById('international_service_type')?.removeAttribute('name');
         }
 
         const domesticZones = document.getElementById('domestic-route-zones');
@@ -2796,7 +2826,251 @@ document.addEventListener('alpine:init', () => {
             refreshVoiceStepsForActiveMode(mode, true);
         }
 
+        clearConsignmentValidationErrors();
         updateSummaryStats();
+    }
+
+    // =========================================================================
+    // CONSIGNMENT FORM VALIDATION & INTERACTIVE FIELD GUIDANCE
+    // =========================================================================
+    function clearConsignmentValidationErrors() {
+        document.querySelectorAll('#shipment-form .consignment-field-error').forEach(el => {
+            el.classList.remove('consignment-field-error', 'border-rose-500', 'ring-2', 'ring-rose-400', 'bg-rose-50/50');
+            el.classList.add('border-slate-200');
+        });
+        document.querySelectorAll('.field-error-msg').forEach(el => el.remove());
+        const banner = document.getElementById('consignment-validation-errors');
+        if (banner) {
+            banner.classList.add('hidden');
+            banner.innerHTML = '';
+        }
+    }
+
+    function markFieldInvalid(element, label, reason) {
+        if (!element) return;
+        element.classList.add('consignment-field-error', 'border-rose-500', 'ring-2', 'ring-rose-400', 'bg-rose-50/50');
+        element.classList.remove('border-slate-200');
+
+        const parent = element.closest('.relative') || element.parentElement;
+        if (parent && !parent.querySelector(`.field-error-msg[data-for="${element.id || element.name}"]`)) {
+            const errorP = document.createElement('p');
+            errorP.className = 'field-error-msg text-[11px] font-bold text-rose-600 mt-1 flex items-center gap-1.5 animate-pulse';
+            errorP.setAttribute('data-for', element.id || element.name);
+            errorP.innerHTML = `<i class="fas fa-circle-exclamation text-rose-500"></i> <span>${label} is required${reason ? ' (' + reason + ')' : ''}.</span>`;
+            parent.appendChild(errorP);
+        }
+
+        const clearHandler = function() {
+            element.classList.remove('consignment-field-error', 'border-rose-500', 'ring-2', 'ring-rose-400', 'bg-rose-50/50');
+            element.classList.add('border-slate-200');
+            const msg = parent?.querySelector(`.field-error-msg[data-for="${element.id || element.name}"]`);
+            if (msg) msg.remove();
+
+            if (document.querySelectorAll('#shipment-form .consignment-field-error').length === 0) {
+                const banner = document.getElementById('consignment-validation-errors');
+                if (banner) {
+                    banner.classList.add('hidden');
+                    banner.innerHTML = '';
+                }
+            }
+            element.removeEventListener('input', clearHandler);
+            element.removeEventListener('change', clearHandler);
+        };
+        element.addEventListener('input', clearHandler);
+        element.addEventListener('change', clearHandler);
+    }
+
+    function focusAndScrollToField(id) {
+        const el = document.getElementById(id) || document.querySelector(`[name="${id}"]`);
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => {
+                try { el.focus(); } catch (e) {}
+            }, 300);
+        }
+    }
+
+    function validateAndSubmitConsignment(event) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+
+        clearConsignmentValidationErrors();
+
+        const form = document.getElementById('shipment-form');
+        if (!form) return false;
+
+        const mode = document.getElementById('shipment_type')?.value || 'domestic';
+        const alpineEl = document.querySelector('[x-data]');
+        const alpineData = alpineEl && alpineEl._x_dataStack ? alpineEl._x_dataStack[0] : null;
+        const hasDoorstep = alpineData ? !!alpineData.hasDoorstepPickup : true;
+
+        const missingFields = [];
+
+        // 1. Validate Pickup or Sender details
+        if (hasDoorstep) {
+            const pickupName = document.getElementById('pickup_name_0') || form.querySelector('[name="pickup_name[]"]');
+            if (!pickupName || !pickupName.value.trim()) {
+                markFieldInvalid(pickupName, 'Pickup Contact Person Name');
+                missingFields.push({ id: pickupName?.id || 'pickup_name_0', label: 'Pickup Contact Person Name' });
+            }
+
+            const pickupPhone = document.getElementById('pickup_phone_0') || form.querySelector('[name="pickup_phone[]"]');
+            if (!pickupPhone || !pickupPhone.value.trim() || pickupPhone.value.trim().length < 7) {
+                markFieldInvalid(pickupPhone, 'Pickup Contact Mobile Number', 'valid phone number required');
+                missingFields.push({ id: pickupPhone?.id || 'pickup_phone_0', label: 'Pickup Contact Mobile Number' });
+            }
+
+            const pickupAddress = document.getElementById('pickup_address_0') || form.querySelector('[name="pickup_address[]"]');
+            if (!pickupAddress || !pickupAddress.value.trim()) {
+                markFieldInvalid(pickupAddress, 'Pickup Street Address & Landmark');
+                missingFields.push({ id: pickupAddress?.id || 'pickup_address_0', label: 'Pickup Street Address & Landmark' });
+            }
+        } else {
+            const senderName = document.getElementById('sender_name_input') || form.querySelector('[name="sender_name"]');
+            if (!senderName || !senderName.value.trim()) {
+                markFieldInvalid(senderName, 'Sender Full Name');
+                missingFields.push({ id: senderName?.id || 'sender_name_input', label: 'Sender Full Name' });
+            }
+
+            const senderPhone = document.getElementById('sender_phone_input') || form.querySelector('[name="sender_phone"]');
+            if (!senderPhone || !senderPhone.value.trim() || senderPhone.value.trim().length < 7) {
+                markFieldInvalid(senderPhone, 'Sender Contact Phone');
+                missingFields.push({ id: senderPhone?.id || 'sender_phone_input', label: 'Sender Contact Phone' });
+            }
+        }
+
+        // 2. Validate Destinations by Mode
+        if (mode === 'international') {
+            const country = document.getElementById('receiver_country');
+            if (!country || !country.value.trim()) {
+                markFieldInvalid(country, 'Destination Country');
+                missingFields.push({ id: 'receiver_country', label: 'Destination Country' });
+            }
+
+            const recName = document.getElementById('receiver_name');
+            if (!recName || !recName.value.trim()) {
+                markFieldInvalid(recName, 'Receiver Full Name / Overseas Company');
+                missingFields.push({ id: 'receiver_name', label: 'Receiver Full Name / Company' });
+            }
+
+            const recStreet = document.getElementById('receiver_street');
+            if (!recStreet || !recStreet.value.trim()) {
+                markFieldInvalid(recStreet, 'Receiver Destination Street Address');
+                missingFields.push({ id: 'receiver_street', label: 'Receiver Street Address' });
+            }
+
+            const recCity = document.getElementById('receiver_city');
+            if (!recCity || !recCity.value.trim()) {
+                markFieldInvalid(recCity, 'Receiver City');
+                missingFields.push({ id: 'receiver_city', label: 'Receiver Destination City' });
+            }
+        } else {
+            // Domestic or E-Commerce
+            const delivName = document.getElementById('delivery_name_0') || form.querySelector('[name="delivery_name[]"]');
+            if (!delivName || !delivName.value.trim()) {
+                markFieldInvalid(delivName, 'Recipient Full Name');
+                missingFields.push({ id: delivName?.id || 'delivery_name_0', label: 'Recipient Full Name' });
+            }
+
+            const delivPhone = document.getElementById('delivery_phone_0') || form.querySelector('[name="delivery_phone[]"]');
+            if (!delivPhone || !delivPhone.value.trim() || delivPhone.value.trim().length < 7) {
+                markFieldInvalid(delivPhone, 'Recipient Phone Number', 'valid phone number required');
+                missingFields.push({ id: delivPhone?.id || 'delivery_phone_0', label: 'Recipient Phone Number' });
+            }
+
+            const delivAddress = document.getElementById('delivery_address_0') || form.querySelector('[name="delivery_address[]"]');
+            if (!delivAddress || !delivAddress.value.trim()) {
+                markFieldInvalid(delivAddress, 'Recipient Street Address & Landmark');
+                missingFields.push({ id: delivAddress?.id || 'delivery_address_0', label: 'Recipient Street Address' });
+            }
+        }
+
+        // 3. Validate Cargo Weight
+        const weightInput = document.getElementById('weight-input') || form.querySelector('[name="weight"]');
+        const weightVal = parseFloat(weightInput?.value) || 0;
+        const totalGross = alpineData ? (alpineData.totalCargoGrossWeight || 0) : 0;
+        const finalWeight = Math.max(weightVal, totalGross);
+        if (finalWeight < 0.1) {
+            markFieldInvalid(weightInput, 'Package Weight', 'minimum 0.1 KG');
+            missingFields.push({ id: weightInput?.id || 'weight-input', label: 'Package Weight (min 0.1 KG)' });
+        }
+
+        // 4. Validate Packing List Over-allocation (if multi-box)
+        if (alpineData && alpineData.totalBoxes > 1 && alpineData.hasOverAllocatedItems) {
+            missingFields.push({ id: 'box-matrix-anchor', label: 'Packing List Allocations (Box quantities exceed invoice items)' });
+        }
+
+        // 5. IF ANY FIELDS ARE MISSING -> SHOW INDICATION & HALT
+        if (missingFields.length > 0) {
+            const banner = document.getElementById('consignment-validation-errors');
+            if (banner) {
+                banner.className = 'p-5 rounded-3xl bg-rose-950/95 border-2 border-rose-500 text-white shadow-2xl space-y-3.5 backdrop-blur-sm';
+
+                const chipsHtml = missingFields.map(f => `
+                    <button type="button" onclick="focusAndScrollToField('${f.id}')"
+                            class="flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl bg-rose-900/70 hover:bg-rose-800 border border-rose-500/60 text-left transition group cursor-pointer shadow-sm">
+                        <span class="text-xs font-bold text-rose-100 flex items-center gap-2">
+                            <i class="fas fa-circle-exclamation text-rose-400 text-xs"></i>
+                            <span>${f.label}</span>
+                        </span>
+                        <span class="text-[10px] font-black uppercase tracking-wider text-rose-300 group-hover:text-white flex items-center gap-1 bg-rose-800/80 group-hover:bg-rose-700 px-2 py-0.5 rounded-md border border-rose-400/30">
+                            Fill In <i class="fas fa-arrow-right text-[8px]"></i>
+                        </span>
+                    </button>
+                `).join('');
+
+                banner.innerHTML = `
+                    <div class="flex items-start justify-between gap-3 pb-2.5 border-b border-rose-500/40">
+                        <div class="flex items-center gap-2.5 text-rose-300">
+                            <div class="w-8 h-8 rounded-xl bg-rose-500/30 border border-rose-400 flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-triangle-exclamation text-rose-400 text-sm animate-pulse"></i>
+                            </div>
+                            <div>
+                                <h5 class="text-sm font-black uppercase tracking-wider text-white">Missing Required Consignment Fields</h5>
+                                <p class="text-[11px] text-rose-300">Please complete the ${missingFields.length} field(s) below to confirm your booking.</p>
+                            </div>
+                        </div>
+                        <button type="button" onclick="clearConsignmentValidationErrors()" class="w-6 h-6 rounded-lg bg-rose-900/60 hover:bg-rose-800 text-rose-300 hover:text-white flex items-center justify-center text-xs">
+                            <i class="fas fa-xmark"></i>
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                        ${chipsHtml}
+                    </div>
+                `;
+                banner.classList.remove('hidden');
+            }
+
+            // Scroll to the first missing field
+            const firstId = missingFields[0].id;
+            focusAndScrollToField(firstId);
+
+            // Announce via Voice Assistant if available
+            if (typeof speakVoicePrompt === 'function') {
+                speakVoicePrompt('Hajur, please fill in the required field: ' + missingFields[0].label + ' to confirm and book your consignment.');
+            }
+
+            return false;
+        }
+
+        // 6. ALL VALID -> SUBMIT
+        const submitBtn = document.getElementById('submit-btn');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            const icon = document.getElementById('submit-btn-icon');
+            const text = document.getElementById('submit-btn-text');
+            if (icon) icon.className = 'fas fa-circle-notch fa-spin mr-2';
+            if (text) text.innerText = 'Confirming & Booking Consignment (Issuing HAWB)...';
+        }
+
+        if (weightInput) {
+            weightInput.value = finalWeight.toFixed(2);
+        }
+
+        form.submit();
+        return true;
     }
 
     // =============================================
@@ -2876,9 +3150,10 @@ document.addEventListener('alpine:init', () => {
 
         const urlParams = new URLSearchParams(window.location.search);
         const modeParam = urlParams.get('shipment_type');
-        if (modeParam && ['domestic', 'international', 'ecommerce'].includes(modeParam)) {
-            switchMode(modeParam);
-        }
+        const initialMode = (modeParam && ['domestic', 'international', 'ecommerce'].includes(modeParam)) 
+            ? modeParam 
+            : (document.getElementById('shipment_type')?.value || 'domestic');
+        switchMode(initialMode);
 
         const countryParam = urlParams.get('receiver_country');
         if (countryParam) {

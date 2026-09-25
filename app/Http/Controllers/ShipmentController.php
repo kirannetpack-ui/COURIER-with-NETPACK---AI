@@ -205,8 +205,8 @@ class ShipmentController extends Controller
                 'receiver_name' => 'required|string|max:255',
                 'receiver_street' => 'required|string|max:255',
                 'receiver_city' => 'required|string|max:100',
-                'receiver_state' => 'required|string|max:100',
-                'receiver_postal_code' => 'required|string|max:20',
+                'receiver_state' => 'nullable|string|max:100',
+                'receiver_postal_code' => 'nullable|string|max:20',
                 'receiver_country' => 'required|string|max:100',
             ]);
         } else {
