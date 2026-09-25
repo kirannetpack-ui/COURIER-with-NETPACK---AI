@@ -2147,8 +2147,7 @@ document.addEventListener('alpine:init', () => {
                 <div id="consignment-validation-errors" class="hidden transition-all duration-300"></div>
 
                 <button type="button" id="submit-btn" onclick="validateAndSubmitConsignment(event)"
-                        :disabled="totalBoxes > 1 && hasOverAllocatedItems"
-                        :class="totalBoxes > 1 && hasOverAllocatedItems ? 'opacity-50 cursor-not-allowed filter grayscale' : ''"
+                        :class="totalBoxes > 1 && hasOverAllocatedItems ? 'opacity-85 ring-2 ring-rose-400' : ''"
                         class="w-full py-4 bg-gradient-to-r from-teal-400 to-emerald-400 hover:from-teal-300 hover:to-emerald-300 text-slate-950 font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer">
                     <i class="fas fa-circle-check" id="submit-btn-icon"></i>
                     <span id="submit-btn-text">Confirm & Book Consignment (Issue HAWB)</span>
@@ -3065,11 +3064,21 @@ document.addEventListener('alpine:init', () => {
             if (text) text.innerText = 'Confirming & Booking Consignment (Issuing HAWB)...';
         }
 
-        if (weightInput) {
-            weightInput.value = finalWeight.toFixed(2);
+        // Guarantee active weight input has numeric value
+        let activeWeightInp = form.querySelector('input[name="weight"]:not([disabled])');
+        if (!activeWeightInp) {
+            activeWeightInp = document.createElement('input');
+            activeWeightInp.type = 'hidden';
+            activeWeightInp.name = 'weight';
+            form.appendChild(activeWeightInp);
         }
+        activeWeightInp.value = finalWeight.toFixed(2);
 
-        form.submit();
+        try {
+            HTMLFormElement.prototype.submit.call(form);
+        } catch (err) {
+            form.submit();
+        }
         return true;
     }
 
