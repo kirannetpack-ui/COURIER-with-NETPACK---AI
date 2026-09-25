@@ -49,9 +49,9 @@
         ];
     })->values();
 
-    $defaultName = Auth::user()->name ?? '';
-    $defaultPhone = Auth::user()->phone ?? '';
-    $defaultAddress = Auth::user()->address ?? Auth::user()->permanent_address ?? '';
+    $defaultName = $convertPickup->contact_person_name ?? '';
+    $defaultPhone = $convertPickup->contact_person_phone ?? '';
+    $defaultAddress = $convertPickup->pickup_address ?? '';
     $hasPickupInitial = old('schedule_doorstep_pickup', request('pickup', '1')) != '0';
     $initialView = (request('tab') === 'queue' || request('view') === 'queue') ? 'queue' : 'booking';
 @endphp
@@ -68,9 +68,9 @@ function shipmentConsoleData() {
         hasKnownDestination: {{ request('receiver_country') || request('destination_city') ? 'true' : 'false' }},
         savedAddresses: {{ Js::from($savedAddressesJson) }},
         selectedAddressId: '',
-        contactPersonName: '{{ addslashes($convertPickup->contact_person_name ?? $defaultName) }}',
-        contactPhone: '{{ addslashes($convertPickup->contact_person_phone ?? $defaultPhone) }}',
-        pickupAddress: '{{ addslashes($convertPickup->pickup_address ?? $defaultAddress) }}',
+        contactPersonName: '{{ addslashes($convertPickup->contact_person_name ?? "") }}',
+        contactPhone: '{{ addslashes($convertPickup->contact_person_phone ?? "") }}',
+        pickupAddress: '{{ addslashes($convertPickup->pickup_address ?? "") }}',
         pickupLandmark: '',
         pickupCity: '{{ addslashes(request("pickup_city", "Kathmandu")) }}',
         saveAddress: true,
@@ -116,8 +116,8 @@ function shipmentConsoleData() {
 
         resetToNewPickupAddress() {
             this.selectedAddressId = 'new';
-            this.contactPersonName = '{{ addslashes($defaultName) }}';
-            this.contactPhone = '{{ addslashes($defaultPhone) }}';
+            this.contactPersonName = '';
+            this.contactPhone = '';
             this.pickupAddress = '';
             this.pickupLandmark = '';
             this.pickupCity = 'Kathmandu';
@@ -175,12 +175,12 @@ function shipmentConsoleData() {
         // Invoice line items with live WCO HS suggestion state
         invoiceItems: [
             {
-                name: 'Handmade Pashmina / Cashmere Shawl',
-                hs_code: '6214.20.00',
+                name: '',
+                hs_code: '',
                 origin_country: 'Nepal',
-                qty: 2,
+                qty: 1,
                 uom: 'PCS',
-                unit_price: 35.00,
+                unit_price: '',
                 duty_rate: 0,
                 searchQuery: '',
                 suggestions: [],
@@ -194,12 +194,12 @@ function shipmentConsoleData() {
         boxes: [
             {
                 box_number: 1,
-                weight_kg: {{ old('weight', $convertPickup->estimated_weight_kg ?? request('weight', '1.0')) }},
-                length_cm: 30,
-                width_cm: 25,
-                height_cm: 20,
+                weight_kg: '{{ old('weight', $convertPickup->estimated_weight_kg ?? request('weight', '')) }}',
+                length_cm: '',
+                width_cm: '',
+                height_cm: '',
                 items: [
-                    { item_index: 0, item_name: 'Handmade Pashmina / Cashmere Shawl', qty: 2 }
+                    { item_index: 0, item_name: '', qty: 1 }
                 ]
             }
         ],
@@ -262,14 +262,15 @@ function shipmentConsoleData() {
         setBoxCount(count) {
             count = Math.max(1, parseInt(count) || 1);
             this.totalBoxes = count;
+            const b1 = this.boxes[0] || {};
             while (this.boxes.length < count) {
                 const num = this.boxes.length + 1;
                 this.boxes.push({
                     box_number: num,
-                    weight_kg: 1.0,
-                    length_cm: 30,
-                    width_cm: 25,
-                    height_cm: 20,
+                    weight_kg: b1.weight_kg || '',
+                    length_cm: b1.length_cm || '',
+                    width_cm: b1.width_cm || '',
+                    height_cm: b1.height_cm || '',
                     items: this.invoiceItems.map((item, idx) => ({
                         item_index: idx,
                         item_name: item.name,
@@ -387,6 +388,66 @@ function shipmentConsoleData() {
                 const total = parseFloat(item.qty) || 0;
                 return this.getItemAllocatedQty(idx) > (total + 0.0001);
             });
+        },
+
+        cloneBox1SpecsToAll() {
+            if (this.boxes.length <= 1) return;
+            const b1 = this.boxes[0];
+            const weight = b1.weight_kg !== '' ? b1.weight_kg : '';
+            const length = b1.length_cm !== '' ? b1.length_cm : '';
+            const width = b1.width_cm !== '' ? b1.width_cm : '';
+            const height = b1.height_cm !== '' ? b1.height_cm : '';
+
+            for (let i = 1; i < this.boxes.length; i++) {
+                this.boxes[i].weight_kg = weight;
+                this.boxes[i].length_cm = length;
+                this.boxes[i].width_cm = width;
+                this.boxes[i].height_cm = height;
+            }
+            this.syncCargoWeight();
+        },
+
+        cloneSpecsFromBox(sourceIdx, targetIdx) {
+            if (!this.boxes[sourceIdx] || !this.boxes[targetIdx]) return;
+            const src = this.boxes[sourceIdx];
+            this.boxes[targetIdx].weight_kg = src.weight_kg;
+            this.boxes[targetIdx].length_cm = src.length_cm;
+            this.boxes[targetIdx].width_cm = src.width_cm;
+            this.boxes[targetIdx].height_cm = src.height_cm;
+            this.syncCargoWeight();
+        },
+
+        autoDistributeItemsAcrossBoxes() {
+            if (this.boxes.length <= 1 || !this.invoiceItems.length) return;
+            const numBoxes = this.boxes.length;
+            
+            // Clear existing allocations
+            this.boxes.forEach(box => {
+                box.items = this.invoiceItems.map((item, idx) => ({
+                    item_index: idx,
+                    item_name: item.name,
+                    qty: 0
+                }));
+            });
+
+            // Distribute each invoice item across boxes evenly
+            this.invoiceItems.forEach((item, itemIdx) => {
+                const totalQty = Math.max(0, parseFloat(item.qty) || 0);
+                const perBox = Math.floor(totalQty / numBoxes);
+                let remainder = totalQty % numBoxes;
+
+                this.boxes.forEach((box, bIdx) => {
+                    let allocated = perBox;
+                    if (remainder > 0) {
+                        allocated += 1;
+                        remainder--;
+                    }
+                    if (box.items && box.items[itemIdx]) {
+                        box.items[itemIdx].qty = allocated;
+                    }
+                });
+            });
+            this.packingListWarning = '';
         },
 
         validatePackingListSubmission(event) {
@@ -779,10 +840,33 @@ document.addEventListener('alpine:init', () => {
         </div>
     </div>
 
-    <!-- ACTIVE VOICE CONCIERGE CONTROLLER (FIXED BOTTOM DOCKED COCKPIT - NEVER LEFT BEHIND) -->
+    <!-- ACTIVE VOICE CONCIERGE CONTROLLER (DRAGGABLE & ADJUSTABLE ANYWHERE) -->
     <div id="ai-voice-active-controller" 
          style="display: none;" 
          class="fixed bottom-5 left-1/2 -translate-x-1/2 w-[95%] max-w-4xl z-50 rounded-3xl bg-slate-950/95 border-2 border-teal-500/70 p-4 sm:p-5 text-white shadow-[0_20px_60px_rgba(0,0,0,0.85)] backdrop-blur-2xl ring-4 ring-teal-500/20 transition-all duration-300">
+        
+        <!-- Draggable Cockpit Handle -->
+        <div id="ai-voice-drag-handle" 
+             class="flex items-center justify-between pb-2 mb-3 border-b border-teal-500/30 cursor-move active:cursor-grabbing select-none text-[11px] text-teal-300 font-mono">
+            <span class="flex items-center gap-2 font-bold tracking-wider uppercase text-teal-200">
+                <i class="fas fa-grip-lines text-teal-400"></i>
+                <span>NETPACK AI Logistics Copilot &bull; Drag Anywhere</span>
+            </span>
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="window.resetAiBarPosition(event)" 
+                        title="Snap Copilot back to bottom dock"
+                        class="px-2 py-0.5 rounded-md bg-teal-900/60 hover:bg-teal-800 text-[10px] text-teal-200 border border-teal-500/30 transition flex items-center gap-1 cursor-pointer">
+                    <i class="fas fa-anchor text-[9px]"></i>
+                    <span>Snap to Bottom</span>
+                </button>
+                <button type="button" onclick="window.toggleAiBarMinimize(event)" id="ai-bar-min-btn" 
+                        title="Minimize / Expand Copilot"
+                        class="w-6 h-6 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs flex items-center justify-center transition cursor-pointer">
+                    <i class="fas fa-minus text-[10px]"></i>
+                </button>
+            </div>
+        </div>
+
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <!-- Left Info -->
             <div class="flex items-center gap-3.5 min-w-0">
@@ -1226,7 +1310,7 @@ document.addEventListener('alpine:init', () => {
                                         <input type="text" name="pickup_name[]" id="pickup_name_0"
                                                :required="hasDoorstepPickup"
                                                :disabled="!hasDoorstepPickup"
-                                               value="{{ old('pickup_name.0', $convertPickup->contact_person_name ?? Auth::user()->name ?? '') }}"
+                                               value="{{ old('pickup_name.0', $convertPickup->contact_person_name ?? '') }}"
                                                class="w-full text-xs pl-8 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-medium text-slate-900"
                                                placeholder="Contact person name">
                                     </div>
@@ -1239,7 +1323,7 @@ document.addEventListener('alpine:init', () => {
                                         <input type="text" name="pickup_phone[]" id="pickup_phone_0"
                                                :required="hasDoorstepPickup"
                                                :disabled="!hasDoorstepPickup"
-                                               value="{{ old('pickup_phone.0', $convertPickup->contact_person_phone ?? Auth::user()->phone ?? '') }}"
+                                               value="{{ old('pickup_phone.0', $convertPickup->contact_person_phone ?? '') }}"
                                                class="w-full text-xs pl-8 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-mono font-medium text-slate-900"
                                                placeholder="98XXXXXXXX">
                                     </div>
@@ -1252,7 +1336,7 @@ document.addEventListener('alpine:init', () => {
                                           :required="hasDoorstepPickup"
                                           :disabled="!hasDoorstepPickup"
                                           class="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-medium text-slate-900"
-                                          placeholder="Full street address, ward number, or building">{{ old('pickup_address.0', $convertPickup->pickup_address ?? Auth::user()->address ?? Auth::user()->permanent_address ?? '') }}</textarea>
+                                          placeholder="Full street address, ward number, or building">{{ old('pickup_address.0', $convertPickup->pickup_address ?? '') }}</textarea>
                             </div>
 
                             <!-- Interactive Leaflet Map for Pickup #0 -->
@@ -1329,21 +1413,24 @@ document.addEventListener('alpine:init', () => {
                                     <label class="block text-[10px] font-bold text-slate-500 mb-1">Sender Name</label>
                                     <input type="text" name="sender_name" id="sender_name_input"
                                            :disabled="hasDoorstepPickup"
-                                           value="{{ old('sender_name', Auth::user()->name ?? '') }}"
+                                           value="{{ old('sender_name', '') }}"
+                                           placeholder="Sender full name"
                                            class="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-teal-500">
                                 </div>
                                 <div>
                                     <label class="block text-[10px] font-bold text-slate-500 mb-1">Sender Phone</label>
                                     <input type="text" name="sender_phone" id="sender_phone_input"
                                            :disabled="hasDoorstepPickup"
-                                           value="{{ old('sender_phone', Auth::user()->phone ?? '') }}"
+                                           value="{{ old('sender_phone', '') }}"
+                                           placeholder="Sender contact phone"
                                            class="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono font-medium text-slate-900 focus:ring-2 focus:ring-teal-500">
                                 </div>
                                 <div>
                                     <label class="block text-[10px] font-bold text-slate-500 mb-1">Sender Address / Station</label>
                                     <input type="text" name="sender_address" id="sender_address_input"
                                            :disabled="hasDoorstepPickup"
-                                           value="{{ old('sender_address', Auth::user()->address ?? Auth::user()->permanent_address ?? 'Netpack Station Drop-off') }}"
+                                           value="{{ old('sender_address', '') }}"
+                                           placeholder="Sender address or drop-off hub"
                                            class="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-teal-500">
                                 </div>
                             </div>
@@ -1401,6 +1488,29 @@ document.addEventListener('alpine:init', () => {
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Receiver Name / Company <span class="text-rose-500">*</span></label>
                                 <input type="text" name="receiver_name" id="receiver_name" value="{{ old('receiver_name') }}" class="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-medium text-slate-900" placeholder="Full name or company">
+                            </div>
+                        </div>
+
+                        <!-- Consignee Phone & Tax ID -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">
+                                    Consignee / Receiver Mobile Phone <span class="text-rose-500">*</span>
+                                    <span class="text-[10px] text-slate-400 font-normal ml-1">(Required for Courier SMS & Customs)</span>
+                                </label>
+                                <div class="relative flex items-center">
+                                    <span class="inline-flex items-center px-3 py-2 rounded-l-xl border border-r-0 border-slate-200 bg-slate-100 text-teal-800 font-mono font-bold text-xs" id="receiver-dial-code-prefix">
+                                        +Intl
+                                    </span>
+                                    <input type="text" name="receiver_phone" id="receiver_phone" value="{{ old('receiver_phone') }}" 
+                                           class="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-r-xl focus:ring-2 focus:ring-teal-500 font-mono font-medium text-slate-900" 
+                                           placeholder="e.g. 501 234 567">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Consignee Tax ID / EORI / VAT (Optional)</label>
+                                <input type="text" name="receiver_tax_id" id="receiver_tax_id" value="{{ old('receiver_tax_id') }}" class="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-mono font-medium" placeholder="Optional Tax ID or EORI">
                             </div>
                         </div>
 
@@ -1565,8 +1675,9 @@ document.addEventListener('alpine:init', () => {
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Parcel Gross Weight (KG) <span class="text-rose-500">*</span></label>
                                 <input type="number" step="0.1" name="weight" id="weight-input" required 
-                                       value="{{ old('weight', $convertPickup->estimated_weight_kg ?? request('weight', '1.0')) }}"
+                                       value="{{ old('weight', $convertPickup->estimated_weight_kg ?? request('weight', '')) }}"
                                        oninput="calculateVolumetricWeight()"
+                                       placeholder="e.g. 2.5"
                                        class="w-full text-xs px-3 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 font-mono font-bold text-slate-900">
                             </div>
                             <div>
@@ -1919,6 +2030,31 @@ document.addEventListener('alpine:init', () => {
 
                         <!-- CASE 2: Multi-Box Matrix (> 1 Box) -->
                         <div x-show="totalBoxes > 1" class="space-y-4">
+                            <!-- Multi-Box Quick Action Toolbar (1-Click Cloning & Auto-Distribution) -->
+                            <div class="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-gradient-to-r from-teal-950 via-slate-900 to-teal-950 rounded-2xl border border-teal-500/40 text-white shadow-sm">
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-8 h-8 rounded-xl bg-teal-500/20 border border-teal-400/40 flex items-center justify-center text-teal-300">
+                                        <i class="fas fa-boxes-packing text-sm"></i>
+                                    </div>
+                                    <div>
+                                        <span class="font-extrabold text-xs text-white block">Multi-Box Batch Accelerators</span>
+                                        <span class="text-[11px] text-teal-300/80">1-click clone Box #1 specs or auto-balance goods across all cartons</span>
+                                    </div>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <button type="button" @click="cloneBox1SpecsToAll()" 
+                                            class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-teal-400 to-emerald-400 hover:from-teal-300 hover:to-emerald-300 text-slate-950 font-black text-xs transition flex items-center gap-1.5 shadow-sm cursor-pointer">
+                                        <i class="fas fa-clone"></i>
+                                        <span>Clone Box #1 Specs to All Boxes</span>
+                                    </button>
+                                    <button type="button" @click="autoDistributeItemsAcrossBoxes()" 
+                                            class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-teal-300 border border-teal-500/40 font-bold text-xs transition flex items-center gap-1.5 cursor-pointer">
+                                        <i class="fas fa-scale-balanced"></i>
+                                        <span>Evenly Distribute Items</span>
+                                    </button>
+                                </div>
+                            </div>
+
                             <!-- Over-Allocation Warning Banner -->
                             <div x-show="packingListWarning || hasOverAllocatedItems" x-transition 
                                  class="p-3.5 rounded-xl bg-rose-50 border-2 border-rose-300 text-rose-900 text-xs flex items-center gap-2.5 shadow-sm">
@@ -1977,10 +2113,17 @@ document.addEventListener('alpine:init', () => {
                                                 <span class="w-6 h-6 rounded-md bg-teal-700 text-white text-xs font-black flex items-center justify-center" x-text="box.box_number"></span>
                                                 <span class="font-extrabold text-xs text-slate-900" x-text="'Box #' + box.box_number + ' of ' + totalBoxes"></span>
                                             </div>
-                                            <button type="button" @click="allocateAllRemainingToBox(bIdx)" 
-                                                    class="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-[10px] font-black tracking-wider transition cursor-pointer">
-                                                <i class="fas fa-bolt text-teal-600 mr-1"></i> Fill Remaining
-                                            </button>
+                                            <div class="flex items-center gap-1.5">
+                                                <button type="button" x-show="bIdx > 0" @click="cloneSpecsFromBox(0, bIdx)" 
+                                                        title="Copy weight and dimensions from Box #1"
+                                                        class="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-[10px] font-bold transition cursor-pointer">
+                                                    <i class="fas fa-copy text-teal-600 mr-1"></i> Copy Box #1
+                                                </button>
+                                                <button type="button" @click="allocateAllRemainingToBox(bIdx)" 
+                                                        class="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-[10px] font-black tracking-wider transition cursor-pointer">
+                                                    <i class="fas fa-bolt text-teal-600 mr-1"></i> Fill Remaining
+                                                </button>
+                                            </div>
                                         </div>
 
                                         <!-- Dimensions & Weight -->
@@ -2880,12 +3023,44 @@ document.addEventListener('alpine:init', () => {
     }
 
     function focusAndScrollToField(id) {
-        const el = document.getElementById(id) || document.querySelector(`[name="${id}"]`);
+        const mode = document.getElementById('shipment_type')?.value || 'domestic';
+
+        // Unhide international or domestic section if targeted field is inside
+        if (id.startsWith('receiver_') || id === 'receiver_phone') {
+            const intlSec = document.getElementById('delivery-international');
+            if (intlSec) {
+                intlSec.classList.remove('hidden');
+                intlSec.style.display = 'block';
+            }
+        } else if (id.startsWith('delivery_') && mode !== 'international') {
+            const domSec = document.getElementById('delivery-domestic');
+            if (domSec) {
+                domSec.classList.remove('hidden');
+                domSec.style.display = 'block';
+            }
+        }
+
+        let el = document.getElementById(id) || document.querySelector(`[name="${id}"]`);
+        if (!el && id.includes('_0')) {
+            const baseName = id.replace('_0', '');
+            el = document.querySelector(`[name="${baseName}[]"]`) || document.querySelector(`[name="${baseName}"]`);
+        }
+
         if (el) {
+            el.removeAttribute('disabled');
             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.classList.add('ring-4', 'ring-rose-400', 'ring-offset-2');
             setTimeout(() => {
                 try { el.focus(); } catch (e) {}
-            }, 300);
+            }, 250);
+            setTimeout(() => {
+                el.classList.remove('ring-4', 'ring-rose-400', 'ring-offset-2');
+            }, 3500);
+        }
+
+        // Intelligently align the AI Voice Assistant directly to this field without restarting or re-asking completed fields!
+        if (typeof window.jumpToVoiceStepForField === 'function') {
+            window.jumpToVoiceStepForField(id);
         }
     }
 
@@ -2907,37 +3082,50 @@ document.addEventListener('alpine:init', () => {
 
         const missingFields = [];
 
-        // 1. Validate Pickup or Sender details
-        if (hasDoorstep) {
-            const pickupName = document.getElementById('pickup_name_0') || form.querySelector('[name="pickup_name[]"]');
-            if (!pickupName || !pickupName.value.trim()) {
-                markFieldInvalid(pickupName, 'Pickup Contact Person Name');
-                missingFields.push({ id: pickupName?.id || 'pickup_name_0', label: 'Pickup Contact Person Name' });
-            }
+        // 1. Bi-directional Synchronization between Doorstep Pickup & Sender Dropoff Fields
+        const pickupName = document.getElementById('pickup_name_0') || form.querySelector('[name="pickup_name[]"]');
+        const senderName = document.getElementById('sender_name_input') || form.querySelector('[name="sender_name"]');
+        const pickupPhone = document.getElementById('pickup_phone_0') || form.querySelector('[name="pickup_phone[]"]');
+        const senderPhone = document.getElementById('sender_phone_input') || form.querySelector('[name="sender_phone"]');
+        const pickupAddress = document.getElementById('pickup_address_0') || form.querySelector('[name="pickup_address[]"]');
+        const senderAddress = document.getElementById('sender_address_input') || form.querySelector('[name="sender_address"]');
 
-            const pickupPhone = document.getElementById('pickup_phone_0') || form.querySelector('[name="pickup_phone[]"]');
-            if (!pickupPhone || !pickupPhone.value.trim() || pickupPhone.value.trim().length < 7) {
-                markFieldInvalid(pickupPhone, 'Pickup Contact Mobile Number', 'valid phone number required');
-                missingFields.push({ id: pickupPhone?.id || 'pickup_phone_0', label: 'Pickup Contact Mobile Number' });
-            }
+        if (pickupName && senderName) {
+            if (pickupName.value.trim() && !senderName.value.trim()) senderName.value = pickupName.value.trim();
+            else if (senderName.value.trim() && !pickupName.value.trim()) pickupName.value = senderName.value.trim();
+        }
+        if (pickupPhone && senderPhone) {
+            if (pickupPhone.value.trim() && !senderPhone.value.trim()) senderPhone.value = pickupPhone.value.trim();
+            else if (senderPhone.value.trim() && !pickupPhone.value.trim()) pickupPhone.value = senderPhone.value.trim();
+        }
+        if (pickupAddress && senderAddress) {
+            if (pickupAddress.value.trim() && !senderAddress.value.trim()) senderAddress.value = pickupAddress.value.trim();
+            else if (senderAddress.value.trim() && !pickupAddress.value.trim()) pickupAddress.value = senderAddress.value.trim();
+        }
 
-            const pickupAddress = document.getElementById('pickup_address_0') || form.querySelector('[name="pickup_address[]"]');
-            if (!pickupAddress || !pickupAddress.value.trim()) {
-                markFieldInvalid(pickupAddress, 'Pickup Street Address & Landmark');
-                missingFields.push({ id: pickupAddress?.id || 'pickup_address_0', label: 'Pickup Street Address & Landmark' });
-            }
-        } else {
-            const senderName = document.getElementById('sender_name_input') || form.querySelector('[name="sender_name"]');
-            if (!senderName || !senderName.value.trim()) {
-                markFieldInvalid(senderName, 'Sender Full Name');
-                missingFields.push({ id: senderName?.id || 'sender_name_input', label: 'Sender Full Name' });
-            }
+        const effectiveSenderName = (pickupName?.value || senderName?.value || '').trim();
+        const effectiveSenderPhone = (pickupPhone?.value || senderPhone?.value || '').trim();
+        const effectiveSenderAddress = (pickupAddress?.value || senderAddress?.value || '').trim();
 
-            const senderPhone = document.getElementById('sender_phone_input') || form.querySelector('[name="sender_phone"]');
-            if (!senderPhone || !senderPhone.value.trim() || senderPhone.value.trim().length < 7) {
-                markFieldInvalid(senderPhone, 'Sender Contact Phone');
-                missingFields.push({ id: senderPhone?.id || 'sender_phone_input', label: 'Sender Contact Phone' });
-            }
+        // Validate Sender / Pickup Name
+        if (!effectiveSenderName) {
+            const target = hasDoorstep ? (pickupName || senderName) : (senderName || pickupName);
+            markFieldInvalid(target, 'Sender / Pickup Contact Person Name');
+            missingFields.push({ id: target?.id || (hasDoorstep ? 'pickup_name_0' : 'sender_name_input'), label: 'Sender Contact Person Name' });
+        }
+
+        // Validate Sender / Pickup Phone (At least 7 digits in either field satisfies both)
+        if (!effectiveSenderPhone || effectiveSenderPhone.length < 7) {
+            const target = hasDoorstep ? (pickupPhone || senderPhone) : (senderPhone || pickupPhone);
+            markFieldInvalid(target, 'Sender Contact Phone', 'valid phone number required');
+            missingFields.push({ id: target?.id || (hasDoorstep ? 'pickup_phone_0' : 'sender_phone_input'), label: 'Sender Contact Phone' });
+        }
+
+        // Validate Pickup Address if doorstep collection requested
+        if (hasDoorstep && !effectiveSenderAddress) {
+            const target = pickupAddress || senderAddress;
+            markFieldInvalid(target, 'Pickup Street Address & Landmark');
+            missingFields.push({ id: target?.id || 'pickup_address_0', label: 'Pickup Street Address & Landmark' });
         }
 
         // 2. Validate Destinations by Mode
@@ -2950,8 +3138,14 @@ document.addEventListener('alpine:init', () => {
 
             const recName = document.getElementById('receiver_name');
             if (!recName || !recName.value.trim()) {
-                markFieldInvalid(recName, 'Receiver Full Name / Overseas Company');
-                missingFields.push({ id: 'receiver_name', label: 'Receiver Full Name / Company' });
+                markFieldInvalid(recName, 'Overseas Receiver Full Name / Company');
+                missingFields.push({ id: 'receiver_name', label: 'Overseas Receiver Name / Company' });
+            }
+
+            const recPhone = document.getElementById('receiver_phone') || form.querySelector('[name="receiver_phone"]');
+            if (!recPhone || !recPhone.value.trim() || recPhone.value.trim().length < 7) {
+                markFieldInvalid(recPhone, 'Overseas Consignee / Receiver Phone Number', 'valid phone number required');
+                missingFields.push({ id: 'receiver_phone', label: 'Overseas Consignee Contact Phone' });
             }
 
             const recStreet = document.getElementById('receiver_street');
@@ -3171,6 +3365,10 @@ document.addEventListener('alpine:init', () => {
         }
 
         updateSummaryStats();
+
+        if (typeof window.updateInternationalDialPrefix === 'function') {
+            window.updateInternationalDialPrefix();
+        }
 
         // Check if user previously dismissed the Voice Autofill invitation
         if (sessionStorage.getItem('ai_voice_autofill_dismissed') === '1') {
@@ -3478,6 +3676,25 @@ document.addEventListener('alpine:init', () => {
                         return val;
                     }
                 },
+                // Field 7b: Overseas Recipient Phone Number
+                {
+                    id: 'receiver_phone',
+                    title: 'Overseas Recipient Phone Number',
+                    prompt: function() {
+                        return 'What is the contact mobile or telephone number of the overseas recipient?';
+                    },
+                    targetSelector: function() {
+                        return document.getElementById('receiver_phone') || document.querySelector('input[name="receiver_phone"]');
+                    },
+                    parse: function(text) {
+                        return parseSpokenPhoneNumber(text);
+                    },
+                    apply: function(val) {
+                        const el = document.getElementById('receiver_phone') || document.querySelector('input[name="receiver_phone"]');
+                        if (el) typeIntoElement(el, val);
+                        return val;
+                    }
+                },
                 // Field 8: Destination City
                 {
                     id: 'receiver_city',
@@ -3769,19 +3986,277 @@ document.addEventListener('alpine:init', () => {
         sessionStorage.setItem('ai_voice_autofill_dismissed', '1');
     };
 
-    window.initiateVoiceAutofillAssistant = async function(userExplicitlyClicked = false) {
+    // Helper to test if a step's underlying form element already has content typed
+    function isStepFieldFilled(step) {
+        if (!step) return false;
+        if (step.id === 'mode') return true;
+        try {
+            const el = step.targetSelector ? step.targetSelector() : null;
+            if (!el) return false;
+            if (el.tagName === 'SELECT') {
+                return !!(el.value && el.value.trim() && el.selectedIndex > 0);
+            }
+            return !!(el.value && String(el.value).trim().length > 0);
+        } catch(e) {
+            return false;
+        }
+    }
+
+    function findFirstUnfilledStepIndex() {
+        if (!window.aiVoiceAutofill || !window.aiVoiceAutofill.steps) return 0;
+        for (let i = 0; i < window.aiVoiceAutofill.steps.length; i++) {
+            if (!isStepFieldFilled(window.aiVoiceAutofill.steps[i])) {
+                return i;
+            }
+        }
+        return 0;
+    }
+
+    function findNextUnfilledStepIndex(currentIndex) {
+        if (!window.aiVoiceAutofill || !window.aiVoiceAutofill.steps) return -1;
+        for (let i = currentIndex + 1; i < window.aiVoiceAutofill.steps.length; i++) {
+            if (!isStepFieldFilled(window.aiVoiceAutofill.steps[i])) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    // Directly jumps to a specific field's step without restarting from Step 0 or re-asking completed fields!
+    window.jumpToVoiceStepForField = function(fieldId) {
+        if (!window.aiVoiceAutofill) return;
+
+        const mode = document.getElementById('shipment_type')?.value || 'domestic';
+        window.aiVoiceAutofill.steps = buildVoiceStepsForMode(mode);
+
+        const fieldMap = {
+            'pickup_name_0': 'sender_name',
+            'sender_name_input': 'sender_name',
+            'pickup_phone_0': 'sender_phone',
+            'sender_phone_input': 'sender_phone',
+            'pickup_address_0': 'pickup_address',
+            'sender_address_input': 'pickup_address',
+            'delivery_name_0': 'receiver_name',
+            'delivery_phone_0': 'receiver_phone',
+            'delivery_address_0': 'delivery_address',
+            'receiver_country': 'receiver_country',
+            'receiver_name': 'receiver_name',
+            'receiver_phone': 'receiver_phone',
+            'receiver_city': 'receiver_city',
+            'receiver_street': 'receiver_street',
+            'receiver_postal_code': 'receiver_postal_code',
+            'weight-input': 'weight',
+            'weight': 'weight',
+            'length-input': 'dimensions',
+            'dimensions': 'dimensions'
+        };
+
+        const targetStepId = fieldMap[fieldId] || fieldId;
+        const targetIdx = window.aiVoiceAutofill.steps.findIndex(s => s.id === targetStepId);
+
+        if (targetIdx !== -1) {
+            if (!window.aiVoiceAutofill.isActive) {
+                window.initiateVoiceAutofillAssistant(true, targetIdx);
+            } else {
+                executeVoiceStep(targetIdx, true);
+            }
+        }
+    };
+
+    // Draggable Cockpit Controller Support (Anywhere on screen, mouse & touch)
+    window.setupAiBarDraggable = function() {
+        const bar = document.getElementById('ai-voice-active-controller');
+        const handle = document.getElementById('ai-voice-drag-handle') || bar;
+        if (!bar || bar._dragSetupDone) return;
+        bar._dragSetupDone = true;
+
+        let isDragging = false;
+        let startX = 0, startY = 0;
+        let initialLeft = 0, initialTop = 0;
+
+        function startDrag(clientX, clientY) {
+            isDragging = true;
+            const rect = bar.getBoundingClientRect();
+            bar.classList.remove('-translate-x-1/2', 'bottom-5', 'left-1/2');
+            bar.style.bottom = 'auto';
+            bar.style.transform = 'none';
+            bar.style.left = `${rect.left}px`;
+            bar.style.top = `${rect.top}px`;
+            startX = clientX;
+            startY = clientY;
+            initialLeft = rect.left;
+            initialTop = rect.top;
+            bar.classList.add('shadow-[0_25px_70px_rgba(0,0,0,0.95)]', 'scale-[1.01]');
+        }
+
+        function moveDrag(clientX, clientY) {
+            if (!isDragging) return;
+            const dx = clientX - startX;
+            const dy = clientY - startY;
+            let newLeft = initialLeft + dx;
+            let newTop = initialTop + dy;
+
+            const maxLeft = Math.max(10, window.innerWidth - bar.offsetWidth - 10);
+            const maxTop = Math.max(10, window.innerHeight - bar.offsetHeight - 10);
+            newLeft = Math.min(Math.max(10, newLeft), maxLeft);
+            newTop = Math.min(Math.max(10, newTop), maxTop);
+
+            bar.style.left = `${newLeft}px`;
+            bar.style.top = `${newTop}px`;
+        }
+
+        function endDrag() {
+            if (!isDragging) return;
+            isDragging = false;
+            bar.classList.remove('scale-[1.01]');
+        }
+
+        handle.addEventListener('mousedown', function(e) {
+            if (e.target.closest('button')) return;
+            e.preventDefault();
+            startDrag(e.clientX, e.clientY);
+
+            function onMouseMove(moveEvent) {
+                moveDrag(moveEvent.clientX, moveEvent.clientY);
+            }
+            function onMouseUp() {
+                endDrag();
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            }
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        });
+
+        handle.addEventListener('touchstart', function(e) {
+            if (e.target.closest('button')) return;
+            const touch = e.touches[0];
+            startDrag(touch.clientX, touch.clientY);
+
+            function onTouchMove(tMove) {
+                const t = tMove.touches[0];
+                moveDrag(t.clientX, t.clientY);
+            }
+            function onTouchEnd() {
+                endDrag();
+                document.removeEventListener('touchmove', onTouchMove);
+                document.removeEventListener('touchend', onTouchEnd);
+            }
+            document.addEventListener('touchmove', onTouchMove, { passive: false });
+            document.addEventListener('touchend', onTouchEnd);
+        }, { passive: true });
+    };
+
+    window.resetAiBarPosition = function(event) {
+        if (event) { event.preventDefault(); event.stopPropagation(); }
+        const bar = document.getElementById('ai-voice-active-controller');
+        if (!bar) return;
+        bar.style.top = '';
+        bar.style.left = '';
+        bar.style.bottom = '';
+        bar.style.transform = '';
+        bar.className = 'fixed bottom-5 left-1/2 -translate-x-1/2 w-[95%] max-w-4xl z-50 rounded-3xl bg-slate-950/95 border-2 border-teal-500/70 p-4 sm:p-5 text-white shadow-[0_20px_60px_rgba(0,0,0,0.85)] backdrop-blur-2xl ring-4 ring-teal-500/20 transition-all duration-300';
+    };
+
+    window.toggleAiBarMinimize = function(event) {
+        if (event) { event.preventDefault(); event.stopPropagation(); }
+        const bar = document.getElementById('ai-voice-active-controller');
+        const minBtn = document.getElementById('ai-bar-min-btn');
+        if (!bar) return;
+
+        const isMinimized = bar.classList.contains('ai-bar-minimized');
+        const bodyContent = bar.querySelector('.flex.flex-col.md\\:flex-row');
+        const quickInputRow = document.getElementById('ai-voice-quick-input-row');
+
+        if (isMinimized) {
+            bar.classList.remove('ai-bar-minimized');
+            if (bodyContent) bodyContent.style.display = '';
+            if (quickInputRow) quickInputRow.style.display = '';
+            if (minBtn) minBtn.innerHTML = '<i class="fas fa-minus text-[10px]"></i>';
+        } else {
+            bar.classList.add('ai-bar-minimized');
+            if (bodyContent) bodyContent.style.display = 'none';
+            if (quickInputRow) quickInputRow.style.display = 'none';
+            if (minBtn) minBtn.innerHTML = '<i class="fas fa-expand text-[10px]"></i>';
+        }
+    };
+
+    window.updateInternationalDialPrefix = function() {
+        const countryEl = document.getElementById('receiver_country');
+        const prefixEl = document.getElementById('receiver-dial-code-prefix');
+        if (!countryEl || !prefixEl) return;
+        const country = (countryEl.value || '').toLowerCase();
+        
+        const dialMap = {
+            'poland': '+48',
+            'united states': '+1',
+            'usa': '+1',
+            'canada': '+1',
+            'united kingdom': '+44',
+            'uk': '+44',
+            'australia': '+61',
+            'germany': '+49',
+            'france': '+33',
+            'italy': '+39',
+            'spain': '+34',
+            'netherlands': '+31',
+            'japan': '+81',
+            'united arab emirates': '+971',
+            'uae': '+971',
+            'qatar': '+974',
+            'singapore': '+65',
+            'malaysia': '+60',
+            'india': '+91',
+            'china': '+86',
+            'switzerland': '+41',
+            'sweden': '+46',
+            'norway': '+47',
+            'denmark': '+45',
+            'finland': '+358',
+            'belgium': '+32',
+            'austria': '+43',
+            'portugal': '+351',
+            'ireland': '+353',
+            'new zealand': '+64'
+        };
+
+        let dial = '+Intl';
+        for (let [c, code] of Object.entries(dialMap)) {
+            if (country.includes(c)) {
+                dial = code;
+                break;
+            }
+        }
+        prefixEl.innerText = dial;
+    };
+
+    window.initiateVoiceAutofillAssistant = async function(userExplicitlyClicked = false, forcedStartIndex = null) {
         const banner = document.getElementById('ai-voice-invitation-banner');
         if (banner) banner.style.display = 'none';
 
         const controller = document.getElementById('ai-voice-active-controller');
-        if (controller) controller.style.display = 'block';
+        if (controller) {
+            controller.style.display = 'block';
+            setupAiBarDraggable();
+        }
 
         // Add bottom padding so floating docked controller never obscures bottom fields
         const mainContainer = document.querySelector('form#shipment-form') || document.body;
         if (mainContainer) mainContainer.classList.add('pb-44');
 
         window.aiVoiceAutofill.isActive = true;
-        window.aiVoiceAutofill.currentStepIndex = 0;
+
+        const mode = document.getElementById('shipment_type')?.value || 'domestic';
+        window.aiVoiceAutofill.steps = buildVoiceStepsForMode(mode);
+
+        let startIndex = 0;
+        if (forcedStartIndex !== null && forcedStartIndex >= 0 && forcedStartIndex < window.aiVoiceAutofill.steps.length) {
+            startIndex = forcedStartIndex;
+        } else {
+            startIndex = findFirstUnfilledStepIndex();
+        }
+
+        window.aiVoiceAutofill.currentStepIndex = startIndex;
 
         // 1. Explicitly request microphone stream from user click gesture to grant permission,
         // and immediately release tracks so the physical device is NOT locked away from SpeechRecognition!
@@ -3806,8 +4281,8 @@ document.addEventListener('alpine:init', () => {
         // 4. Setup speech recognition
         initSpeechRecognition();
 
-        // 5. Ask Step 0
-        executeVoiceStep(0);
+        // 5. Ask the designated starting step (first unfilled field)
+        executeVoiceStep(startIndex);
     };
 
     function startEqualizerAnimation() {
@@ -3978,9 +4453,11 @@ document.addEventListener('alpine:init', () => {
 
     window.voiceAssistantNext = function() {
         if (!window.aiVoiceAutofill.isActive) return;
-        const next = window.aiVoiceAutofill.currentStepIndex + 1;
-        if (next < window.aiVoiceAutofill.steps.length) {
+        const next = findNextUnfilledStepIndex(window.aiVoiceAutofill.currentStepIndex);
+        if (next !== -1) {
             executeVoiceStep(next);
+        } else if (window.aiVoiceAutofill.currentStepIndex + 1 < window.aiVoiceAutofill.steps.length) {
+            executeVoiceStep(window.aiVoiceAutofill.currentStepIndex + 1);
         } else {
             completeVoiceAutofill();
         }
@@ -4217,14 +4694,20 @@ document.addEventListener('alpine:init', () => {
             setTimeout(() => {
                 const phrase = ackPhrase || `Got it, ${appliedLabel}!`;
                 speakVoicePrompt(phrase, function() {
-                    const nextStep = stepIndex + 1;
-                    if (nextStep < window.aiVoiceAutofill.steps.length) {
+                    const nextStep = findNextUnfilledStepIndex(stepIndex);
+                    if (nextStep !== -1) {
                         executeVoiceStep(nextStep);
                     } else {
-                        completeVoiceAutofill();
+                        // Check if any prior step was left unfilled
+                        const firstMissed = findFirstUnfilledStepIndex();
+                        if (!isStepFieldFilled(window.aiVoiceAutofill.steps[firstMissed])) {
+                            executeVoiceStep(firstMissed);
+                        } else {
+                            completeVoiceAutofill();
+                        }
                     }
                 });
-            }, 500);
+            }, 400);
         };
 
         // Try AI Backend normalization endpoint first

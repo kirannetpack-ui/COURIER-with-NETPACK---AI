@@ -716,6 +716,35 @@ class AiAssistantService
             ];
         }
 
+        // 1.7 Post-Delivery Assistance & Damage / Returns / POD Dispute Guarantee
+        if (str_contains($q, 'damage') || str_contains($q, 'broken') || str_contains($q, 'phuteko') || str_contains($q, 'phutyo') || str_contains($q, 'bhiitro phutyo') || str_contains($q, 'return') || str_contains($q, 'rto') || str_contains($q, 'phirta') || str_contains($q, 'missing') || str_contains($q, 'lost item') || str_contains($q, 'harayo') || str_contains($q, 'pod') || str_contains($q, 'proof of delivery') || str_contains($q, 'who signed') || str_contains($q, 'after delivery')) {
+            $reply = "### 🛡️ Post-Delivery Assistance & Resolution Desk\n\n"
+                . "Namaste {$clientName}! 🙏 Even after a package has been delivered, our AI Logistics Copilot and operations team stand by to protect your interest with our **Zero-Hassle Resolution Guarantee**:\n\n"
+                . "1. 📦 **Damaged Contents or Crushed Box**:\n"
+                . "   - Take 2 clear photographs: one of the outer shipping label and carton, and one of the damaged item inside.\n"
+                . "   - File a priority report directly from your tracking page (`Report Situation -> Damaged Package`).\n"
+                . "   - Our claims desk initiates a **Safe-Transit Review within 2 hours**, offering repair, replacement, or carrier insurance claim with no paperwork runaround.\n\n"
+                . "2. 🔄 **Return to Origin (RTO) or Exchange**:\n"
+                . "   - If an e-commerce customer rejected the item or requested an exchange, you can initiate a reverse pickup.\n"
+                . "   - The return parcel is barcoded with reverse tracking and routed back to your warehouse on the next scheduled linehaul.\n\n"
+                . "3. 📝 **Proof of Delivery (POD) & Signature Verification**:\n"
+                . "   - Need to verify who accepted the consignment? The recipient's digital signature and timestamped OTP audit trail are stored permanently on your tracking dashboard.\n\n"
+                . "👉 **Take Action**: Please quote your tracking number or click below to submit your situation report to our dispatch chief.";
+
+            return [
+                'success' => true,
+                'provider' => 'builtin_expert',
+                'client_name' => $clientName,
+                'response' => $reply,
+                'speech_text' => "Namaste {$clientName}! If you have experienced damage, missing items, or need a return after delivery, our zero-hassle resolution guarantee protects you. Please take photos of the package and submit an issue report from your tracking page for a 2-hour review.",
+                'gesture' => 'speaking',
+                'actions' => [
+                    ['label' => 'Report Issue / Damage', 'url' => '/tracking'],
+                    ['label' => 'View Tracking Radar', 'url' => '/tracking'],
+                ],
+            ];
+        }
+
         // 2. Door-to-Door Delivery Mechanics & OTP Protocols
         if (str_contains($q, 'door to door') || str_contains($q, 'doorstep') || str_contains($q, 'otp') || str_contains($q, 'handover') || str_contains($q, 'direct rider')) {
             $reply = "### 🚪 Door-to-Door Delivery & Dual-OTP Security Protocol\n\n"

@@ -349,6 +349,101 @@
             </div>
         </div>
 
+        <!-- NETPACK AI LOGISTICS COPILOT & CONTINUOUS TELEMETRY RADAR -->
+        @php
+            $isDelivered = ($shipment->status === 'delivered');
+            $aiBriefingText = match($shipment->status) {
+                'delivered' => "Namaste! Your consignment has been safely delivered and signed for at " . ($shipment->receiver_city ?: 'destination') . ", " . ($shipment->receiver_country ?: '') . ". If you have any post-delivery damage, return, or discrepancy questions, I am here to assist immediately.",
+                'out_for_delivery' => "Namaste! Your shipment is currently out for final delivery with " . ($shipment->last_mile_carrier_name ?: 'the regional delivery partner') . ". Doorstep arrival is expected today.",
+                'in_transit' => "Namaste! Your parcel is in active transit via " . ($shipment->service_type === 'express' ? 'Priority Express Network' : 'Air Cargo Freight') . ". Telemetry confirms passing through " . ($latestLocation ?: 'regional gateway') . " onward to " . ($shipment->receiver_city ?: $shipment->receiver_country) . ".",
+                'customs_clearance' => "Namaste! Your international air cargo is currently undergoing customs and security clearance at the designated gateway hub. All electronic manifest documents are in order.",
+                default => "Namaste! Consignment booking confirmed. Your package is undergoing origin gateway intake and barcoding at Kathmandu hub."
+            };
+        @endphp
+        <div class="p-5 sm:p-6 bg-gradient-to-r from-slate-950 via-slate-900 to-teal-950 text-white border-b border-teal-500/30">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div class="flex items-start gap-3.5">
+                    <div class="w-11 h-11 rounded-2xl bg-teal-500/20 border border-teal-400/40 flex items-center justify-center text-teal-300 text-lg flex-shrink-0 shadow-lg shadow-teal-500/10">
+                        <i class="fas fa-headset text-teal-400 animate-pulse"></i>
+                    </div>
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-teal-500/20 text-teal-300 border border-teal-400/30">
+                                🤖 AI Logistics Concierge &bull; Continuous Telemetry
+                            </span>
+                            <span class="text-[10px] font-mono text-emerald-400 flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span> Live Monitoring
+                            </span>
+                        </div>
+                        <p class="text-xs sm:text-sm text-slate-200 font-medium leading-relaxed" id="ai-tracking-briefing-text">
+                            {{ $aiBriefingText }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 flex-wrap self-end lg:self-center flex-shrink-0">
+                    <button type="button" onclick="playAiTrackingBriefing()" id="play-briefing-btn"
+                            class="px-3.5 py-2 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-xs flex items-center gap-2 shadow-md hover:shadow-teal-500/20 transition cursor-pointer">
+                        <i class="fas fa-volume-high text-xs" id="briefing-audio-icon"></i>
+                        <span id="briefing-audio-text">Listen AI Voice</span>
+                    </button>
+                    @if($isDelivered)
+                        <button type="button" onclick="openIssueModal('damage')" 
+                                class="px-3.5 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer">
+                            <i class="fas fa-box-open text-xs"></i>
+                            <span>Report Damaged Box</span>
+                        </button>
+                        <button type="button" onclick="openIssueModal('return_request')" 
+                                class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs flex items-center gap-1.5 transition cursor-pointer">
+                            <i class="fas fa-rotate-left text-xs"></i>
+                            <span>Return Request (RTO)</span>
+                        </button>
+                    @else
+                        <button type="button" onclick="openIssueModal('delay')" 
+                                class="px-3 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer">
+                            <i class="fas fa-clock text-xs"></i>
+                            <span>Transit Query / Delay</span>
+                        </button>
+                        <button type="button" onclick="openIssueModal('damage')" 
+                                class="px-3 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer">
+                            <i class="fas fa-triangle-exclamation text-xs"></i>
+                            <span>Report Exception</span>
+                        </button>
+                    @endif
+                </div>
+            </div>
+
+            <!-- Interactive AI Chat / Situation Prompt Input Box -->
+            <div class="mt-4 pt-3.5 border-t border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <div class="relative flex-1">
+                    <i class="fas fa-robot absolute left-3.5 top-1/2 -translate-y-1/2 text-teal-400 text-xs"></i>
+                    <input type="text" id="ai-tracking-query-input" 
+                           onkeydown="if(event.key === 'Enter') askAiTrackingQuery(event)"
+                           placeholder="Ask AI Copilot about this consignment (e.g. 'When will it reach doorstep?', 'My package was damaged', 'Show customs info')..." 
+                           class="w-full text-xs pl-9 pr-24 py-2.5 bg-slate-900/90 border border-teal-500/40 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400">
+                    <button type="button" onclick="askAiTrackingQuery(event)" 
+                            class="absolute right-1.5 top-1/2 -translate-y-1/2 px-3 py-1 rounded-lg bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-[11px] transition flex items-center gap-1 cursor-pointer">
+                        <span>Ask AI</span>
+                        <i class="fas fa-paper-plane text-[9px]"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dynamic AI Query Response Box (Expands when asked) -->
+            <div id="ai-tracking-response-box" style="display: none;" 
+                 class="mt-3 p-4 rounded-2xl bg-slate-900 border border-teal-500/40 text-xs text-slate-200 space-y-2">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <span class="font-bold text-teal-300 flex items-center gap-2">
+                        <i class="fas fa-sparkles text-teal-400"></i> AI Logistics Resolution
+                    </span>
+                    <button type="button" onclick="document.getElementById('ai-tracking-response-box').style.display='none'" class="text-slate-400 hover:text-white text-xs">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div id="ai-tracking-response-content" class="leading-relaxed whitespace-pre-line text-slate-100"></div>
+            </div>
+        </div>
+
         <!-- THE MULTI-COLORED PROGRESSIVE BAR -->
         <div class="p-6 sm:p-8 bg-white border-b border-slate-100">
             <div class="mb-4 flex items-center justify-between">
@@ -1107,12 +1202,110 @@ function closeSubscribeModal() {
     document.getElementById('subscribeModal').classList.add('hidden');
 }
 
-function openIssueModal() {
-    document.getElementById('issueModal').classList.remove('hidden');
+function openIssueModal(presetType = null) {
+    const modal = document.getElementById('issueModal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    if (presetType) {
+        const select = modal.querySelector('select[name="issue_type"]');
+        if (select) select.value = presetType;
+    }
 }
 
 function closeIssueModal() {
     document.getElementById('issueModal').classList.add('hidden');
+}
+
+function playAiTrackingBriefing() {
+    const textEl = document.getElementById('ai-tracking-briefing-text');
+    if (!textEl) return;
+    const text = textEl.innerText.trim();
+    if (!('speechSynthesis' in window)) {
+        alert(text);
+        return;
+    }
+
+    if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+        const icon = document.getElementById('briefing-audio-icon');
+        const label = document.getElementById('briefing-audio-text');
+        if (icon) icon.className = 'fas fa-volume-high text-xs';
+        if (label) label.innerText = 'Listen AI Voice';
+        return;
+    }
+
+    const clean = text.replace(/[#*`_~[\]()]/g, ' ').replace(/\s+/g, ' ').trim();
+    const utterance = new SpeechSynthesisUtterance(clean);
+    utterance.rate = 0.94;
+    utterance.pitch = 1.04;
+
+    const voices = window.speechSynthesis.getVoices();
+    const preferredVoice = voices.find(v => v.lang === 'ne-NP' || v.lang === 'ne_NP' || (v.lang.startsWith('en-IN') && (v.name.includes('India') || v.name.includes('Hindi') || v.name.includes('Google')))) || voices.find(v => v.lang.startsWith('en'));
+    if (preferredVoice) utterance.voice = preferredVoice;
+
+    const icon = document.getElementById('briefing-audio-icon');
+    const label = document.getElementById('briefing-audio-text');
+
+    utterance.onstart = function() {
+        if (icon) icon.className = 'fas fa-volume-xmark text-xs animate-pulse text-amber-900';
+        if (label) label.innerText = 'Stop Audio';
+    };
+
+    utterance.onend = function() {
+        if (icon) icon.className = 'fas fa-volume-high text-xs';
+        if (label) label.innerText = 'Listen AI Voice';
+    };
+
+    utterance.onerror = function() {
+        if (icon) icon.className = 'fas fa-volume-high text-xs';
+        if (label) label.innerText = 'Listen AI Voice';
+    };
+
+    window.speechSynthesis.speak(utterance);
+}
+
+function askAiTrackingQuery(event) {
+    if (event) event.preventDefault();
+    const input = document.getElementById('ai-tracking-query-input');
+    if (!input) return;
+    const query = input.value.trim();
+    if (!query) return;
+
+    const resBox = document.getElementById('ai-tracking-response-box');
+    const resContent = document.getElementById('ai-tracking-response-content');
+    if (resBox && resContent) {
+        resBox.style.display = 'block';
+        resContent.innerHTML = '<span class="text-teal-300 font-bold animate-pulse"><i class="fas fa-spinner fa-spin mr-1"></i> Consulting NETPACK Logistics Intelligence Radar...</span>';
+    }
+
+    const payload = `Consignment: {{ $shipment->tracking_number }}. Status: {{ $shipment->status }}. Query: ${query}`;
+
+    fetch('/ai/chat', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({ message: payload })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (resContent) {
+            const reply = data.response || "Namaste! I have registered your inquiry regarding {{ $shipment->tracking_number }}. Our operations desk has been updated.";
+            resContent.innerText = reply;
+            if (data.speech_text && 'speechSynthesis' in window) {
+                const u = new SpeechSynthesisUtterance(data.speech_text.replace(/[#*`_~[\]()]/g, ' '));
+                u.rate = 0.94;
+                window.speechSynthesis.speak(u);
+            }
+        }
+    })
+    .catch(err => {
+        if (resContent) {
+            resContent.innerText = `Namaste! For consignment {{ $shipment->tracking_number }}, current status is {{ $statusInfo['label'] }}. For urgent assistance, please click 'Report Exception' above or contact WhatsApp help.`;
+        }
+    });
 }
 
 // Map Initialization
