@@ -64,8 +64,8 @@
                     </span>
                 </div>
 
-                <h3 class="text-sm font-bold text-white">NETPACK AI Copilot</h3>
-                <p class="text-xs text-teal-300 font-medium">Logistics & Door-to-Door Voice Expert</p>
+                <h3 class="text-sm font-bold text-white">Chanda &bull; NETPACK AI Copilot</h3>
+                <p class="text-xs text-teal-300 font-medium">Your Dedicated Voice & Logistics Assistant</p>
 
                 <!-- Voice Equalizer Animation Preview -->
                 <div class="flex items-center gap-1 my-3 h-5">
@@ -76,11 +76,19 @@
                     <span class="w-1 h-3 bg-cyan-400 rounded-full animate-pulse"></span>
                 </div>
 
-                <button onclick="document.querySelector('#netpack-ai-copilot button[aria-label=\'Open AI Logistics Copilot\']')?.click()"
-                        class="w-full py-2 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 font-bold text-xs uppercase tracking-wider rounded-xl transition shadow-md flex items-center justify-center gap-2">
-                    <i class="fas fa-comments"></i>
-                    <span>Launch Voice Assistant</span>
-                </button>
+                <div class="flex flex-col gap-2 w-full">
+                    <button onclick="document.querySelector('#netpack-ai-copilot button[aria-label=\'Open AI Logistics Copilot\']')?.click()"
+                            class="w-full py-2 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 font-bold text-xs uppercase tracking-wider rounded-xl transition shadow-md flex items-center justify-center gap-2 cursor-pointer">
+                        <i class="fas fa-comments"></i>
+                        <span>Talk with Chanda</span>
+                    </button>
+                    <button onclick="window.playChandaHologramVoice()"
+                            id="btn-sample-voice-hologram"
+                            class="w-full py-1.5 bg-slate-800 hover:bg-slate-700 text-teal-300 border border-teal-500/40 font-semibold text-[11px] rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer">
+                        <i class="fas fa-volume-high text-[10px]"></i>
+                        <span>Sample Voice</span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -387,6 +395,39 @@
                 </span>
             </div>
         </div>
-    </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+window.hologramAudio = null;
+window.playChandaHologramVoice = function() {
+    if (window.hologramAudio && !window.hologramAudio.paused) {
+        window.hologramAudio.pause();
+        window.hologramAudio.currentTime = 0;
+        const btn = document.getElementById('btn-sample-voice-hologram');
+        if (btn) btn.innerHTML = '<i class="fas fa-volume-high text-[10px]"></i> <span>Sample Voice</span>';
+        return;
+    }
+    const sample = "Namaste! I am Chanda, your global logistics copilot at NETPACK. I am highly motivated, energetic, and delighted to assist your consignments today!";
+    const accent = localStorage.getItem('chanda_voice_accent') || 'en-GB';
+    const streamUrl = `/ai/speech/stream?text=${encodeURIComponent(sample)}&accent=${encodeURIComponent(accent)}`;
+    
+    if (!window.hologramAudio) {
+        window.hologramAudio = new Audio();
+    }
+    window.hologramAudio.src = streamUrl;
+    const btn = document.getElementById('btn-sample-voice-hologram');
+    window.hologramAudio.onplay = () => {
+        if (btn) btn.innerHTML = '<i class="fas fa-volume-xmark text-[10px] animate-pulse text-amber-400"></i> <span class="text-amber-300">Speaking...</span>';
+    };
+    window.hologramAudio.onended = () => {
+        if (btn) btn.innerHTML = '<i class="fas fa-volume-high text-[10px]"></i> <span>Sample Voice</span>';
+    };
+    window.hologramAudio.onerror = () => {
+        if (btn) btn.innerHTML = '<i class="fas fa-volume-high text-[10px]"></i> <span>Sample Voice</span>';
+    };
+    window.hologramAudio.play().catch(e => console.log('Audio autoplay prevented:', e));
+};
+</script>
+@endpush

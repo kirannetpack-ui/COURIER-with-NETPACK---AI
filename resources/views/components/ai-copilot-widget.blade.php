@@ -13,6 +13,8 @@
          csrfToken: '{{ csrf_token() }}'
      })"
      x-init="initWidget()"
+     @open-ai-copilot.window="openDrawer($event.detail)"
+     @toggle-ai-copilot.window="toggleDrawer()"
      x-cloak
      class="fixed bottom-6 right-6 z-50 font-sans select-none print:hidden">
 
@@ -35,10 +37,10 @@
             <span class="text-base animate-bounce" x-text="currentGestureIcon">👋</span>
             <div class="flex flex-col text-left">
                 <span class="text-xs font-bold text-teal-300 flex items-center gap-1.5">
-                    <span>Namaste, <span x-text="firstName"></span>!</span>
+                    <span>Namaste! I am Chanda 🙏</span>
                     <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
                 </span>
-                <span class="text-[11px] text-slate-300" x-text="pillText">How can I assist your deliveries today?</span>
+                <span class="text-[11px] text-slate-300" x-text="pillText">I am eager and ready to assist you today!</span>
             </div>
             <button @click.stop="showGreetingPill = false" class="text-slate-400 hover:text-white ml-1 text-xs">
                 <i class="fas fa-times"></i>
@@ -119,7 +121,7 @@
 
                 <div class="flex flex-col min-w-0">
                     <div class="flex items-center gap-2">
-                        <h3 class="text-sm font-black text-white tracking-tight truncate">NETPACK AI Copilot</h3>
+                        <h3 class="text-sm font-black text-white tracking-tight truncate">Chanda &bull; NETPACK AI Copilot</h3>
                         <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30 uppercase tracking-wider">
                             Voice & Chat
                         </span>
@@ -128,7 +130,7 @@
                         </span>
                     </div>
                     <p class="text-[11px] text-teal-400/80 font-medium truncate flex items-center gap-1.5">
-                        <span x-text="statusMessage">Namaste, ready to assist</span>
+                        <span x-text="statusMessage">Namaste! Chanda here, ready to assist</span>
                     </p>
                 </div>
             </div>
@@ -160,6 +162,31 @@
                 </button>
             </div>
         </div>
+
+        <!-- GLOBAL NEURAL VOICE TUNER STRIP (Motivated, Respectful & Professional Voice) -->
+        <div class="px-4 py-2 bg-slate-950/90 border-b border-teal-900/50 flex items-center justify-between gap-2 text-xs flex-shrink-0">
+            <div class="flex items-center gap-1.5 min-w-0">
+                <i class="fas fa-sparkles text-amber-400 text-[11px] animate-pulse"></i>
+                <span class="text-[11px] font-bold text-slate-300 whitespace-nowrap">Voice:</span>
+                <select x-model="voiceAccent" 
+                        @change="localStorage.setItem('chanda_voice_accent', voiceAccent); playVoiceSample()"
+                        class="bg-slate-900 text-teal-300 border border-teal-700/60 rounded-lg px-2 py-0.5 text-[10px] font-semibold focus:outline-none focus:ring-1 focus:ring-teal-400">
+                    <option value="en-GB">🇬🇧 Global International (Immaculate & Motivated)</option>
+                    <option value="en-IN">🇳🇵 South Asian / Nepali English (Warm & Respectful)</option>
+                    <option value="en-US">🇺🇸 Dynamic Executive (High Energy)</option>
+                </select>
+            </div>
+            <button type="button" 
+                    @click="playVoiceSample()" 
+                    title="Play voice preview sample"
+                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gradient-to-r from-teal-500/20 to-emerald-500/20 hover:from-teal-500/30 hover:to-emerald-500/30 text-teal-200 text-[10px] font-bold border border-teal-500/40 transition whitespace-nowrap cursor-pointer">
+                <i class="fas" :class="isSpeaking ? 'fa-volume-high text-emerald-400 animate-pulse' : 'fa-play text-[9px]'"></i>
+                <span>Sample</span>
+            </button>
+        </div>
+
+        <!-- Hidden Audio Element for Neural Speech Playback -->
+        <audio id="chanda-neural-audio-player" style="display:none;" preload="auto"></audio>
 
         <!-- FESTIVAL & LOGISTICS SCHEDULE ALERT RIBBON (Proactive Notice) -->
         <template x-if="activeOccasion">
@@ -340,18 +367,29 @@ function aiCopilotWidget(config) {
         userRole: config.userRole || 'Guest',
         csrfToken: config.csrfToken,
         activeOccasion: null,
+        voiceAccent: localStorage.getItem('chanda_voice_accent') || 'en-GB',
+        audioElement: null,
         suggestionChips: [
             { label: '🚪 Door-to-Door Guide', prompt: 'Explain the door-to-door delivery workflow with secret Pickup OTP and Delivery OTP.' },
             { label: '📍 Track Parcel', prompt: 'How can I track my shipment using HAWB or Consignment code?' },
             { label: '💰 Domestic Tariffs', prompt: 'What are the delivery rates from Kathmandu to Pokhara, Biratnagar, and other districts?' },
             { label: '🗓️ Dashain & Festive Cutoffs', prompt: 'What are the upcoming festival dates and shipping cutoff deadlines?' },
-            { label: '💵 COD Limits & Cash', prompt: 'How does Cash on Delivery (COD) collection and tiered rider limits work?' }
+            { label: '💵 COD Limits & Cash', prompt: 'How does Cash on Delivery (COD) collection and tiered rider limits work?' },
+            { label: '🛡️ Damage & Return Help', prompt: 'What is the procedure if my delivered package was damaged, broken, or needs a return (RTO)?' }
         ],
 
         initWidget() {
+            this.audioElement = document.getElementById('chanda-neural-audio-player');
+
             // Setup Speech Synthesis
             if ('speechSynthesis' in window) {
                 this.speechSynthesis = window.speechSynthesis;
+                window.speechSynthesis.getVoices();
+                if (window.speechSynthesis.onvoiceschanged !== undefined) {
+                    window.speechSynthesis.onvoiceschanged = () => {
+                        window.speechSynthesis.getVoices();
+                    };
+                }
             }
 
             // Setup Speech Recognition (Browser Native Web Speech API)
@@ -417,6 +455,18 @@ function aiCopilotWidget(config) {
             }, 14000);
         },
 
+        openDrawer(detail) {
+            this.isOpen = true;
+            this.showGreetingPill = false;
+            this.scrollToBottom();
+            if (this.messages.length === 0) {
+                this.fetchGreeting();
+            }
+            if (detail && detail.query) {
+                this.askQuestion(detail.query);
+            }
+        },
+
         toggleDrawer() {
             this.isOpen = !this.isOpen;
             if (this.isOpen) {
@@ -471,15 +521,13 @@ function aiCopilotWidget(config) {
                 })
                 .catch(err => {
                     console.log('AI Greeting fetch error:', err);
-                    if (this.messages.length === 0) {
                         this.messages.push({
                             role: 'assistant',
-                            content: `Namaste ${this.firstName}! 🙏 I am your NETPACK AI Logistics Copilot. How may I assist your door-to-door deliveries, cargo tariffs, or tracking today?`,
-                            speechText: `Namaste ${this.firstName}! How may I assist your deliveries today?`,
+                            content: `Namaste ${this.firstName}! 🙏 My name is Chanda, your dedicated NETPACK AI Assistant. I am very eager and delighted to support and assist your door-to-door deliveries, cargo tariffs, and tracking today. How may I help you?`,
+                            speechText: `Namaste ${this.firstName}! My name is Chanda, your dedicated NETPACK AI Assistant. I am very eager and delighted to support and assist you today. How may I help you?`,
                             gestureIcon: '👋',
                             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                         });
-                    }
                 });
         },
 
@@ -628,13 +676,73 @@ function aiCopilotWidget(config) {
             }
         },
 
+        getChandaFemaleVoice() {
+            if (!('speechSynthesis' in window)) return null;
+            const voices = window.speechSynthesis.getVoices();
+            if (!voices || !voices.length) return null;
+
+            // Strict filter against all male voices
+            const isMale = (v) => {
+                const n = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
+                if (/\b(ravi|david|mark|george|guy|male|boy|hemant|madhur|prabhat|steve|alex|fred|daniel|oliver|thomas|paul|james|john|richard|deepak|karthik|ajay|tarun|neil|alec)\b/i.test(n)) {
+                    return true;
+                }
+                if (n.includes('male') && !n.includes('female')) {
+                    return true;
+                }
+                return false;
+            };
+
+            const femaleEligible = voices.filter(v => !isMale(v));
+
+            // 1. Native Nepali Female Voice (ne-NP, ne_NP, or containing 'nepal')
+            const nepaliFemale = femaleEligible.find(v => 
+                (v.lang === 'ne-NP' || v.lang === 'ne_NP' || v.lang.startsWith('ne') || v.name.toLowerCase().includes('nepal'))
+            );
+            if (nepaliFemale) return nepaliFemale;
+
+            // 2. High Priority: Authentic South Asian / Indian English Female (Heera, Neerja, Swara, Kalpana, Aditi, Pooja, Veena, Kavya, Ananya)
+            const southAsianNamedFemale = femaleEligible.find(v => 
+                (v.lang === 'en-IN' || v.lang === 'hi-IN' || v.lang.startsWith('en-IN') || v.lang.startsWith('hi')) &&
+                /(heera|neerja|swara|kalpana|aditi|pooja|veena|kavya|ananya|shruti|sangeeta|female)/i.test(v.name)
+            );
+            if (southAsianNamedFemale) return southAsianNamedFemale;
+
+            // 3. Any South Asian English / Hindi female (non-male)
+            const southAsianFemale = femaleEligible.find(v => 
+                (v.lang === 'en-IN' || v.lang === 'hi-IN' || v.lang.startsWith('en-IN') || v.lang.startsWith('hi'))
+            );
+            if (southAsianFemale) return southAsianFemale;
+
+            // 4. High-Quality Natural Female Voices (Jenny, Aria, Samantha, Zira, Victoria, Sonia)
+            const naturalFemale = femaleEligible.find(v => 
+                /(jenny|aria|samantha|zira|victoria|sonia|karen|susan|female)/i.test(v.name)
+            );
+            if (naturalFemale) return naturalFemale;
+
+            // 5. Any remaining non-male English voice
+            const anyEnglishFemale = femaleEligible.find(v => v.lang.startsWith('en'));
+            if (anyEnglishFemale) return anyEnglishFemale;
+
+            return femaleEligible[0] || null;
+        },
+
+        playVoiceSample() {
+            this.stopSpeaking();
+            const samples = {
+                'en-GB': "Namaste! I am Chanda, your global logistics copilot. I am highly motivated, energetic, and delighted to assist your consignments today!",
+                'en-IN': "Namaste! My name is Chanda. I am eagerly and enthusiastically ready to support all your door to door deliveries across Nepal!",
+                'en-US': "Namaste! I am Chanda. I am energized, focused, and ready to accelerate your air cargo tariffs and tracking right now!"
+            };
+            const sampleText = samples[this.voiceAccent] || samples['en-GB'];
+            this.speakText(sampleText);
+        },
+
         speakText(text) {
-            if (!this.voiceEnabled || !('speechSynthesis' in window)) return;
+            if (!this.voiceEnabled) return;
+            this.stopSpeaking();
 
-            // Stop any ongoing speech
-            window.speechSynthesis.cancel();
-
-            // Sanitize text from markdown characters for speech
+            // Sanitize text from markdown characters and links for clean speech
             const cleanText = text
                 .replace(/[#*`_~[\]()]/g, ' ')
                 .replace(/https?:\/\/\S+/g, '')
@@ -643,41 +751,96 @@ function aiCopilotWidget(config) {
 
             if (!cleanText) return;
 
-            const utterance = new SpeechSynthesisUtterance(cleanText);
-            // Nepalese English cadence: measured, polite tempo with warm, respectful pitch
-            utterance.rate = 0.94;
-            utterance.pitch = 1.04;
-
-            // Prioritize Nepali (ne-NP) -> South Asian English (en-IN / hi-IN) -> Natural English fallback
-            const voices = window.speechSynthesis.getVoices();
-            const nepaliVoice = voices.find(v => v.lang === 'ne-NP' || v.lang === 'ne_NP' || v.lang.startsWith('ne'));
-            const southAsianVoice = voices.find(v => (v.lang === 'en-IN' || v.lang === 'hi-IN' || v.lang.startsWith('en-IN')) && (v.name.includes('India') || v.name.includes('Hindi') || v.name.includes('Heera') || v.name.includes('Ravi') || v.name.includes('Neerja') || v.name.includes('Google')));
-            const preferredVoice = nepaliVoice || southAsianVoice || voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha')));
-            if (preferredVoice) {
-                utterance.voice = preferredVoice;
+            // 1. Primary: High-Definition Studio-Grade Neural Voice Stream
+            if (!this.audioElement) {
+                this.audioElement = document.getElementById('chanda-neural-audio-player');
             }
 
-            utterance.onstart = () => {
+            if (this.audioElement) {
+                const streamUrl = `/ai/speech/stream?text=${encodeURIComponent(cleanText)}&accent=${encodeURIComponent(this.voiceAccent || 'en-GB')}`;
+                this.audioElement.src = streamUrl;
                 this.isSpeaking = true;
-                this.statusMessage = 'Speaking...';
-            };
+                this.statusMessage = 'Speaking (Chanda AI)...';
 
-            utterance.onend = () => {
+                this.audioElement.onplay = () => {
+                    this.isSpeaking = true;
+                    this.statusMessage = 'Speaking (Chanda AI)...';
+                };
+
+                this.audioElement.onended = () => {
+                    this.isSpeaking = false;
+                    this.statusMessage = 'Ready to assist';
+                };
+
+                this.audioElement.onerror = (e) => {
+                    console.warn('Neural audio stream error, falling back to browser speech synthesis:', e);
+                    this.speakViaBrowserSynthesis(cleanText);
+                };
+
+                const playPromise = this.audioElement.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(err => {
+                        console.warn('Audio stream autoplay blocked, falling back to speech synthesis:', err);
+                        this.speakViaBrowserSynthesis(cleanText);
+                    });
+                }
+            } else {
+                this.speakViaBrowserSynthesis(cleanText);
+            }
+        },
+
+        speakViaBrowserSynthesis(cleanText) {
+            if (!this.voiceEnabled || !('speechSynthesis' in window)) {
                 this.isSpeaking = false;
                 this.statusMessage = 'Ready to assist';
-            };
+                return;
+            }
 
-            utterance.onerror = () => {
+            try {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(cleanText);
+                // Highly motivated, energetic, and distinct female pitch
+                utterance.rate = 1.05;   // Lively, eager, attentive tempo
+                utterance.pitch = 1.18;  // Warm, enthusiastic, distinct female pitch
+
+                const voice = this.getChandaFemaleVoice();
+                if (voice) {
+                    utterance.voice = voice;
+                }
+
+                utterance.onstart = () => {
+                    this.isSpeaking = true;
+                    this.statusMessage = 'Speaking (Chanda AI)...';
+                };
+
+                utterance.onend = () => {
+                    this.isSpeaking = false;
+                    this.statusMessage = 'Ready to assist';
+                };
+
+                utterance.onerror = () => {
+                    this.isSpeaking = false;
+                    this.statusMessage = 'Ready to assist';
+                };
+
+                window.speechSynthesis.speak(utterance);
+            } catch (err) {
                 this.isSpeaking = false;
                 this.statusMessage = 'Ready to assist';
-            };
-
-            window.speechSynthesis.speak(utterance);
+            }
         },
 
         stopSpeaking() {
+            if (this.audioElement) {
+                try {
+                    this.audioElement.pause();
+                    this.audioElement.currentTime = 0;
+                } catch(e) {}
+            }
             if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
+                try {
+                    window.speechSynthesis.cancel();
+                } catch(e) {}
             }
             this.isSpeaking = false;
             this.statusMessage = 'Ready to assist';

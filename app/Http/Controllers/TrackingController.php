@@ -141,7 +141,7 @@ class TrackingController extends Controller
 
         $routeCoordinates = $this->resolveFlightRouteCoordinates($shipment);
 
-        return view('tracking.public', compact('shipment', 'routeCoordinates'));
+        return view('tracking.public', compact('shipment', 'routeCoordinates') + ['coords' => $routeCoordinates]);
     }
 
     /**
@@ -218,18 +218,23 @@ class TrackingController extends Controller
             'NRT' => ['lat' => 35.7720, 'lng' => 140.3929, 'city' => 'Tokyo', 'country' => 'Japan'],
         ];
 
-        // Resolve Hub
-        $hubCode = strtoupper($shipment->hub?->hub_code ?? 'DXB');
-        $hubLat = (float) ($shipment->hub?->latitude ?? ($hubDictionary[$hubCode]['lat'] ?? 25.2532));
-        $hubLng = (float) ($shipment->hub?->longitude ?? ($hubDictionary[$hubCode]['lng'] ?? 55.3657));
+        // Resolve Hub: Prioritizes Admin/Staff manual assignment, otherwise auto-figures out based on destination country & pre-defined main/transit coverage
+        $hubModel = \App\Models\OverseasHub::resolveHubForShipment($shipment);
+        $hubCode = strtoupper($hubModel?->hub_code ?? 'DXB');
+        $hubLat = (float) ($hubModel?->latitude ?? ($hubDictionary[$hubCode]['lat'] ?? 25.2532));
+        $hubLng = (float) ($hubModel?->longitude ?? ($hubDictionary[$hubCode]['lng'] ?? 55.3657));
 
         $hub = [
-            'name' => $shipment->hub?->hub_name ?? "{$hubCode} Global Hub",
-            'city' => $shipment->hub?->city ?? ($hubDictionary[$hubCode]['city'] ?? 'Transit Hub'),
-            'country' => $shipment->hub?->country ?? ($hubDictionary[$hubCode]['country'] ?? 'Global Gateway'),
+            'name' => $hubModel?->hub_name ?? "{$hubCode} Global Hub",
+            'city' => $hubModel?->city ?? ($hubDictionary[$hubCode]['city'] ?? 'Transit Hub'),
+            'country' => $hubModel?->country ?? ($hubDictionary[$hubCode]['country'] ?? 'Global Gateway'),
             'iata' => $hubCode,
             'lat' => $hubLat,
             'lng' => $hubLng,
+            'is_manual_admin' => !empty($shipment->current_hub_id),
+            'service_category' => $this->determineHubServiceCategory($hubModel, $shipment->receiver_country),
+            'partner_name' => $shipment->agency?->name ?? $hubModel?->agencies?->first()?->name ?? 'Regional Handling Partner',
+            'hub_model_id' => $hubModel?->id,
         ];
 
         // Resolve Destination Coordinates
@@ -269,6 +274,33 @@ class TrackingController extends Controller
             'hub' => $hub,
             'destination' => $destination,
         ];
+    }
+
+    /**
+     * Determine whether the destination country is under Main Delivery or Transit Service
+     */
+    private function determineHubServiceCategory(?\App\Models\OverseasHub $hub, ?string $destCountry): string
+    {
+        if (!$hub || empty($destCountry)) {
+            return 'Gateway Transit';
+        }
+
+        $clean = strtolower(trim($destCountry));
+        $mainList = array_map('strtolower', (array) $hub->main_delivery_countries);
+        foreach ($mainList as $c) {
+            if ($c === $clean || str_contains($clean, $c) || str_contains($c, $clean)) {
+                return 'Main Delivery Area';
+            }
+        }
+
+        $transitList = array_map('strtolower', (array) $hub->transit_countries);
+        foreach ($transitList as $c) {
+            if ($c === $clean || str_contains($clean, $c) || str_contains($c, $clean)) {
+                return 'Transit Service Gateway';
+            }
+        }
+
+        return 'Regional Gateway Hub';
     }
 
     /**

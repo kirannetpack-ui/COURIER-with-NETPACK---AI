@@ -81,62 +81,106 @@
                         <i class="fas fa-map-marker-alt text-rose-500"></i> {{ $hub->city ?? 'Gateway City' }}, {{ $hub->country ?? 'Global' }}
                     </p>
 
-                    <div class="space-y-2 py-3 border-t border-b border-slate-100 dark:border-slate-800 text-xs">
+                    <div class="space-y-2 py-2.5 border-t border-b border-slate-100 dark:border-slate-800 text-xs">
                         <div class="flex items-center justify-between text-slate-600 dark:text-slate-400">
                             <span>Airport / Terminal:</span>
                             <span class="font-medium text-slate-700 dark:text-slate-300 truncate max-w-[170px]">{{ $hub->airport_name ?? 'Primary Airport' }}</span>
                         </div>
-                        @php
-                            $primaryAgency = $hub->agencies->first();
-                        @endphp
-                        @if($primaryAgency)
-                            <div class="flex items-center justify-between text-slate-600 dark:text-slate-400">
-                                <span>Handling Agency:</span>
-                                <span class="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[170px]" title="{{ $primaryAgency->name }}">
-                                    {{ $primaryAgency->name }}
-                                </span>
+                    </div>
+
+                    <!-- Multi-Partner Network -->
+                    @php
+                        $partners = $hub->partners->isNotEmpty() ? $hub->partners : $hub->agencies;
+                    @endphp
+                    <div class="py-2.5 border-b border-slate-100 dark:border-slate-800">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                                <i class="fas fa-handshake text-cyan-600 dark:text-cyan-400"></i> Partner Network
+                            </span>
+                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-cyan-50 dark:bg-cyan-950/70 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800">
+                                {{ $partners->count() }} Partner{{ $partners->count() === 1 ? '' : 's' }}
+                            </span>
+                        </div>
+                        @if($partners->isNotEmpty())
+                            <div class="flex flex-wrap gap-1">
+                                @foreach($partners as $partner)
+                                    <span class="inline-flex items-center gap-1 text-[10px] font-semibold bg-cyan-50 dark:bg-cyan-950/40 text-cyan-800 dark:text-cyan-200 px-2 py-0.5 rounded border border-cyan-200 dark:border-cyan-800/60" title="{{ $partner->name }} ({{ $partner->code }})">
+                                        <i class="fas fa-building text-[9px] opacity-60"></i> {{ \Illuminate\Support\Str::limit($partner->name, 22) }}
+                                    </span>
+                                @endforeach
                             </div>
-                            @if($primaryAgency->primary_contact || $primaryAgency->phone)
-                                <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[11px]">
-                                    <span>Contact:</span>
-                                    <span class="truncate max-w-[170px]">{{ $primaryAgency->primary_contact ?: $primaryAgency->phone }}</span>
-                                </div>
-                            @endif
+                        @else
+                            <p class="text-[11px] text-slate-400 italic">No partner agencies attached</p>
                         @endif
                     </div>
 
-                    <!-- Clearance & Delivery Destination Countries -->
-                    <div class="mt-3">
-                        <div class="flex items-center justify-between mb-1.5">
-                            <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                                <i class="fas fa-passport text-indigo-500 mr-1"></i> Clearance Scope
+                    <!-- Main Delivery Areas (Pre-defined Direct Doorstep) -->
+                    @php
+                        $mainDelivery = !empty($hub->main_delivery_countries) ? $hub->main_delivery_countries : [];
+                        $transit = !empty($hub->transit_countries) ? $hub->transit_countries : [];
+                        // Fallback to coverage_countries if new json columns are empty
+                        if (empty($mainDelivery) && empty($transit) && !empty($hub->coverage_countries)) {
+                            $mainDelivery = array_slice((array)$hub->coverage_countries, 0, 3);
+                            $transit = array_slice((array)$hub->coverage_countries, 3);
+                        }
+                    @endphp
+                    <div class="mt-2.5">
+                        <div class="flex items-center justify-between mb-1">
+                            <p class="text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                                <i class="fas fa-truck-fast text-[11px]"></i> Main Delivery Areas
                             </p>
-                            <span class="text-[10px] text-slate-400 font-mono">{{ count((array)$hub->coverage_countries) }} Countries</span>
+                            <span class="text-[10px] font-bold text-emerald-600 font-mono">{{ count($mainDelivery) }}</span>
                         </div>
-                        @if(!empty($hub->coverage_countries))
+                        @if(!empty($mainDelivery))
                             <div class="flex flex-wrap gap-1">
-                                @foreach(array_slice((array)$hub->coverage_countries, 0, 5) as $c)
-                                    <span class="text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-md border border-indigo-100 dark:border-indigo-800/60">
-                                        {{ $c }}
+                                @foreach(array_slice($mainDelivery, 0, 4) as $country)
+                                    <span class="text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
+                                        {{ $country }}
                                     </span>
                                 @endforeach
-                                @if(count((array)$hub->coverage_countries) > 5)
-                                    <span class="text-[10px] font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
-                                        +{{ count((array)$hub->coverage_countries) - 5 }} more
+                                @if(count($mainDelivery) > 4)
+                                    <span class="text-[10px] font-bold text-emerald-600 bg-emerald-100 dark:bg-emerald-900/40 px-1.5 py-0.5 rounded">
+                                        +{{ count($mainDelivery) - 4 }}
                                     </span>
                                 @endif
                             </div>
                         @else
-                            <p class="text-[11px] text-slate-400 italic">No specific coverage countries defined</p>
+                            <p class="text-[10px] text-slate-400 italic">No direct delivery areas set</p>
+                        @endif
+                    </div>
+
+                    <!-- Transit Services (Pre-defined Regional Forwarding / Cross-dock) -->
+                    <div class="mt-2">
+                        <div class="flex items-center justify-between mb-1">
+                            <p class="text-[11px] font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-400 flex items-center gap-1">
+                                <i class="fas fa-plane-departure text-[10px]"></i> Transit Services
+                            </p>
+                            <span class="text-[10px] font-bold text-indigo-600 font-mono">{{ count($transit) }}</span>
+                        </div>
+                        @if(!empty($transit))
+                            <div class="flex flex-wrap gap-1">
+                                @foreach(array_slice($transit, 0, 4) as $country)
+                                    <span class="text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded border border-indigo-200 dark:border-indigo-800">
+                                        {{ $country }}
+                                    </span>
+                                @endforeach
+                                @if(count($transit) > 4)
+                                    <span class="text-[10px] font-bold text-indigo-600 bg-indigo-100 dark:bg-indigo-900/40 px-1.5 py-0.5 rounded">
+                                        +{{ count($transit) - 4 }}
+                                    </span>
+                                @endif
+                            </div>
+                        @else
+                            <p class="text-[10px] text-slate-400 italic">No transit routing countries set</p>
                         @endif
                     </div>
 
                     @if(!empty($hub->service_routes))
-                        <div class="mt-3">
-                            <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Corridors & Routes</p>
+                        <div class="mt-2.5">
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Corridors & Routes</p>
                             <div class="flex flex-wrap gap-1">
-                                @foreach((array)$hub->service_routes as $route)
-                                    <span class="text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                                @foreach(array_slice((array)$hub->service_routes, 0, 3) as $route)
+                                    <span class="text-[9px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
                                         {{ $route }}
                                     </span>
                                 @endforeach

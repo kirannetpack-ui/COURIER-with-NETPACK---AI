@@ -68,12 +68,12 @@
 
             <!-- AI Copilot Quick Launch Button -->
             <button type="button"
-                    onclick="document.querySelector('#netpack-ai-copilot button[aria-label=\'Open AI Logistics Copilot\']')?.click()"
+                    onclick="window.dispatchEvent(new CustomEvent('open-ai-copilot')); document.querySelector('#netpack-ai-copilot button[aria-label=\'Open AI Logistics Copilot\']')?.click()"
                     class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 transition shadow-2xs group focus:outline-none"
-                    title="Launch AI Voice & Chat Assistant">
+                    title="Ask Chanda AI Assistant">
                 <span class="w-2 h-2 rounded-full bg-teal-500 group-hover:animate-ping"></span>
                 <i class="fas fa-robot text-teal-600"></i>
-                <span class="hidden sm:inline">AI Copilot</span>
+                <span class="hidden sm:inline">Ask Chanda</span>
             </button>
 
             <!-- Notifications -->

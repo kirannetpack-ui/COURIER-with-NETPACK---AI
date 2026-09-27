@@ -148,5 +148,38 @@ class AiAssistantController extends Controller
 
         return response()->json($result);
     }
+
+    /**
+     * Stream natural high-clarity neural audio text-to-speech for Chanda voice
+     */
+    public function streamSpeech(Request $request)
+    {
+        $text = trim($request->input('text', ''));
+        if (empty($text)) {
+            return response('', 204);
+        }
+
+        // Available accents:
+        // 'en-GB' -> Global British / International (immaculate clarity, prestigious, easily understood worldwide)
+        // 'en-IN' -> Authentic South Asian / Nepalese English (polite, warm, respectful)
+        // 'en-US' -> Dynamic American (high-energy, motivated executive)
+        $accent = $request->input('accent', 'en-GB');
+        if (!in_array($accent, ['en-GB', 'en-IN', 'en-US'])) {
+            $accent = 'en-GB';
+        }
+
+        $audioData = $this->aiService->generateSpeechAudio($text, $accent);
+        if ($audioData) {
+            return response($audioData, 200, [
+                'Content-Type' => 'audio/mpeg',
+                'Cache-Control' => 'public, max-age=604800',
+                'Content-Length' => strlen($audioData),
+                'Accept-Ranges' => 'bytes',
+            ]);
+        }
+
+        return response()->json(['error' => 'TTS audio stream temporarily unavailable'], 502);
+    }
 }
+
 

@@ -66,6 +66,15 @@
                 </span>
             </a>
 
+            <!-- Partner Agencies -->
+            <a href="{{ route('international.agencies.index') }}" class="flex items-center gap-3 px-3 py-2 rounded-lg transition {{ request()->routeIs('international.agencies*') ? 'bg-sky-600/30 text-sky-200 border border-sky-500/30 font-semibold' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+                <i class="fas fa-handshake w-4 text-center text-cyan-400"></i>
+                <span>Partner Agencies</span>
+                <span class="ml-auto bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-[10px] font-mono px-1.5 py-0.5 rounded">
+                    {{ \App\Models\Agency::count() }}
+                </span>
+            </a>
+
             <!-- Last Mile Carriers -->
             <a href="{{ route('international.last-mile.index') }}" class="flex items-center gap-3 px-3 py-2 rounded-lg transition {{ request()->routeIs('international.last-mile*') ? 'bg-sky-600/30 text-sky-200 border border-sky-500/30 font-semibold' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
                 <i class="fas fa-truck-moving w-4 text-center text-emerald-400"></i>

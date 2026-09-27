@@ -413,7 +413,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:super_admin,ad
     Route::post('/partners/{partner}/approve', [PartnerController::class, 'approve'])->name('partners.approve');
     Route::post('/partners/{partner}/reject', [PartnerController::class, 'reject'])->name('partners.reject');
 
-    // Overseas Partners
+    // Overseas Partners & International Hubs (Super Admin / Admin)
+    Route::get('/hubs', [InternationalHubController::class, 'index'])->name('hubs.index');
+    Route::get('/hubs/create', [InternationalHubController::class, 'create'])->name('hubs.create');
+    Route::post('/hubs', [InternationalHubController::class, 'store'])->name('hubs.store');
+    Route::get('/hubs/{id}/edit', [InternationalHubController::class, 'edit'])->name('hubs.edit');
+    Route::put('/hubs/{id}', [InternationalHubController::class, 'update'])->name('hubs.update');
+    Route::delete('/hubs/{id}', [InternationalHubController::class, 'destroy'])->name('hubs.destroy');
+    Route::patch('/hubs/{id}/toggle', [InternationalHubController::class, 'toggle'])->name('hubs.toggle');
+
     Route::get('/overseas-partners', [OverseasPartnerController::class, 'index'])->name('overseas-partners.index');
     Route::get('/overseas-partners/create', [OverseasPartnerController::class, 'create'])->name('overseas-partners.create');
     Route::post('/overseas-partners', [OverseasPartnerController::class, 'store'])->name('overseas-partners.store');
@@ -848,7 +856,7 @@ Route::prefix('partner')->name('partner.')->middleware(['auth', 'role:partner'])
 // =============================================
 // INTERNATIONAL SERVICE ADMIN ROUTES
 // =============================================
-Route::prefix('international')->name('international.')->middleware(['auth', 'role:international_admin,staff'])->group(function () {
+Route::prefix('international')->name('international.')->middleware(['auth', 'role:super_admin,admin,international_admin,staff'])->group(function () {
     Route::get('/dashboard', [InternationalAdminController::class, 'dashboard'])->name('dashboard');
 
     Route::get('/partners', [InternationalAdminController::class, 'partners'])->name('partners');
@@ -890,6 +898,7 @@ Route::prefix('international')->name('international.')->middleware(['auth', 'rol
     // -------------------------------------------------------------
     // INTERNATIONAL AIR-CARGO, HUBS, AGENCIES, MAWBs & MANIFESTS
     // -------------------------------------------------------------
+    Route::get('hubs/auto-coverage', [InternationalHubController::class, 'autoCoverage'])->name('hubs.auto-coverage');
     Route::patch('hubs/{id}/toggle', [InternationalHubController::class, 'toggle'])->name('hubs.toggle');
     Route::resource('hubs', InternationalHubController::class)->except(['show']);
 
@@ -1011,6 +1020,7 @@ Route::post('/rates/import', [RateUploadController::class, 'import'])->name('rat
 Route::get('/ai-assistant', [AiAssistantController::class, 'index'])->name('ai.assistant');
 Route::get('/ai/greeting', [AiAssistantController::class, 'greeting'])->name('ai.greeting');
 Route::post('/ai/chat', [AiAssistantController::class, 'chat'])->name('ai.chat');
+Route::get('/ai/speech/stream', [AiAssistantController::class, 'streamSpeech'])->name('ai.speech.stream');
 Route::get('/ai/occasions', [AiAssistantController::class, 'occasions'])->name('ai.occasions');
 Route::post('/ai/voice-autofill-parse', [AiAssistantController::class, 'voiceAutofillParse'])->name('ai.voice_autofill_parse');
 Route::get('/admin/ai/operational-intelligence', [AiAssistantController::class, 'adminOperationalIntelligence'])->name('admin.ai.operational_intelligence');

@@ -968,6 +968,8 @@ function adminAiHub() {
         resolvedIssueIds: [],
         executingId: null,
 
+        adminAudioPlayer: null,
+
         get filteredIssues() {
             if (this.selectedFilter === 'critical') {
                 return this.issues.filter(i => (i.severity === 'critical'));
@@ -1026,23 +1028,130 @@ function adminAiHub() {
                 this.executingId = null;
                 if (data && data.success) {
                     this.resolvedIssueIds.push(issue.id);
-                    // Announce voice confirmation in polite Nepalese cadence
-                    if ('speechSynthesis' in window) {
-                        const utterance = new SpeechSynthesisUtterance("Win-win operational resolution applied successfully.");
-                        utterance.rate = 0.94;
-                        utterance.pitch = 1.04;
-                        const voices = window.speechSynthesis.getVoices();
-                        const nepaliVoice = voices.find(v => v.lang.startsWith('ne'));
-                        const southAsianVoice = voices.find(v => (v.lang === 'en-IN' || v.lang === 'hi-IN') && (v.name.includes('India') || v.name.includes('Hindi') || v.name.includes('Heera') || v.name.includes('Ravi')));
-                        if (nepaliVoice || southAsianVoice) utterance.voice = nepaliVoice || southAsianVoice;
-                        window.speechSynthesis.speak(utterance);
-                    }
+                    // Announce voice confirmation
+                    this.playChandaSpeech("Win-win operational resolution applied successfully. Telemetry and regional hubs updated.");
                 }
             })
             .catch(err => {
                 this.executingId = null;
                 console.error('Error executing win-win action:', err);
             });
+        },
+
+        getChandaAdminFemaleVoice() {
+            if (!('speechSynthesis' in window)) return null;
+            const voices = window.speechSynthesis.getVoices();
+            if (!voices || !voices.length) return null;
+
+            const isMale = (v) => {
+                const n = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
+                return /\b(ravi|david|mark|george|guy|male|boy|hemant|madhur|prabhat|steve|alex|fred|daniel|oliver|thomas|paul|james|john|richard|deepak|karthik|ajay|tarun|neil|alec)\b/i.test(n)
+                    || (n.includes('male') && !n.includes('female'));
+            };
+
+            const femaleEligible = voices.filter(v => !isMale(v));
+
+            const nepali = femaleEligible.find(v => v.lang === 'ne-NP' || v.lang === 'ne_NP' || v.lang.startsWith('ne') || v.name.toLowerCase().includes('nepal'));
+            if (nepali) return nepali;
+
+            const southAsianNamed = femaleEligible.find(v => 
+                (v.lang === 'en-IN' || v.lang === 'hi-IN' || v.lang.startsWith('en-IN') || v.lang.startsWith('hi')) &&
+                /(heera|neerja|swara|kalpana|aditi|pooja|veena|kavya|ananya|shruti|sangeeta|female)/i.test(v.name)
+            );
+            if (southAsianNamed) return southAsianNamed;
+
+            const southAsian = femaleEligible.find(v => v.lang === 'en-IN' || v.lang === 'hi-IN' || v.lang.startsWith('en-IN') || v.lang.startsWith('hi'));
+            if (southAsian) return southAsian;
+
+            const natural = femaleEligible.find(v => /(jenny|aria|samantha|zira|victoria|sonia|karen|susan|female)/i.test(v.name));
+            if (natural) return natural;
+
+            const english = femaleEligible.find(v => v.lang.startsWith('en'));
+            if (english) return english;
+
+            return femaleEligible[0] || null;
+        },
+
+        playChandaSpeech(text, onEnd) {
+            if (this.adminAudioPlayer) {
+                try {
+                    this.adminAudioPlayer.pause();
+                    this.adminAudioPlayer.currentTime = 0;
+                } catch(e) {}
+            }
+            if ('speechSynthesis' in window) {
+                try { window.speechSynthesis.cancel(); } catch(e) {}
+            }
+
+            const clean = text.replace(/[#*`_~[\]()]/g, ' ').replace(/\s+/g, ' ').trim();
+            if (!clean) {
+                this.speechPlaying = false;
+                if (onEnd) onEnd();
+                return;
+            }
+
+            const accent = localStorage.getItem('chanda_voice_accent') || 'en-GB';
+            const streamUrl = `/ai/speech/stream?text=${encodeURIComponent(clean)}&accent=${encodeURIComponent(accent)}`;
+
+            if (!this.adminAudioPlayer) {
+                this.adminAudioPlayer = new Audio();
+            }
+
+            this.adminAudioPlayer.src = streamUrl;
+
+            this.adminAudioPlayer.onplay = () => {
+                this.speechPlaying = true;
+            };
+
+            this.adminAudioPlayer.onended = () => {
+                this.speechPlaying = false;
+                if (onEnd) onEnd();
+            };
+
+            this.adminAudioPlayer.onerror = (err) => {
+                console.warn('Neural audio stream error in admin, falling back to speech synthesis:', err);
+                fallbackSynthesis();
+            };
+
+            const playPromise = this.adminAudioPlayer.play();
+            if (playPromise !== undefined) {
+                playPromise.catch((err) => {
+                    console.warn('Neural stream autoplay blocked in admin, falling back to synthesis:', err);
+                    fallbackSynthesis();
+                });
+            }
+
+            const self = this;
+            function fallbackSynthesis() {
+                if (!('speechSynthesis' in window)) {
+                    self.speechPlaying = false;
+                    if (onEnd) onEnd();
+                    return;
+                }
+                try {
+                    window.speechSynthesis.cancel();
+                    const utterance = new SpeechSynthesisUtterance(clean);
+                    utterance.rate = 1.05;
+                    utterance.pitch = 1.18;
+                    const v = self.getChandaAdminFemaleVoice();
+                    if (v) utterance.voice = v;
+
+                    utterance.onstart = () => { self.speechPlaying = true; };
+                    utterance.onend = () => {
+                        self.speechPlaying = false;
+                        if (onEnd) onEnd();
+                    };
+                    utterance.onerror = () => {
+                        self.speechPlaying = false;
+                        if (onEnd) onEnd();
+                    };
+
+                    window.speechSynthesis.speak(utterance);
+                } catch(e) {
+                    self.speechPlaying = false;
+                    if (onEnd) onEnd();
+                }
+            }
         },
 
         toggleVoiceBriefing() {
@@ -1054,38 +1163,23 @@ function adminAiHub() {
         },
 
         playVoiceBriefing() {
-            if (!('speechSynthesis' in window)) {
-                alert('Voice speech synthesis is not supported on this browser.');
-                return;
-            }
-
             const textToSpeak = this.reportSpeechText || 
                 `Namaste! We currently have ${this.criticalCount} critical exceptions and ${this.warningCount} operational items requiring attention. All win-win-win protocols are ready for one click execution.`;
 
-            window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(textToSpeak);
-            // Nepalese English cadence: slightly measured tempo with warm respectful pitch
-            utterance.rate = 0.94;
-            utterance.pitch = 1.04;
-
-            const voices = window.speechSynthesis.getVoices();
-            const nepaliVoice = voices.find(v => v.lang.startsWith('ne'));
-            const southAsianVoice = voices.find(v => (v.lang === 'en-IN' || v.lang === 'hi-IN') && (v.name.includes('India') || v.name.includes('Hindi') || v.name.includes('Heera') || v.name.includes('Ravi') || v.name.includes('Neerja')));
-            const naturalVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha')));
-
-            utterance.voice = nepaliVoice || southAsianVoice || naturalVoice || null;
-
-            utterance.onstart = () => { this.speechPlaying = true; };
-            utterance.onend = () => { this.speechPlaying = false; };
-            utterance.onerror = () => { this.speechPlaying = false; };
-
-            this.speechPlaying = true;
-            window.speechSynthesis.speak(utterance);
+            this.playChandaSpeech(textToSpeak);
         },
 
         stopVoiceBriefing() {
+            if (this.adminAudioPlayer) {
+                try {
+                    this.adminAudioPlayer.pause();
+                    this.adminAudioPlayer.currentTime = 0;
+                } catch(e) {}
+            }
             if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
+                try {
+                    window.speechSynthesis.cancel();
+                } catch(e) {}
             }
             this.speechPlaying = false;
         }

@@ -52,7 +52,7 @@ class RouteSafetyTest extends TestCase
             'seller.dashboard' => 'role:seller',
             'rider.dashboard' => 'role:rider',
             'partner.dashboard' => 'role:partner',
-            'international.dashboard' => 'role:international_admin,staff',
+            'international.dashboard' => 'role:super_admin,admin,international_admin,staff',
             'overseas.dashboard' => 'role:overseas',
         ];
 

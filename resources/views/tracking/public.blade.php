@@ -254,9 +254,17 @@
                                 <span class="h-2 w-2 rounded-full bg-teal-400 animate-ping"></span>
                                 🌍 ECONOMY AIR-CARGO
                             </span>
-                            @if($shipment->hub)
-                                <span class="rounded-xl bg-indigo-500/20 px-3 py-1 text-xs font-bold text-indigo-300 border border-indigo-500/30">
-                                    Gateway: {{ $shipment->hub->hub_code }} ({{ $shipment->customs_mode ?? 'DDP' }})
+                            @php
+                                $hubCoords = $coords['hub'] ?? $routeCoordinates['hub'] ?? [];
+                                $displayHub = $shipment->hub ?? (!empty($hubCoords['hub_model_id']) ? \App\Models\OverseasHub::find($hubCoords['hub_model_id']) : null);
+                                $serviceCat = $hubCoords['service_category'] ?? 'Regional Gateway Hub';
+                                $isManual = !empty($hubCoords['is_manual_admin']);
+                            @endphp
+                            @if($displayHub)
+                                <span class="rounded-xl bg-indigo-500/20 px-3 py-1 text-xs font-bold text-indigo-300 border border-indigo-500/30 flex items-center gap-1.5" title="{{ $isManual ? 'Assigned by Operations Admin' : 'Auto-routed by destination sector coverage' }}">
+                                    <i class="fas fa-network-wired text-indigo-400"></i>
+                                    <span>Gateway: {{ $displayHub->hub_code }} ({{ $shipment->customs_mode ?? $displayHub->mode_type ?? 'DDP' }})</span>
+                                    <span class="px-1.5 py-0.5 rounded text-[10px] {{ $serviceCat === 'Main Delivery Area' ? 'bg-emerald-500/30 text-emerald-200' : 'bg-amber-500/30 text-amber-200' }}">{{ $serviceCat }}</span>
                                 </span>
                             @endif
                         @endif
@@ -332,7 +340,7 @@
                             @if(!empty($shipment->mawb))
                                 {{ $shipment->mawb->airline_code ?? 'AIR' }} {{ $shipment->mawb->flight_number ?: 'Cargo' }}
                             @else
-                                {{ $coords['hub']['iata'] ?? 'DXB' }} Hub Transit
+                                {{ $coords['hub']['iata'] ?? $routeCoordinates['hub']['iata'] ?? $displayHub?->hub_code ?? 'DXB' }} Hub Transit
                             @endif
                         </span>
                         <span class="h-px w-8 sm:w-16 bg-slate-700"></span>
@@ -1216,52 +1224,150 @@ function closeIssueModal() {
     document.getElementById('issueModal').classList.add('hidden');
 }
 
+let trackingAudioPlayer = null;
+
+function getChandaTrackingFemaleVoice() {
+    if (!('speechSynthesis' in window)) return null;
+    const voices = window.speechSynthesis.getVoices();
+    if (!voices || !voices.length) return null;
+
+    const isMale = (v) => {
+        const n = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
+        return /\b(ravi|david|mark|george|guy|male|boy|hemant|madhur|prabhat|steve|alex|fred|daniel|oliver|thomas|paul|james|john|richard|deepak|karthik|ajay|tarun|neil|alec)\b/i.test(n)
+            || (n.includes('male') && !n.includes('female'));
+    };
+
+    const femaleEligible = voices.filter(v => !isMale(v));
+
+    // 1. Native Nepali Female Voice
+    const nepali = femaleEligible.find(v => v.lang === 'ne-NP' || v.lang === 'ne_NP' || v.lang.startsWith('ne') || v.name.toLowerCase().includes('nepal'));
+    if (nepali) return nepali;
+
+    // 2. South Asian / Indian English Female
+    const southAsianNamed = femaleEligible.find(v => 
+        (v.lang === 'en-IN' || v.lang === 'hi-IN' || v.lang.startsWith('en-IN') || v.lang.startsWith('hi')) &&
+        /(heera|neerja|swara|kalpana|aditi|pooja|veena|kavya|ananya|shruti|sangeeta|female)/i.test(v.name)
+    );
+    if (southAsianNamed) return southAsianNamed;
+
+    // 3. Any South Asian English / Hindi female
+    const southAsian = femaleEligible.find(v => v.lang === 'en-IN' || v.lang === 'hi-IN' || v.lang.startsWith('en-IN') || v.lang.startsWith('hi'));
+    if (southAsian) return southAsian;
+
+    // 4. Natural Online Female (Jenny, Aria, Samantha, Zira, Victoria, Sonia)
+    const natural = femaleEligible.find(v => /(jenny|aria|samantha|zira|victoria|sonia|karen|susan|female)/i.test(v.name));
+    if (natural) return natural;
+
+    // 5. English female
+    const english = femaleEligible.find(v => v.lang.startsWith('en'));
+    if (english) return english;
+
+    return femaleEligible[0] || null;
+}
+
+function playChandaTrackingAudio(text, onStart, onEnd) {
+    if (trackingAudioPlayer) {
+        try {
+            trackingAudioPlayer.pause();
+            trackingAudioPlayer.currentTime = 0;
+        } catch(e) {}
+    }
+    if ('speechSynthesis' in window) {
+        try { window.speechSynthesis.cancel(); } catch(e) {}
+    }
+
+    const clean = text.replace(/[#*`_~[\]()]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!clean) {
+        if (onEnd) onEnd();
+        return;
+    }
+
+    const accent = localStorage.getItem('chanda_voice_accent') || 'en-GB';
+    const streamUrl = `/ai/speech/stream?text=${encodeURIComponent(clean)}&accent=${encodeURIComponent(accent)}`;
+
+    if (!trackingAudioPlayer) {
+        trackingAudioPlayer = new Audio();
+    }
+
+    let started = false;
+    trackingAudioPlayer.src = streamUrl;
+
+    trackingAudioPlayer.onplay = () => {
+        started = true;
+        if (onStart) onStart();
+    };
+
+    trackingAudioPlayer.onended = () => {
+        if (onEnd) onEnd();
+    };
+
+    trackingAudioPlayer.onerror = (err) => {
+        console.warn('Neural audio stream error, falling back to speech synthesis:', err);
+        fallbackToSynthesis();
+    };
+
+    const playPromise = trackingAudioPlayer.play();
+    if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+            console.warn('Neural stream blocked, falling back to speech synthesis:', err);
+            fallbackToSynthesis();
+        });
+    }
+
+    function fallbackToSynthesis() {
+        if (!('speechSynthesis' in window)) {
+            if (onEnd) onEnd();
+            return;
+        }
+        try {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(clean);
+            utterance.rate = 1.05;
+            utterance.pitch = 1.18;
+            const preferredVoice = getChandaTrackingFemaleVoice();
+            if (preferredVoice) utterance.voice = preferredVoice;
+
+            utterance.onstart = () => { if (onStart) onStart(); };
+            utterance.onend = () => { if (onEnd) onEnd(); };
+            utterance.onerror = () => { if (onEnd) onEnd(); };
+
+            window.speechSynthesis.speak(utterance);
+        } catch(e) {
+            if (onEnd) onEnd();
+        }
+    }
+}
+
 function playAiTrackingBriefing() {
     const textEl = document.getElementById('ai-tracking-briefing-text');
     if (!textEl) return;
     const text = textEl.innerText.trim();
-    if (!('speechSynthesis' in window)) {
-        alert(text);
-        return;
-    }
-
-    if (window.speechSynthesis.speaking) {
-        window.speechSynthesis.cancel();
-        const icon = document.getElementById('briefing-audio-icon');
-        const label = document.getElementById('briefing-audio-text');
-        if (icon) icon.className = 'fas fa-volume-high text-xs';
-        if (label) label.innerText = 'Listen AI Voice';
-        return;
-    }
-
-    const clean = text.replace(/[#*`_~[\]()]/g, ' ').replace(/\s+/g, ' ').trim();
-    const utterance = new SpeechSynthesisUtterance(clean);
-    utterance.rate = 0.94;
-    utterance.pitch = 1.04;
-
-    const voices = window.speechSynthesis.getVoices();
-    const preferredVoice = voices.find(v => v.lang === 'ne-NP' || v.lang === 'ne_NP' || (v.lang.startsWith('en-IN') && (v.name.includes('India') || v.name.includes('Hindi') || v.name.includes('Google')))) || voices.find(v => v.lang.startsWith('en'));
-    if (preferredVoice) utterance.voice = preferredVoice;
 
     const icon = document.getElementById('briefing-audio-icon');
     const label = document.getElementById('briefing-audio-text');
 
-    utterance.onstart = function() {
+    if ((trackingAudioPlayer && !trackingAudioPlayer.paused) || (window.speechSynthesis && window.speechSynthesis.speaking)) {
+        if (trackingAudioPlayer) {
+            try {
+                trackingAudioPlayer.pause();
+                trackingAudioPlayer.currentTime = 0;
+            } catch(e) {}
+        }
+        if (window.speechSynthesis) {
+            try { window.speechSynthesis.cancel(); } catch(e) {}
+        }
+        if (icon) icon.className = 'fas fa-volume-high text-xs';
+        if (label) label.innerText = 'Listen AI Voice';
+        return;
+    }
+
+    playChandaTrackingAudio(text, () => {
         if (icon) icon.className = 'fas fa-volume-xmark text-xs animate-pulse text-amber-900';
         if (label) label.innerText = 'Stop Audio';
-    };
-
-    utterance.onend = function() {
+    }, () => {
         if (icon) icon.className = 'fas fa-volume-high text-xs';
         if (label) label.innerText = 'Listen AI Voice';
-    };
-
-    utterance.onerror = function() {
-        if (icon) icon.className = 'fas fa-volume-high text-xs';
-        if (label) label.innerText = 'Listen AI Voice';
-    };
-
-    window.speechSynthesis.speak(utterance);
+    });
 }
 
 function askAiTrackingQuery(event) {
@@ -1294,10 +1400,8 @@ function askAiTrackingQuery(event) {
         if (resContent) {
             const reply = data.response || "Namaste! I have registered your inquiry regarding {{ $shipment->tracking_number }}. Our operations desk has been updated.";
             resContent.innerText = reply;
-            if (data.speech_text && 'speechSynthesis' in window) {
-                const u = new SpeechSynthesisUtterance(data.speech_text.replace(/[#*`_~[\]()]/g, ' '));
-                u.rate = 0.94;
-                window.speechSynthesis.speak(u);
+            if (data.speech_text) {
+                playChandaTrackingAudio(data.speech_text);
             }
         }
     })

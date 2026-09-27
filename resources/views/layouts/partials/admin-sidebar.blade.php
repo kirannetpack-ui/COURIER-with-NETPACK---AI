@@ -120,6 +120,40 @@
         </div>
 
         <!-- ============================================== -->
+        <!-- INTERNATIONAL HUBS & GATEWAYS (Super Admin)    -->
+        <!-- ============================================== -->
+        <div class="pt-3">
+            <div class="flex items-center justify-between px-3 mb-1">
+                <p class="text-[10px] text-purple-400 font-extrabold uppercase tracking-widest">Gateway Hubs & Partners</p>
+                <span class="px-1.5 py-0.2 bg-indigo-500/20 text-indigo-300 text-[9px] rounded font-mono font-bold">GLOBAL</span>
+            </div>
+            
+            <!-- International Gateway Hubs -->
+            <a href="{{ route('international.hubs.index') }}" 
+               class="flex items-center gap-3 px-3 py-2 rounded-lg transition {{ request()->routeIs('international.hubs.index') ? 'bg-purple-600 text-white font-semibold shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+                <i class="fas fa-network-wired w-4 text-center text-indigo-400"></i>
+                <span>International Hubs</span>
+                <span class="ml-auto bg-indigo-500/20 text-indigo-300 text-[10px] font-mono px-1.5 py-0.5 rounded">{{ \App\Models\OverseasHub::count() }}</span>
+            </a>
+
+            <!-- Create International Hub -->
+            <a href="{{ route('international.hubs.create') }}" 
+               class="flex items-center gap-3 px-3 py-2 rounded-lg transition {{ request()->routeIs('international.hubs.create') ? 'bg-purple-600 text-white font-semibold shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+                <i class="fas fa-plus-circle w-4 text-center text-emerald-400"></i>
+                <span>Create New Hub</span>
+                <span class="ml-auto text-[9px] font-bold uppercase tracking-wider px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300">+Add</span>
+            </a>
+
+            <!-- Partner Agencies -->
+            <a href="{{ route('international.agencies.index') }}" 
+               class="flex items-center gap-3 px-3 py-2 rounded-lg transition {{ request()->routeIs('international.agencies*') ? 'bg-purple-600 text-white font-semibold shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+                <i class="fas fa-handshake w-4 text-center text-cyan-400"></i>
+                <span>Partner Agencies</span>
+                <span class="ml-auto bg-cyan-500/20 text-cyan-300 text-[10px] font-mono px-1.5 py-0.5 rounded">{{ \App\Models\Agency::count() }}</span>
+            </a>
+        </div>
+
+        <!-- ============================================== -->
         <!-- INTERNATIONAL RATES FEEDING (Super Admin Task) -->
         <!-- ============================================== -->
         <div class="pt-3">

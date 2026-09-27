@@ -463,6 +463,13 @@
                 <span class="badge">{{ App\Models\User::count() }}</span>
             </a>
             
+            <!-- AI Copilot (Chanda) - Same for all users -->
+            <a href="{{ route('ai.assistant') }}" class="nav-item {{ request()->routeIs('ai.*') ? 'active' : '' }}" onclick="if(event.ctrlKey || event.metaKey) return true; event.preventDefault(); window.dispatchEvent(new CustomEvent('open-ai-copilot'));">
+                <i class="fas fa-robot" style="color:#2dd4bf;"></i>
+                <span>Ask Chanda (AI)</span>
+                <span class="badge" style="background:#0d9488; font-size:10px;">Copilot</span>
+            </a>
+            
             <!-- Inquiries with Sub-items -->
             <div class="nav-item" onclick="toggleSubMenu('inquiriesSub')" style="cursor:pointer;">
                 <i class="fas fa-file-alt"></i>
@@ -501,9 +508,30 @@
             
             <div class="nav-section-title" style="margin-top:16px;">MANAGEMENT</div>
             
-            <a href="#" class="nav-item">
+            <!-- International Gateway Hubs & Partners (Super Admin Enabled) -->
+            <div class="nav-item" onclick="toggleSubMenu('intlHubsSub')" style="cursor:pointer;">
+                <i class="fas fa-globe-americas"></i>
+                <span>International Hubs</span>
+                <i class="fas fa-chevron-right arrow {{ request()->routeIs('international.hubs*', 'international.agencies*') ? 'open' : '' }}" id="intlHubsArrow"></i>
+            </div>
+            <div class="nav-sub-items" id="intlHubsSub" style="{{ request()->routeIs('international.hubs*', 'international.agencies*') ? 'display:block;' : 'display:none;' }}">
+                <a href="{{ route('international.hubs.index') }}" class="nav-sub-item {{ request()->routeIs('international.hubs.index') ? 'active' : '' }}">
+                    <i class="fas fa-network-wired"></i> All Gateway Hubs
+                </a>
+                <a href="{{ route('international.hubs.create') }}" class="nav-sub-item {{ request()->routeIs('international.hubs.create') ? 'active' : '' }}">
+                    <i class="fas fa-plus-circle"></i> Create New Hub
+                </a>
+                <a href="{{ route('international.agencies.index') }}" class="nav-sub-item {{ request()->routeIs('international.agencies*') ? 'active' : '' }}">
+                    <i class="fas fa-handshake"></i> Partner Agencies
+                </a>
+                <a href="{{ route('admin.international-rates.index') }}" class="nav-sub-item {{ request()->routeIs('admin.international-rates*') ? 'active' : '' }}">
+                    <i class="fas fa-dollar-sign"></i> Hub Rates Matrix
+                </a>
+            </div>
+
+            <a href="{{ route('international.dashboard') }}" class="nav-item">
                 <i class="fas fa-plane"></i>
-                <span>Air Cargo</span>
+                <span>Air Cargo Services</span>
             </a>
             <a href="#" class="nav-item">
                 <i class="fas fa-ship"></i>
@@ -574,7 +602,18 @@
                 <h2>@yield('page-title', 'Dashboard')</h2>
                 <p>@yield('page-subtitle', 'Manage your logistics operations')</p>
             </div>
-            <div class="header-actions">
+            <div class="header-actions" style="display:flex; align-items:center; gap:12px;">
+                <!-- AI Copilot Quick Launch Button (Ask Chanda) -->
+                <button type="button"
+                        onclick="window.dispatchEvent(new CustomEvent('open-ai-copilot')); document.querySelector('#netpack-ai-copilot button[aria-label=\'Open AI Logistics Copilot\']')?.click()"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 transition shadow-2xs group focus:outline-none"
+                        style="cursor:pointer;"
+                        title="Ask Chanda AI Assistant">
+                    <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#14b8a6;"></span>
+                    <i class="fas fa-robot" style="color:#0d9488;"></i>
+                    <span style="font-weight:700; color:#0f766e;">Ask Chanda</span>
+                </button>
+
                 <button class="notification-btn">
                     <i class="fas fa-bell"></i>
                     <span class="dot"></span>

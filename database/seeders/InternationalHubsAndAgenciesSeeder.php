@@ -72,6 +72,9 @@ class InternationalHubsAndAgenciesSeeder extends Seeder
 
         $createdHubs = [];
         foreach ($hubsData as $data) {
+            $auto = OverseasHub::autoFigureOutCoverage($data['country'], $data['hub_code']);
+            $data['main_delivery_countries'] = $auto['main_delivery_countries'];
+            $data['transit_countries'] = $auto['transit_countries'];
             $hub = OverseasHub::updateOrCreate(
                 ['hub_code' => $data['hub_code']],
                 $data

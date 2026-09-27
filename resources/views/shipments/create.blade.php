@@ -809,7 +809,7 @@ document.addEventListener('alpine:init', () => {
                 <div>
                     <div class="flex items-center gap-2">
                         <h4 class="text-sm font-black text-white tracking-wide">
-                            Would you like AI Voice Autofill Assistance?
+                            Would you like AI Voice Autofill Assistance? Meet Chanda, your AI Copilot
                         </h4>
                         <span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-teal-500/20 text-teal-300 border border-teal-500/30">
                             Hands-Free Voice Typing
@@ -819,7 +819,7 @@ document.addEventListener('alpine:init', () => {
                         </span>
                     </div>
                     <p class="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
-                        Namaste <strong>{{ session('ai_preferred_name', explode(' ', Auth::user()->name ?? 'Client')[0]) }} Ji</strong>! Our AI Copilot is calibrated for <strong>Nepalese English & Romanized Nepali</strong> (e.g. <em>Jhapa bata</em>, <em>Poland pathaune</em>, <em>20 kg</em>, <em>luga</em>). It speaks with respectful warmth and auto-types every field as you answer.
+                        Namaste <strong>{{ session('ai_preferred_name', explode(' ', Auth::user()->name ?? 'Client')[0]) }} Ji</strong>! I am <strong>Chanda</strong>, your dedicated NETPACK AI Assistant. I am calibrated for <strong>Nepalese English & Romanized Nepali</strong> (e.g. <em>Jhapa bata</em>, <em>Poland pathaune</em>, <em>20 kg</em>, <em>luga</em>). I speak with respectful warmth and excitement to guide and auto-type every consignment field as we speak.
                     </p>
                 </div>
             </div>
@@ -829,7 +829,7 @@ document.addEventListener('alpine:init', () => {
                         onclick="window.initiateVoiceAutofillAssistant(true)"
                         class="px-4 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 text-xs font-black tracking-wide shadow-md hover:shadow-teal-500/20 transition flex items-center gap-2 cursor-pointer">
                     <i class="fas fa-play text-[10px]"></i>
-                    <span>Yes, Guide Me by Voice</span>
+                    <span>Yes, Guide Me by Voice with Chanda</span>
                 </button>
                 <button type="button" 
                         onclick="window.dismissVoiceAutofillInvitation()"
@@ -842,26 +842,29 @@ document.addEventListener('alpine:init', () => {
 
     <!-- ACTIVE VOICE CONCIERGE CONTROLLER (DRAGGABLE & ADJUSTABLE ANYWHERE) -->
     <div id="ai-voice-active-controller" 
-         style="display: none;" 
-         class="fixed bottom-5 left-1/2 -translate-x-1/2 w-[95%] max-w-4xl z-50 rounded-3xl bg-slate-950/95 border-2 border-teal-500/70 p-4 sm:p-5 text-white shadow-[0_20px_60px_rgba(0,0,0,0.85)] backdrop-blur-2xl ring-4 ring-teal-500/20 transition-all duration-300">
+         style="display: none; background: #020617 !important; color: #f8fafc !important; border: 2px solid #0d9488 !important; box-shadow: 0 25px 65px rgba(0,0,0,0.85) !important;" 
+         class="fixed bottom-5 left-1/2 -translate-x-1/2 w-[95%] max-w-4xl z-50 rounded-3xl p-4 sm:p-5 backdrop-blur-2xl ring-4 ring-teal-500/20 transition-all duration-300">
         
         <!-- Draggable Cockpit Handle -->
         <div id="ai-voice-drag-handle" 
-             class="flex items-center justify-between pb-2 mb-3 border-b border-teal-500/30 cursor-move active:cursor-grabbing select-none text-[11px] text-teal-300 font-mono">
-            <span class="flex items-center gap-2 font-bold tracking-wider uppercase text-teal-200">
+             style="border-bottom: 1px solid #134e4a !important;"
+             class="flex items-center justify-between pb-2 mb-3 cursor-move active:cursor-grabbing select-none text-[11px] font-mono">
+            <span class="flex items-center gap-2 font-black tracking-wider uppercase" style="color: #2dd4bf !important;">
                 <i class="fas fa-grip-lines text-teal-400"></i>
-                <span>NETPACK AI Logistics Copilot &bull; Drag Anywhere</span>
+                <span>CHANDA &bull; NETPACK AI Logistics Copilot &bull; Drag Anywhere</span>
             </span>
             <div class="flex items-center gap-2">
                 <button type="button" onclick="window.resetAiBarPosition(event)" 
                         title="Snap Copilot back to bottom dock"
-                        class="px-2 py-0.5 rounded-md bg-teal-900/60 hover:bg-teal-800 text-[10px] text-teal-200 border border-teal-500/30 transition flex items-center gap-1 cursor-pointer">
+                        style="background: #134e4a !important; color: #ccfbf1 !important; border: 1px solid #14b8a6 !important;"
+                        class="px-2.5 py-0.5 rounded-md text-[10px] font-bold transition flex items-center gap-1 cursor-pointer">
                     <i class="fas fa-anchor text-[9px]"></i>
                     <span>Snap to Bottom</span>
                 </button>
                 <button type="button" onclick="window.toggleAiBarMinimize(event)" id="ai-bar-min-btn" 
                         title="Minimize / Expand Copilot"
-                        class="w-6 h-6 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs flex items-center justify-center transition cursor-pointer">
+                        style="background: #1e293b !important; color: #f8fafc !important;"
+                        class="w-6 h-6 rounded-md text-xs flex items-center justify-center transition cursor-pointer hover:bg-slate-700">
                     <i class="fas fa-minus text-[10px]"></i>
                 </button>
             </div>
@@ -870,26 +873,26 @@ document.addEventListener('alpine:init', () => {
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <!-- Left Info -->
             <div class="flex items-center gap-3.5 min-w-0">
-                <div class="w-10 h-10 rounded-2xl bg-teal-500/20 border border-teal-500/40 flex items-center justify-center text-lg text-teal-300 flex-shrink-0" id="ai-voice-avatar-icon">
-                    <i class="fas fa-microphone-lines text-teal-400 animate-pulse"></i>
+                <div class="w-11 h-11 rounded-2xl flex items-center justify-center text-lg flex-shrink-0 shadow-md" id="ai-voice-avatar-icon" style="background: rgba(13, 148, 136, 0.25) !important; border: 1px solid #14b8a6 !important; color: #5eead4 !important;">
+                    <i class="fas fa-microphone-lines animate-pulse"></i>
                 </div>
                 <div class="min-w-0">
                     <div class="flex items-center gap-2 flex-wrap">
-                        <span class="px-2 py-0.5 rounded text-[10px] font-bold font-mono uppercase bg-teal-500 text-slate-950" id="ai-voice-step-badge">
-                            Field 1 of 9
+                        <span class="px-2 py-0.5 rounded text-[10px] font-black font-mono uppercase" id="ai-voice-step-badge" style="background: #14b8a6 !important; color: #020617 !important;">
+                            Field 1 of 18
                         </span>
-                        <span class="text-xs font-black text-white truncate" id="ai-voice-step-title">
+                        <span class="text-xs font-black truncate" id="ai-voice-step-title" style="color: #ffffff !important;">
                             Shipment Service Category
                         </span>
-                        <span class="text-[10px] text-teal-300/80 font-mono" id="ai-voice-status-indicator">
+                        <span class="text-[10px] font-mono font-bold" id="ai-voice-status-indicator" style="color: #34d399 !important;">
                             ● Speaking question...
                         </span>
                     </div>
-                    <p class="text-xs text-teal-200/90 font-medium mt-0.5 line-clamp-1" id="ai-voice-current-prompt">
+                    <p class="text-xs font-bold mt-1 leading-snug" id="ai-voice-current-prompt" style="color: #f1f5f9 !important; text-shadow: 0 1px 2px rgba(0,0,0,0.6);">
                         Loading question...
                     </p>
-                    <p class="text-[11px] text-slate-400 font-mono mt-0.5 italic truncate" id="ai-voice-transcript-preview" style="display: none;">
-                        🎙️ Transcribed: <span class="text-emerald-300 font-bold" id="ai-voice-transcript-text"></span>
+                    <p class="text-[11px] font-mono mt-0.5 italic truncate" id="ai-voice-transcript-preview" style="display: none; color: #6ee7b7 !important;">
+                        🎙️ Transcribed: <span class="font-bold" id="ai-voice-transcript-text" style="color: #34d399 !important;"></span>
                     </p>
                 </div>
             </div>
@@ -897,7 +900,7 @@ document.addEventListener('alpine:init', () => {
             <!-- Equalizer & Actions -->
             <div class="flex items-center gap-2 self-end md:self-center flex-shrink-0">
                 <!-- Soundwave Visualizer Bars -->
-                <div class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-950/80 border border-slate-800 h-9" id="ai-voice-equalizer" title="Microphone Audio Volume Meter">
+                <div class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border h-9" id="ai-voice-equalizer" title="Microphone Audio Volume Meter" style="background: #020617 !important; border-color: #1e293b !important;">
                     <span class="eq-bar w-1.5 h-3 bg-teal-400 rounded-full transition-all duration-75"></span>
                     <span class="eq-bar w-1.5 h-5 bg-emerald-400 rounded-full transition-all duration-75"></span>
                     <span class="eq-bar w-1.5 h-2 bg-teal-300 rounded-full transition-all duration-75"></span>
@@ -922,19 +925,22 @@ document.addEventListener('alpine:init', () => {
                 </button>
 
                 <button type="button" onclick="window.voiceAssistantReask()" title="Re-ask current question"
-                        class="p-2 sm:px-2.5 sm:py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer">
+                        style="background: #1e293b !important; color: #f8fafc !important;"
+                        class="p-2 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer hover:bg-slate-700">
                     <i class="fas fa-rotate-right text-[10px]"></i>
                     <span class="hidden sm:inline">Repeat</span>
                 </button>
 
                 <button type="button" onclick="window.voiceAssistantPrev()" title="Go to previous field"
-                        class="p-2 sm:px-2.5 sm:py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer">
+                        style="background: #1e293b !important; color: #f8fafc !important;"
+                        class="p-2 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer hover:bg-slate-700">
                     <i class="fas fa-arrow-left text-[10px]"></i>
                     <span class="hidden sm:inline">Back</span>
                 </button>
 
                 <button type="button" onclick="window.voiceAssistantNext()" title="Skip to next field"
-                        class="p-2 sm:px-2.5 sm:py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer">
+                        style="background: #1e293b !important; color: #f8fafc !important;"
+                        class="p-2 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer hover:bg-slate-700">
                     <span class="hidden sm:inline">Skip</span>
                     <i class="fas fa-arrow-right text-[10px]"></i>
                 </button>
@@ -948,21 +954,23 @@ document.addEventListener('alpine:init', () => {
         </div>
 
         <!-- Inline Quick Answer / Keyboard Fallback Bar -->
-        <div class="mt-3 pt-3 border-t border-slate-800/80 flex items-center gap-2">
-            <div class="text-[11px] text-slate-400 font-medium flex items-center gap-1.5 flex-shrink-0">
+        <div class="mt-3 pt-3 flex items-center gap-2" id="ai-voice-quick-input-row" style="border-top: 1px solid #1e293b !important;">
+            <div class="text-[11px] font-bold flex items-center gap-1.5 flex-shrink-0" style="color: #94a3b8 !important;">
                 <i class="fas fa-keyboard text-teal-400"></i>
                 <span class="hidden sm:inline">Or type answer:</span>
             </div>
             <input type="text" id="ai-voice-quick-input" 
                    placeholder="Speak now into your microphone, or type directly into form boxes..." 
                    onkeydown="if(event.key === 'Enter'){ event.preventDefault(); window.submitManualVoiceStepInput(); }"
-                   class="flex-1 bg-slate-950/70 border border-slate-700 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 text-xs text-white rounded-lg px-3 py-1.5 placeholder-slate-500 outline-none">
+                   style="background: #0f172a !important; color: #ffffff !important; border: 1px solid #334155 !important;"
+                   class="flex-1 text-xs rounded-lg px-3 py-2 placeholder-slate-400 outline-none focus:ring-2 focus:ring-teal-400">
             <button type="button" onclick="window.submitManualVoiceStepInput()"
-                    class="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-slate-950 text-xs font-bold transition flex items-center gap-1 cursor-pointer">
+                    style="background: #0d9488 !important; color: #ffffff !important;"
+                    class="px-3.5 py-2 rounded-lg text-xs font-black transition flex items-center gap-1 cursor-pointer hover:opacity-90">
                 <span>Apply</span>
                 <i class="fas fa-arrow-right text-[10px]"></i>
             </button>
-            <span class="hidden lg:inline text-[10px] text-teal-300/80 font-mono ml-1">
+            <span class="hidden lg:inline text-[10px] font-mono ml-1" style="color: #5eead4 !important;">
                 Tip: Direct typing in form boxes is also accepted!
             </span>
         </div>
@@ -3472,6 +3480,11 @@ document.addEventListener('alpine:init', () => {
         return canonical;
     }
 
+    function getAlpineConsoleData() {
+        const el = document.querySelector('[x-data]');
+        return el && el._x_dataStack ? el._x_dataStack[0] : null;
+    }
+
     function buildVoiceStepsForMode(mode) {
         const isIntl = mode === 'international';
         const isEcom = mode === 'ecommerce';
@@ -3481,8 +3494,17 @@ document.addEventListener('alpine:init', () => {
             {
                 id: 'mode',
                 title: 'Shipment Service Category',
+                getValue: function() {
+                    const cur = document.getElementById('shipment_type')?.value || 'domestic';
+                    if (cur === 'ecommerce') return 'E-Commerce Rider & COD';
+                    if (cur === 'international') return 'International Air Cargo';
+                    return 'Domestic Express Delivery across Nepal';
+                },
                 prompt: function(ctx) {
-                    return `Namaste ${ctx.clientPreferredName}! Which of our 3 services would you like to book? 1: Domestic Delivery across Nepal, 2: International Air Cargo, or 3: E-Commerce Delivery with Cash on Delivery?`;
+                    return `Namaste ${ctx.clientPreferredName}! I am your Netpack AI Logistics Copilot, and I am absolutely delighted to assist you with booking your consignment today. Which of our 3 service categories would you like to book? 1: Domestic Delivery across Nepal, 2: International Air Cargo, or 3: E-Commerce Delivery with Cash on Delivery?`;
+                },
+                confirmPrompt: function(ctx, curVal) {
+                    return `I see that your service category is currently selected as "${curVal}". Does that look perfect to you, or would you like to switch to a different service?`;
                 },
                 targetSelector: function() {
                     const cur = document.getElementById('shipment_type')?.value;
@@ -3512,10 +3534,18 @@ document.addEventListener('alpine:init', () => {
             {
                 id: 'service_type',
                 title: isIntl ? 'International Air Courier Mode' : (isEcom ? 'E-Commerce Rider SLA' : 'Domestic Service Tier SLA'),
+                getValue: function() {
+                    const selId = isIntl ? 'international_service_type' : (isEcom ? 'ecommerce_service_type' : 'domestic_service_type');
+                    const sel = document.getElementById(selId);
+                    return sel && sel.selectedIndex >= 0 ? (sel.options[sel.selectedIndex]?.text?.trim() || sel.value) : '';
+                },
                 prompt: function() {
-                    if (isIntl) return 'Which courier mode do you require? 1: Priority Express Service (3-4 working days), or 2: Economy Air Cargo (6-8 working days)?';
+                    if (isIntl) return 'Which international courier mode do you require? 1: Priority Express Service (3-4 working days), or 2: Economy Air Cargo (6-8 working days)?';
                     if (isEcom) return 'Which rider SLA do you need? 1: Instant Flash Dispatch within 60-90 minutes, 2: Same-Day Delivery, or 3: Standard Next-Day Collection?';
                     return 'Which delivery speed would you like? 1: Standard 1-2 days normal transit, 2: Flash 1-2 hours urgent, 3: Same-Day express, or 4: Himalayan remote?';
+                },
+                confirmPrompt: function(ctx, curVal) {
+                    return `Your delivery speed SLA is currently set to "${curVal}". Does that timeline work nicely for you, or would you like to update it?`;
                 },
                 targetSelector: function() {
                     if (isIntl) return document.getElementById('international_service_type');
@@ -3551,63 +3581,219 @@ document.addEventListener('alpine:init', () => {
                 }
             },
 
-            // Field 3: Sender Contact Person
+            // Field 3: Package Classification
             {
-                id: 'sender_name',
-                title: isEcom ? 'Store / Merchant Contact Name' : 'Sender Contact Person',
+                id: 'package_type',
+                title: isIntl ? 'Package Packaging' : (isEcom ? 'E-Commerce Package Type' : 'Package Classification'),
+                getValue: function() {
+                    const sel = isIntl 
+                        ? document.querySelector('select[name="intl_package_type"]')
+                        : (isEcom ? document.querySelector('select[name="ecom_package_type"]') : document.querySelector('select[name="package_type"]'));
+                    return sel && sel.selectedIndex >= 0 ? (sel.options[sel.selectedIndex]?.text?.trim() || sel.value) : '';
+                },
                 prompt: function() {
-                    return isEcom 
-                        ? 'Who is the store or merchant contact person for package pickup?' 
-                        : 'Who is the sender or contact person for parcel pickup?';
+                    return 'What is the package classification for this consignment? For example: Standard Parcel, Heavy Box Carton, Documents or Legal Envelopes, or Fragile Items?';
+                },
+                confirmPrompt: function(ctx, curVal) {
+                    return `Your package classification is currently set to "${curVal}". Would you like to keep this, or update it?`;
                 },
                 targetSelector: function() {
-                    return document.getElementById('pickup_name_0') || document.querySelector('input[name="pickup_name[]"]') || document.querySelector('input[name="sender_name"]');
+                    return isIntl 
+                        ? document.querySelector('select[name="intl_package_type"]')
+                        : (isEcom ? document.querySelector('select[name="ecom_package_type"]') : document.querySelector('select[name="package_type"]'));
                 },
                 parse: function(text) {
-                    return text.replace(/^(my name is|the name is|contact is|sender is|this is)\s+/i, '').trim();
+                    const t = text.toLowerCase();
+                    if (t.includes('box') || t.includes('carton') || t.includes('heavy')) return 'box';
+                    if (t.includes('envelope') || t.includes('document') || t.includes('letter') || t.includes('kagaj')) return 'envelope';
+                    if (t.includes('fragile') || t.includes('glass') || t.includes('electronic')) return 'fragile';
+                    if (t.includes('grocery') || t.includes('food')) return 'grocery';
+                    return 'parcel';
                 },
                 apply: function(val) {
-                    const el = document.getElementById('pickup_name_0') || document.querySelector('input[name="pickup_name[]"]') || document.querySelector('input[name="sender_name"]');
-                    if (el) typeIntoElement(el, val);
+                    const sel = isIntl 
+                        ? document.querySelector('select[name="intl_package_type"]')
+                        : (isEcom ? document.querySelector('select[name="ecom_package_type"]') : document.querySelector('select[name="package_type"]'));
+                    if (sel) {
+                        sel.value = val;
+                        sel.dispatchEvent(new Event('change', { bubbles: true }));
+                        sel.classList.add('ring-2', 'ring-emerald-500', 'bg-emerald-50/20');
+                        setTimeout(() => sel.classList.remove('ring-2', 'ring-emerald-500', 'bg-emerald-50/20'), 1500);
+                        return sel.options[sel.selectedIndex]?.text || val;
+                    }
                     return val;
                 }
             },
 
-            // Field 4: Sender Phone Number
+            // Field 4: Collection Method (Doorstep Pickup vs Station Drop-off)
             {
-                id: 'sender_phone',
-                title: isEcom ? 'Store Contact Mobile Number' : 'Sender Mobile Phone',
+                id: 'collection_method',
+                title: 'Package Collection Method',
+                getValue: function() {
+                    const input = document.getElementById('schedule_doorstep_pickup');
+                    return input && input.value === '1' ? 'Doorstep Courier Collection' : 'Station / Counter Drop-off';
+                },
                 prompt: function() {
-                    return 'What is the sender contact mobile phone number in Nepal?';
+                    return 'How would you prefer your packages to be collected? Option 1: Doorstep Courier Collection where our rider fleet picks them up directly from you, or Option 2: Station Counter Drop-off where you drop them off at a Netpack hub?';
+                },
+                confirmPrompt: function(ctx, curVal) {
+                    return `Your collection method is currently selected as "${curVal}". Would you like to keep this, or switch to the other option?`;
                 },
                 targetSelector: function() {
-                    return document.getElementById('pickup_phone_0') || document.querySelector('input[name="pickup_phone[]"]') || document.querySelector('input[name="sender_phone"]');
+                    return document.getElementById('schedule_doorstep_pickup');
                 },
                 parse: function(text) {
-                    return parseSpokenPhoneNumber(text);
+                    const t = text.toLowerCase();
+                    if (t.includes('drop') || t.includes('station') || t.includes('counter') || t.includes('self') || t.includes('hub') || t.includes('branch')) {
+                        return false;
+                    }
+                    return true;
                 },
-                apply: function(val) {
-                    const el = document.getElementById('pickup_phone_0') || document.querySelector('input[name="pickup_phone[]"]') || document.querySelector('input[name="sender_phone"]');
-                    if (el) typeIntoElement(el, val);
-                    return val;
+                apply: function(isPickup) {
+                    const alpine = getAlpineConsoleData();
+                    if (alpine && typeof alpine.setDoorstepPickup === 'function') {
+                        alpine.setDoorstepPickup(isPickup);
+                    } else {
+                        const input = document.getElementById('schedule_doorstep_pickup');
+                        if (input) input.value = isPickup ? '1' : '0';
+                    }
+                    return isPickup ? 'Doorstep Courier Collection' : 'Station / Counter Drop-off';
                 }
             },
 
-            // Field 5: Pickup Street Address & Landmark
+            // Field 5: Preferred Collection Time Slot
             {
-                id: 'pickup_address',
-                title: isEcom ? 'Store / Warehouse Pickup Address' : 'Full Pickup Street Address & Landmark',
+                id: 'scheduled_pickup_time',
+                title: 'Preferred Collection Time Slot',
+                getValue: function() {
+                    const el = document.querySelector('input[name="scheduled_pickup_time"]');
+                    return el ? el.value.trim() : '';
+                },
                 prompt: function() {
-                    return 'Please state the detailed street address, ward, or landmark for courier collection in Nepal.';
+                    return 'What is your preferred collection date and time slot for our courier rider to arrive?';
+                },
+                confirmPrompt: function(ctx, curVal) {
+                    return `Your scheduled pickup time is currently set to "${curVal}". Does that time work perfectly for you, or would you like to adjust it?`;
                 },
                 targetSelector: function() {
-                    return document.getElementById('pickup_address_0') || document.querySelector('textarea[name="pickup_address[]"]') || document.querySelector('input[name="sender_address"]');
+                    return document.querySelector('input[name="scheduled_pickup_time"]');
                 },
                 parse: function(text) {
                     return text.trim();
                 },
                 apply: function(val) {
-                    const el = document.getElementById('pickup_address_0') || document.querySelector('textarea[name="pickup_address[]"]') || document.querySelector('input[name="sender_address"]');
+                    const el = document.querySelector('input[name="scheduled_pickup_time"]');
+                    if (el) typeIntoElement(el, val);
+                    return val;
+                }
+            },
+
+            // Field 6: Pickup Notes for Rider
+            {
+                id: 'pickup_notes',
+                title: 'Rider Pickup Notes',
+                getValue: function() {
+                    const el = document.querySelector('input[name="pickup_notes"]');
+                    return el ? el.value.trim() : '';
+                },
+                prompt: function() {
+                    return 'Do you have any special instructions or directions for our courier rider? For example: 2nd floor, ring doorbell, or call upon arrival. Or say skip if none.';
+                },
+                confirmPrompt: function(ctx, curVal) {
+                    return `Your rider pickup instructions are currently recorded as: "${curVal}". Would you like to keep this, or update it?`;
+                },
+                targetSelector: function() {
+                    return document.querySelector('input[name="pickup_notes"]');
+                },
+                parse: function(text) {
+                    if (text.toLowerCase().includes('skip') || text.toLowerCase().includes('none')) return '';
+                    return text.trim();
+                },
+                apply: function(val) {
+                    const el = document.querySelector('input[name="pickup_notes"]');
+                    if (el && val) typeIntoElement(el, val);
+                    return val || 'None';
+                }
+            },
+
+            // Field 7: Sender Contact Person
+            {
+                id: 'sender_name',
+                title: isEcom ? 'Store / Merchant Contact Name' : 'Sender Contact Person',
+                getValue: function() {
+                    const el = document.getElementById('pickup_name_0') || document.getElementById('sender_name_input') || document.querySelector('input[name="pickup_name[]"]');
+                    return el ? el.value.trim() : '';
+                },
+                prompt: function() {
+                    return isEcom 
+                        ? 'Who is the merchant or store contact person for parcel pickup?' 
+                        : 'Who is the sender or contact person for parcel pickup?';
+                },
+                confirmPrompt: function(ctx, curVal) {
+                    return `I see the sender contact person is currently set to "${curVal}". Does that look correct, or would you like to update the name?`;
+                },
+                targetSelector: function() {
+                    return document.getElementById('pickup_name_0') || document.getElementById('sender_name_input') || document.querySelector('input[name="pickup_name[]"]');
+                },
+                parse: function(text) {
+                    return text.replace(/^(my name is|the name is|contact is|sender is|this is)\s+/i, '').trim();
+                },
+                apply: function(val) {
+                    const el = document.getElementById('pickup_name_0') || document.getElementById('sender_name_input') || document.querySelector('input[name="pickup_name[]"]');
+                    if (el) typeIntoElement(el, val);
+                    return val;
+                }
+            },
+
+            // Field 8: Sender Mobile Phone
+            {
+                id: 'sender_phone',
+                title: isEcom ? 'Store Contact Mobile Number' : 'Sender Mobile Phone',
+                getValue: function() {
+                    const el = document.getElementById('pickup_phone_0') || document.getElementById('sender_phone_input') || document.querySelector('input[name="pickup_phone[]"]');
+                    return el ? el.value.trim() : '';
+                },
+                prompt: function() {
+                    return 'What is the active Nepal mobile phone number for sender pickup coordination?';
+                },
+                confirmPrompt: function(ctx, curVal) {
+                    return `The sender mobile phone is currently recorded as "${curVal}". Is this number correct, or would you like to update it?`;
+                },
+                targetSelector: function() {
+                    return document.getElementById('pickup_phone_0') || document.getElementById('sender_phone_input') || document.querySelector('input[name="pickup_phone[]"]');
+                },
+                parse: function(text) {
+                    return parseSpokenPhoneNumber(text);
+                },
+                apply: function(val) {
+                    const el = document.getElementById('pickup_phone_0') || document.getElementById('sender_phone_input') || document.querySelector('input[name="pickup_phone[]"]');
+                    if (el) typeIntoElement(el, val);
+                    return val;
+                }
+            },
+
+            // Field 9: Pickup Street Address & Landmark
+            {
+                id: 'pickup_address',
+                title: isEcom ? 'Store / Warehouse Pickup Address' : 'Full Pickup Street Address & Landmark',
+                getValue: function() {
+                    const el = document.getElementById('pickup_address_0') || document.getElementById('sender_address_input') || document.querySelector('textarea[name="pickup_address[]"]');
+                    return el ? el.value.trim() : '';
+                },
+                prompt: function() {
+                    return 'Please provide the detailed street address, ward number, or nearby landmark for collection in Nepal.';
+                },
+                confirmPrompt: function(ctx, curVal) {
+                    return `The pickup address is currently set to "${curVal}". Does that look accurate, or would you like to modify it?`;
+                },
+                targetSelector: function() {
+                    return document.getElementById('pickup_address_0') || document.getElementById('sender_address_input') || document.querySelector('textarea[name="pickup_address[]"]');
+                },
+                parse: function(text) {
+                    return text.trim();
+                },
+                apply: function(val) {
+                    const el = document.getElementById('pickup_address_0') || document.getElementById('sender_address_input') || document.querySelector('textarea[name="pickup_address[]"]');
                     if (el) {
                         const current = el.value.trim();
                         const finalVal = current && !current.toLowerCase().includes(val.toLowerCase()) ? `${val}, ${current}` : val;
@@ -3621,12 +3807,19 @@ document.addEventListener('alpine:init', () => {
         // Delivery Destination Fields (Mode-specific)
         if (isIntl) {
             steps.push(
-                // Field 6: Destination Country
+                // Field 10: Destination Country
                 {
                     id: 'receiver_country',
                     title: 'Destination Country',
+                    getValue: function() {
+                        const sel = document.getElementById('receiver_country');
+                        return sel && sel.value ? sel.value.trim() : '';
+                    },
                     prompt: function() {
                         return 'Which destination country is this international shipment heading to? For example: Poland, United States, United Kingdom, Australia, or Germany.';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `The destination country is currently set to "${curVal}". Is that correct, or is the shipment heading to another country?`;
                     },
                     targetSelector: function() {
                         return document.getElementById('receiver_country');
@@ -3653,16 +3846,24 @@ document.addEventListener('alpine:init', () => {
                             select.dispatchEvent(new Event('change', { bubbles: true }));
                             select.classList.add('ring-2', 'ring-emerald-500', 'bg-emerald-50/20');
                             setTimeout(() => select.classList.remove('ring-2', 'ring-emerald-500', 'bg-emerald-50/20'), 1500);
+                            if (typeof updateInternationalDialPrefix === 'function') updateInternationalDialPrefix();
                         }
                         return val;
                     }
                 },
-                // Field 7: Receiver Name / Company
+                // Field 11: Overseas Recipient Name / Company
                 {
                     id: 'receiver_name',
                     title: 'Overseas Recipient Name / Company',
+                    getValue: function() {
+                        const el = document.querySelector('input[name="receiver_name"]');
+                        return el ? el.value.trim() : '';
+                    },
                     prompt: function() {
                         return 'What is the full name or company name of the recipient overseas?';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `The recipient name is currently set to "${curVal}". Does that look correct, or would you like to update it?`;
                     },
                     targetSelector: function() {
                         return document.querySelector('input[name="receiver_name"]');
@@ -3676,12 +3877,19 @@ document.addEventListener('alpine:init', () => {
                         return val;
                     }
                 },
-                // Field 7b: Overseas Recipient Phone Number
+                // Field 12: Overseas Recipient Phone Number
                 {
                     id: 'receiver_phone',
                     title: 'Overseas Recipient Phone Number',
+                    getValue: function() {
+                        const el = document.getElementById('receiver_phone') || document.querySelector('input[name="receiver_phone"]');
+                        return el ? el.value.trim() : '';
+                    },
                     prompt: function() {
                         return 'What is the contact mobile or telephone number of the overseas recipient?';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `The overseas contact phone is currently recorded as "${curVal}". Is this correct, or would you like to update it?`;
                     },
                     targetSelector: function() {
                         return document.getElementById('receiver_phone') || document.querySelector('input[name="receiver_phone"]');
@@ -3695,12 +3903,46 @@ document.addEventListener('alpine:init', () => {
                         return val;
                     }
                 },
-                // Field 8: Destination City
+                // Field 13: Consignee Tax ID / EORI / VAT
+                {
+                    id: 'receiver_tax_id',
+                    title: 'Consignee Tax ID / EORI / VAT',
+                    getValue: function() {
+                        const el = document.getElementById('receiver_tax_id');
+                        return el ? el.value.trim() : '';
+                    },
+                    prompt: function() {
+                        return 'If applicable for customs, what is the consignee’s Tax ID, VAT, or EORI number? Or say skip if personal.';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `Consignee Tax ID is currently recorded as "${curVal}". Would you like to keep this, or update it?`;
+                    },
+                    targetSelector: function() {
+                        return document.getElementById('receiver_tax_id');
+                    },
+                    parse: function(text) {
+                        if (text.toLowerCase().includes('skip') || text.toLowerCase().includes('none')) return '';
+                        return text.trim();
+                    },
+                    apply: function(val) {
+                        const el = document.getElementById('receiver_tax_id');
+                        if (el && val) typeIntoElement(el, val);
+                        return val || 'None';
+                    }
+                },
+                // Field 14: Destination City Overseas
                 {
                     id: 'receiver_city',
-                    title: 'Destination City',
+                    title: 'Destination City Overseas',
+                    getValue: function() {
+                        const el = document.querySelector('input[name="receiver_city"]');
+                        return el ? el.value.trim() : '';
+                    },
                     prompt: function() {
-                        return 'What is the destination city overseas? For example: Warsaw, London, or New York.';
+                        return 'What is the destination city overseas? For example: Warsaw, London, Sydney, or New York.';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `The destination city is currently set to "${curVal}". Is that correct, or heading to another city?`;
                     },
                     targetSelector: function() {
                         return document.querySelector('input[name="receiver_city"]');
@@ -3714,12 +3956,46 @@ document.addEventListener('alpine:init', () => {
                         return val;
                     }
                 },
-                // Field 9: Postal / ZIP Code
+                // Field 15: State / Province Overseas
+                {
+                    id: 'receiver_state',
+                    title: 'Destination State / Province',
+                    getValue: function() {
+                        const el = document.querySelector('input[name="receiver_state"]');
+                        return el ? el.value.trim() : '';
+                    },
+                    prompt: function() {
+                        return 'What is the state, province, or region overseas? For example: Mazowieckie, California, or Ontario. Or say skip.';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `The destination state or province is currently "${curVal}". Is that correct?`;
+                    },
+                    targetSelector: function() {
+                        return document.querySelector('input[name="receiver_state"]');
+                    },
+                    parse: function(text) {
+                        if (text.toLowerCase().includes('skip') || text.toLowerCase().includes('none')) return '';
+                        return text.trim();
+                    },
+                    apply: function(val) {
+                        const el = document.querySelector('input[name="receiver_state"]');
+                        if (el && val) typeIntoElement(el, val);
+                        return val || 'None';
+                    }
+                },
+                // Field 16: Postal / ZIP Code
                 {
                     id: 'receiver_postal_code',
                     title: 'Postal / ZIP Code',
+                    getValue: function() {
+                        const el = document.querySelector('input[name="receiver_postal_code"]');
+                        return el ? el.value.trim() : '';
+                    },
                     prompt: function() {
-                        return 'What is the postal or ZIP code for the destination address? Or say skip if unknown.';
+                        return 'What is the postal or ZIP code for the overseas destination address? Or say skip if unknown.';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `The postal code is currently set to "${curVal}". Does that look correct, or would you like to update it?`;
                     },
                     targetSelector: function() {
                         return document.querySelector('input[name="receiver_postal_code"]');
@@ -3734,12 +4010,19 @@ document.addEventListener('alpine:init', () => {
                         return val || 'Skipped';
                     }
                 },
-                // Field 10: Destination Street Address
+                // Field 17: Destination Street Address
                 {
                     id: 'receiver_street',
                     title: 'Destination Street Address',
+                    getValue: function() {
+                        const el = document.querySelector('input[name="receiver_street"]');
+                        return el ? el.value.trim() : '';
+                    },
                     prompt: function() {
                         return 'What is the full street address overseas, including building, suite, or room number?';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `The overseas street address is currently set to "${curVal}". Would you like to keep this, or update it?`;
                     },
                     targetSelector: function() {
                         return document.querySelector('input[name="receiver_street"]');
@@ -3757,33 +4040,21 @@ document.addEventListener('alpine:init', () => {
         } else {
             // Domestic or E-Commerce Destination Fields
             steps.push(
-                // Field 6: Destination District in Nepal
+                // Field 10: Recipient Full Name
                 {
-                    id: 'destination_district',
-                    title: 'Destination District in Nepal',
-                    prompt: function() {
-                        return 'Which destination district in Nepal is this package heading to? For example: Kathmandu, Jhapa, Morang, Pokhara, or Chitwan.';
-                    },
-                    targetSelector: function() {
-                        return document.getElementById('shipment_deliv_0_search') || document.getElementById('shipment_deliv_0_district') || document.getElementById('delivery_address_0');
-                    },
-                    parse: function(text) {
-                        return text.replace(/^(to|for|destination is|district is|delivered to)\s+/i, '')
-                                   .replace(/\s+(district|zilla|ma|lai|pathaune)$/i, '').trim();
-                    },
-                    apply: function(val) {
-                        const applied = selectNepalTerritoryDistrict('shipment_deliv_0', val);
-                        return applied || val;
-                    }
-                },
-                // Field 7: Recipient Full Name
-                {
-                    id: 'receiver_name',
+                    id: 'delivery_name',
                     title: isEcom ? 'Customer Full Name' : 'Recipient Full Name',
+                    getValue: function() {
+                        const el = document.getElementById('delivery_name_0') || document.querySelector('input[name="delivery_name[]"]');
+                        return el ? el.value.trim() : '';
+                    },
                     prompt: function() {
                         return isEcom 
                             ? 'What is the customer’s full name at the delivery destination?' 
                             : 'What is the full name of the recipient or consignee at the delivery destination?';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `The recipient full name is currently set to "${curVal}". Is that correct, or would you like to change it?`;
                     },
                     targetSelector: function() {
                         return document.getElementById('delivery_name_0') || document.querySelector('input[name="delivery_name[]"]');
@@ -3797,12 +4068,19 @@ document.addEventListener('alpine:init', () => {
                         return val;
                     }
                 },
-                // Field 8: Recipient Phone Number
+                // Field 11: Recipient Phone Number
                 {
-                    id: 'receiver_phone',
+                    id: 'delivery_phone',
                     title: isEcom ? 'Customer Mobile Phone' : 'Recipient Mobile Phone',
+                    getValue: function() {
+                        const el = document.getElementById('delivery_phone_0') || document.querySelector('input[name="delivery_phone[]"]');
+                        return el ? el.value.trim() : '';
+                    },
                     prompt: function() {
                         return 'What is the recipient’s mobile phone number for delivery coordination in Nepal?';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `The recipient mobile phone number is recorded as "${curVal}". Is that correct, or would you like to update it?`;
                     },
                     targetSelector: function() {
                         return document.getElementById('delivery_phone_0') || document.querySelector('input[name="delivery_phone[]"]');
@@ -3816,12 +4094,79 @@ document.addEventListener('alpine:init', () => {
                         return val;
                     }
                 },
-                // Field 9: Delivery Street Address & Landmark
+                // Field 12: Destination Province in Nepal
+                {
+                    id: 'delivery_province',
+                    title: 'Destination Province in Nepal',
+                    getValue: function() {
+                        const sel = document.getElementById('shipment_deliv_0_province') || document.querySelector('select[name="delivery_province[]"]');
+                        return sel && sel.selectedIndex >= 0 && sel.value ? (sel.options[sel.selectedIndex]?.text?.trim() || sel.value) : '';
+                    },
+                    prompt: function() {
+                        return 'Which destination province in Nepal is this package heading to? For example: Bagmati, Koshi, Madhesh, Gandaki, Lumbini, Karnali, or Sudurpashchim.';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `The destination province is currently set to "${curVal}". Is that correct, or heading to another province?`;
+                    },
+                    targetSelector: function() {
+                        return document.getElementById('shipment_deliv_0_province') || document.querySelector('select[name="delivery_province[]"]');
+                    },
+                    parse: function(text) {
+                        return text.trim();
+                    },
+                    apply: function(val) {
+                        const sel = document.getElementById('shipment_deliv_0_province');
+                        if (sel) {
+                            for (let opt of sel.options) {
+                                if (opt.value && opt.value.toLowerCase().includes(val.toLowerCase())) {
+                                    sel.value = opt.value;
+                                    sel.dispatchEvent(new Event('change', { bubbles: true }));
+                                    break;
+                                }
+                            }
+                        }
+                        return val;
+                    }
+                },
+                // Field 13: Destination District in Nepal
+                {
+                    id: 'destination_district',
+                    title: 'Destination District in Nepal',
+                    getValue: function() {
+                        const el = document.getElementById('shipment_deliv_0_district') || document.getElementById('shipment_deliv_0_search');
+                        return el ? el.value.trim() : '';
+                    },
+                    prompt: function() {
+                        return 'Which destination district in Nepal is this package heading to? For example: Kathmandu, Jhapa, Morang, Pokhara, Chitwan, or Rupandehi.';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `The destination district is currently set to "${curVal}". Does that look correct, or would you like to change districts?`;
+                    },
+                    targetSelector: function() {
+                        return document.getElementById('shipment_deliv_0_search') || document.getElementById('shipment_deliv_0_district') || document.getElementById('delivery_address_0');
+                    },
+                    parse: function(text) {
+                        return text.replace(/^(to|for|destination is|district is|delivered to)\s+/i, '')
+                                   .replace(/\s+(district|zilla|ma|lai|pathaune)$/i, '').trim();
+                    },
+                    apply: function(val) {
+                        const applied = selectNepalTerritoryDistrict('shipment_deliv_0', val);
+                        return applied || val;
+                    }
+                },
+                // Field 14: Delivery Street Address & Landmark
                 {
                     id: 'delivery_address',
                     title: 'Delivery Street Address & Landmark',
+                    getValue: function() {
+                        const el = document.getElementById('delivery_address_0') || document.querySelector('textarea[name="delivery_address[]"]');
+                        return el ? el.value.trim() : '';
+                    },
                     prompt: function() {
-                        return 'What is the detailed street address, ward, or landmark for delivery drop-off?';
+                        return 'What is the detailed street address, ward number, or nearby landmark for delivery drop-off?';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `The delivery drop-off address is currently set to "${curVal}". Would you like to keep this, or update it?`;
                     },
                     targetSelector: function() {
                         return document.getElementById('delivery_address_0') || document.querySelector('textarea[name="delivery_address[]"]');
@@ -3842,96 +4187,704 @@ document.addEventListener('alpine:init', () => {
             );
         }
 
-        // Section 4 Cargo Specifications (All Modes)
-        steps.push(
-            // Cargo Weight
-            {
-                id: 'weight',
-                title: 'Consignment Gross Weight (KG)',
-                prompt: function() {
-                    return 'What is the total weight of the package in kilograms? For example: 2 kg or 20 kg.';
+        // Section 4: Cargo Specifications & Documentation
+        if (isEcom) {
+            // E-Commerce Simple Cargo Specifications
+            steps.push(
+                // Field 15: Cargo Weight
+                {
+                    id: 'weight',
+                    title: 'Parcel Gross Weight (KG)',
+                    getValue: function() {
+                        const el = document.getElementById('weight-input') || document.querySelector('input[name="weight"]');
+                        return el && el.value ? el.value.trim() + ' KG' : '';
+                    },
+                    prompt: function() {
+                        return 'What is the total weight of the package in kilograms? For example: 1.5 kg or 3 kg.';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `The package weight is currently recorded as "${curVal}". Does that look accurate, or would you like to change it?`;
+                    },
+                    targetSelector: function() {
+                        return document.getElementById('weight-input') || document.querySelector('input[name="weight"]');
+                    },
+                    parse: function(text) {
+                        return parseSpokenWeight(text);
+                    },
+                    apply: function(val) {
+                        const el = document.getElementById('weight-input') || document.querySelector('input[name="weight"]');
+                        if (el) {
+                            typeIntoElement(el, val.toString(), () => {
+                                if (typeof calculateVolumetricWeight === 'function') calculateVolumetricWeight();
+                                if (typeof updateSummaryStats === 'function') updateSummaryStats();
+                            });
+                        }
+                        return val + ' KG';
+                    }
                 },
-                targetSelector: function() {
-                    return document.getElementById('weight-input') || document.querySelector('input[name="weight"]');
-                },
-                parse: function(text) {
-                    return parseSpokenWeight(text);
-                },
-                apply: function(val) {
-                    const el = document.getElementById('weight-input') || document.querySelector('input[name="weight"]');
-                    if (el) {
-                        typeIntoElement(el, val.toString(), () => {
-                            if (typeof calculateVolumetricWeight === 'function') calculateVolumetricWeight();
-                            if (typeof updateSummaryStats === 'function') updateSummaryStats();
-                            const alpineEl = document.querySelector('[x-data]');
-                            if (alpineEl && alpineEl._x_dataStack && alpineEl._x_dataStack[0] && alpineEl._x_dataStack[0].boxes && alpineEl._x_dataStack[0].boxes[0]) {
-                                alpineEl._x_dataStack[0].boxes[0].weight_kg = parseFloat(val);
-                                if (typeof alpineEl._x_dataStack[0].syncCargoWeight === 'function') alpineEl._x_dataStack[0].syncCargoWeight();
+                // Field 16: Cargo Dimensions
+                {
+                    id: 'dimensions',
+                    title: 'Package Dimensions (L x W x H cm)',
+                    getValue: function() {
+                        const l = document.getElementById('length-input')?.value;
+                        const w = document.getElementById('width-input')?.value;
+                        const h = document.getElementById('height-input')?.value;
+                        return (l && w && h) ? `${l} × ${w} × ${h} cm` : '';
+                    },
+                    prompt: function() {
+                        return 'What are the box dimensions in centimeters, length by width by height? Or say skip if standard.';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `The package dimensions are currently "${curVal}". Would you like to keep these, or update them?`;
+                    },
+                    targetSelector: function() {
+                        return document.getElementById('length-input');
+                    },
+                    parse: function(text) {
+                        return parseSpokenDimensions(text);
+                    },
+                    apply: function(dims) {
+                        if (!dims || typeof dims !== 'object') return 'Standard dimensions';
+                        const lEl = document.getElementById('length-input');
+                        const wEl = document.getElementById('width-input');
+                        const hEl = document.getElementById('height-input');
+                        if (lEl) lEl.value = dims.length || 20;
+                        if (wEl) wEl.value = dims.width || 20;
+                        if (hEl) hEl.value = dims.height || 20;
+                        [lEl, wEl, hEl].forEach(el => {
+                            if (el) {
+                                el.dispatchEvent(new Event('input', { bubbles: true }));
+                                el.classList.add('ring-2', 'ring-emerald-500');
+                                setTimeout(() => el.classList.remove('ring-2', 'ring-emerald-500'), 1500);
                             }
                         });
+                        if (typeof calculateVolumetricWeight === 'function') calculateVolumetricWeight();
+                        return `${dims.length} × ${dims.width} × ${dims.height} cm`;
                     }
-                    return val + ' KG';
-                }
-            },
-            // Cargo Dimensions
-            {
-                id: 'dimensions',
-                title: 'Package Dimensions (L x W x H cm)',
-                prompt: function() {
-                    return 'What are the box dimensions in centimeters? For example: 30 by 20 by 15 cm. Or say skip if standard.';
                 },
-                targetSelector: function() {
-                    return document.getElementById('length-input');
+                // Field 17: Cargo Description
+                {
+                    id: 'description',
+                    title: 'Package Contents Description',
+                    getValue: function() {
+                        const el = document.querySelector('input[name="description"]');
+                        return el ? el.value.trim() : '';
+                    },
+                    prompt: function() {
+                        return 'Briefly describe the contents of the package. For example: retail apparel, electronics, or cosmetics.';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `The contents description is currently "${curVal}". Keep this description, or would you like to update it?`;
+                    },
+                    targetSelector: function() {
+                        return document.querySelector('input[name="description"]');
+                    },
+                    parse: function(text) {
+                        return text.trim();
+                    },
+                    apply: function(val) {
+                        const el = document.querySelector('input[name="description"]');
+                        if (el) typeIntoElement(el, val);
+                        return val;
+                    }
                 },
-                parse: function(text) {
-                    return parseSpokenDimensions(text);
-                },
-                apply: function(dims) {
-                    if (!dims || typeof dims !== 'object') return 'Standard dimensions';
-                    const lEl = document.getElementById('length-input');
-                    const wEl = document.getElementById('width-input');
-                    const hEl = document.getElementById('height-input');
-                    if (lEl) lEl.value = dims.length || 20;
-                    if (wEl) wEl.value = dims.width || 20;
-                    if (hEl) hEl.value = dims.height || 20;
-                    [lEl, wEl, hEl].forEach(el => {
-                        if (el) {
-                            el.dispatchEvent(new Event('input', { bubbles: true }));
-                            el.classList.add('ring-2', 'ring-emerald-500');
-                            setTimeout(() => el.classList.remove('ring-2', 'ring-emerald-500'), 1500);
+                // Field 18: Supporting Merchant Bill Type
+                {
+                    id: 'seller_bill_type',
+                    title: 'Supporting Tax Document / Bill Type',
+                    getValue: function() {
+                        const sel = document.querySelector('select[name="seller_bill_type"]');
+                        return sel && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex]?.text?.trim() : '';
+                    },
+                    prompt: function() {
+                        return 'What type of supporting merchant document or tax receipt is being attached? For example: VAT Tax Invoice, PAN Cash Bill, or say skip.';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `The supporting bill type is currently "${curVal}". Is that correct?`;
+                    },
+                    targetSelector: function() {
+                        return document.querySelector('select[name="seller_bill_type"]');
+                    },
+                    parse: function(text) {
+                        const t = text.toLowerCase();
+                        if (t.includes('pan')) return 'pan_bill';
+                        if (t.includes('customs')) return 'customs_declaration';
+                        if (t.includes('origin')) return 'certificate_of_origin';
+                        return 'vat_invoice';
+                    },
+                    apply: function(val) {
+                        const sel = document.querySelector('select[name="seller_bill_type"]');
+                        if (sel) {
+                            sel.value = val;
+                            sel.dispatchEvent(new Event('change', { bubbles: true }));
+                            return sel.options[sel.selectedIndex]?.text || val;
                         }
-                    });
-                    if (typeof calculateVolumetricWeight === 'function') calculateVolumetricWeight();
-                    const alpineEl = document.querySelector('[x-data]');
-                    if (alpineEl && alpineEl._x_dataStack && alpineEl._x_dataStack[0] && alpineEl._x_dataStack[0].boxes && alpineEl._x_dataStack[0].boxes[0]) {
-                        alpineEl._x_dataStack[0].boxes[0].length_cm = parseFloat(dims.length || 20);
-                        alpineEl._x_dataStack[0].boxes[0].width_cm = parseFloat(dims.width || 20);
-                        alpineEl._x_dataStack[0].boxes[0].height_cm = parseFloat(dims.height || 20);
-                        if (typeof alpineEl._x_dataStack[0].syncCargoWeight === 'function') alpineEl._x_dataStack[0].syncCargoWeight();
+                        return val;
                     }
-                    return `${dims.length} × ${dims.width} × ${dims.height} cm`;
+                },
+                // Field 19: Merchant Bill Reference Number
+                {
+                    id: 'seller_bill_number',
+                    title: 'Bill / Tax Reference Number',
+                    getValue: function() {
+                        const el = document.querySelector('input[name="seller_bill_number"]');
+                        return el ? el.value.trim() : '';
+                    },
+                    prompt: function() {
+                        return 'What is the merchant bill or order reference number? Or say skip if not applicable.';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `The bill reference number is recorded as "${curVal}". Would you like to keep this, or update it?`;
+                    },
+                    targetSelector: function() {
+                        return document.querySelector('input[name="seller_bill_number"]');
+                    },
+                    parse: function(text) {
+                        if (text.toLowerCase().includes('skip') || text.toLowerCase().includes('none')) return '';
+                        return text.trim();
+                    },
+                    apply: function(val) {
+                        const el = document.querySelector('input[name="seller_bill_number"]');
+                        if (el && val) typeIntoElement(el, val);
+                        return val || 'None';
+                    }
                 }
-            },
-            // Cargo Description
-            {
-                id: 'description',
-                title: 'Package Contents Description',
-                prompt: function() {
-                    return 'Briefly describe the contents of the package. For example: apparel, documents, foodstuff, or handicrafts.';
+            );
+        } else {
+            // Full Documentation Suite: Domestic & International
+            steps.push(
+                // Field 18: Commercial Invoice Currency
+                {
+                    id: 'invoice_currency',
+                    title: 'Commercial Invoice Currency',
+                    getValue: function() {
+                        const sel = document.querySelector('select[x-model="invoiceCurrency"]');
+                        return sel ? sel.value.trim() : (isIntl ? 'USD' : 'NPR');
+                    },
+                    prompt: function() {
+                        return 'Which currency would you like to use for the Commercial Invoice? For example: USD, NPR, EUR, or GBP.';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `The Commercial Invoice currency is currently set to "${curVal}". Would you like to keep this, or switch currency?`;
+                    },
+                    targetSelector: function() {
+                        return document.querySelector('select[x-model="invoiceCurrency"]');
+                    },
+                    parse: function(text) {
+                        const t = text.toUpperCase();
+                        if (t.includes('NPR') || t.includes('RUPEE') || t.includes('RS')) return 'NPR';
+                        if (t.includes('EUR') || t.includes('EURO')) return 'EUR';
+                        if (t.includes('GBP') || t.includes('POUND')) return 'GBP';
+                        if (t.includes('AUD')) return 'AUD';
+                        return 'USD';
+                    },
+                    apply: function(val) {
+                        const sel = document.querySelector('select[x-model="invoiceCurrency"]');
+                        if (sel) {
+                            sel.value = val;
+                            sel.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+                        const alpine = getAlpineConsoleData();
+                        if (alpine) alpine.invoiceCurrency = val;
+                        return val;
+                    }
                 },
-                targetSelector: function() {
-                    return document.querySelector('input[name="description"]');
+                // Field 19: Commercial Invoice Number
+                {
+                    id: 'invoice_number',
+                    title: 'Commercial Invoice Number',
+                    getValue: function() {
+                        const el = document.querySelector('input[x-model="invoiceNumber"]');
+                        return el ? el.value.trim() : '';
+                    },
+                    prompt: function() {
+                        return 'What is the Commercial Invoice reference number? For example: INV-2026-001.';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `The Commercial Invoice number is currently "${curVal}". Does that look correct, or would you like to update it?`;
+                    },
+                    targetSelector: function() {
+                        return document.querySelector('input[x-model="invoiceNumber"]');
+                    },
+                    parse: function(text) {
+                        return text.toUpperCase().trim();
+                    },
+                    apply: function(val) {
+                        const el = document.querySelector('input[x-model="invoiceNumber"]');
+                        if (el) typeIntoElement(el, val);
+                        const alpine = getAlpineConsoleData();
+                        if (alpine) alpine.invoiceNumber = val;
+                        return val;
+                    }
                 },
-                parse: function(text) {
-                    return text.trim();
+                // Field 20: Commercial Invoice Date
+                {
+                    id: 'invoice_date',
+                    title: 'Commercial Invoice Date',
+                    getValue: function() {
+                        const el = document.querySelector('input[x-model="invoiceDate"]');
+                        return el ? el.value.trim() : '';
+                    },
+                    prompt: function() {
+                        return 'What is the Commercial Invoice date? For example: today’s date.';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `The Commercial Invoice date is set to "${curVal}". Does that look correct?`;
+                    },
+                    targetSelector: function() {
+                        return document.querySelector('input[x-model="invoiceDate"]');
+                    },
+                    parse: function(text) {
+                        return text.trim();
+                    },
+                    apply: function(val) {
+                        const el = document.querySelector('input[x-model="invoiceDate"]');
+                        if (el) typeIntoElement(el, val);
+                        const alpine = getAlpineConsoleData();
+                        if (alpine) alpine.invoiceDate = val;
+                        return val;
+                    }
                 },
-                apply: function(val) {
-                    const el = document.querySelector('input[name="description"]');
-                    if (el) typeIntoElement(el, val);
-                    return val;
+                // Field 21: Incoterms
+                {
+                    id: 'incoterms',
+                    title: 'Incoterms SLA',
+                    getValue: function() {
+                        const sel = document.querySelector('select[x-model="incoterm"]');
+                        return sel ? sel.value.trim() : 'DAP';
+                    },
+                    prompt: function() {
+                        return 'Which Incoterm applies to this shipment? For example: DAP Delivered at Place, DDP Delivered Duty Paid, FOB Free on Board, or CIF.';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `The Incoterm is currently set to "${curVal}". Is this correct, or would you like to switch terms?`;
+                    },
+                    targetSelector: function() {
+                        return document.querySelector('select[x-model="incoterm"]');
+                    },
+                    parse: function(text) {
+                        const t = text.toUpperCase();
+                        if (t.includes('DDP')) return 'DDP';
+                        if (t.includes('FOB')) return 'FOB';
+                        if (t.includes('CIF')) return 'CIF';
+                        if (t.includes('EXW')) return 'EXW';
+                        return 'DAP';
+                    },
+                    apply: function(val) {
+                        const sel = document.querySelector('select[x-model="incoterm"]');
+                        if (sel) {
+                            sel.value = val;
+                            sel.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+                        const alpine = getAlpineConsoleData();
+                        if (alpine) alpine.incoterm = val;
+                        return val;
+                    }
+                },
+                // Field 22: Reason for Export / Dispatch
+                {
+                    id: 'reason_for_export',
+                    title: 'Reason for Export / Dispatch',
+                    getValue: function() {
+                        const sel = document.querySelector('select[x-model="reasonForExport"]');
+                        return sel ? sel.value.trim() : '';
+                    },
+                    prompt: function() {
+                        return 'What is the declared reason for export or transit? For example: Commercial Sale, Sample Not For Sale, Personal Gift, or Return for Repair.';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `Reason for export is currently set to "${curVal}". Would you like to keep this, or update it?`;
+                    },
+                    targetSelector: function() {
+                        return document.querySelector('select[x-model="reasonForExport"]');
+                    },
+                    parse: function(text) {
+                        const t = text.toLowerCase();
+                        if (t.includes('sample')) return 'Sample Not For Sale';
+                        if (t.includes('gift') || t.includes('personal')) return 'Gift / Personal Effects';
+                        if (t.includes('repair') || t.includes('return')) return 'Return / Repair';
+                        return 'Commercial Sale / Export';
+                    },
+                    apply: function(val) {
+                        const sel = document.querySelector('select[x-model="reasonForExport"]');
+                        if (sel) {
+                            sel.value = val;
+                            sel.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+                        const alpine = getAlpineConsoleData();
+                        if (alpine) alpine.reasonForExport = val;
+                        return val;
+                    }
+                },
+                // Field 23: Client Acquisition Channel
+                {
+                    id: 'acquisition_source',
+                    title: 'Acquisition Booking Channel',
+                    getValue: function() {
+                        const sel = document.querySelector('select[x-model="acquisitionSource"]');
+                        return sel && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex]?.text?.trim() : '';
+                    },
+                    prompt: function() {
+                        return 'What is the client acquisition booking channel? For example: Direct Web Portal, Client Referral, Sales Executive, or Walk-in.';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `The booking acquisition channel is currently "${curVal}". Is that correct?`;
+                    },
+                    targetSelector: function() {
+                        return document.querySelector('select[x-model="acquisitionSource"]');
+                    },
+                    parse: function(text) {
+                        const t = text.toLowerCase();
+                        if (t.includes('referral')) return 'referral';
+                        if (t.includes('sales')) return 'sales_representative';
+                        if (t.includes('walk') || t.includes('counter')) return 'agent_walkin';
+                        return 'direct_portal';
+                    },
+                    apply: function(val) {
+                        const sel = document.querySelector('select[x-model="acquisitionSource"]');
+                        if (sel) {
+                            sel.value = val;
+                            sel.dispatchEvent(new Event('change', { bubbles: true }));
+                            return sel.options[sel.selectedIndex]?.text || val;
+                        }
+                        return val;
+                    }
+                },
+                // Field 24: Exporter PAN / VAT
+                {
+                    id: 'exporter_pan_vat',
+                    title: 'Exporter PAN / VAT',
+                    getValue: function() {
+                        const el = document.querySelector('input[x-model="exporterPanVat"]');
+                        return el ? el.value.trim() : '';
+                    },
+                    prompt: function() {
+                        return 'What is the exporter or business 9-digit PAN or VAT registration number in Nepal?';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `The exporter PAN or VAT number is currently recorded as "${curVal}". Does that look correct, or would you like to update it?`;
+                    },
+                    targetSelector: function() {
+                        return document.querySelector('input[x-model="exporterPanVat"]');
+                    },
+                    parse: function(text) {
+                        return text.replace(/\D/g, '') || text.trim();
+                    },
+                    apply: function(val) {
+                        const el = document.querySelector('input[x-model="exporterPanVat"]');
+                        if (el) typeIntoElement(el, val);
+                        const alpine = getAlpineConsoleData();
+                        if (alpine) alpine.exporterPanVat = val;
+                        return val;
+                    }
+                },
+                // Field 25: EXIM Code (Nepal Customs)
+                {
+                    id: 'exporter_exim_code',
+                    title: 'Nepal Customs EXIM Code',
+                    getValue: function() {
+                        const el = document.querySelector('input[x-model="exporterEximCode"]');
+                        return el ? el.value.trim() : '';
+                    },
+                    prompt: function() {
+                        return 'If you have an EXIM code for Nepal Customs, please state it now, or say skip.';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `The customs EXIM code is currently "${curVal}". Would you like to keep this, or update it?`;
+                    },
+                    targetSelector: function() {
+                        return document.querySelector('input[x-model="exporterEximCode"]');
+                    },
+                    parse: function(text) {
+                        if (text.toLowerCase().includes('skip') || text.toLowerCase().includes('none')) return '';
+                        return text.toUpperCase().trim();
+                    },
+                    apply: function(val) {
+                        const el = document.querySelector('input[x-model="exporterEximCode"]');
+                        if (el && val) typeIntoElement(el, val);
+                        const alpine = getAlpineConsoleData();
+                        if (alpine) alpine.exporterEximCode = val;
+                        return val || 'None';
+                    }
+                },
+                // Field 26: Declared Commodity Line Item Name
+                {
+                    id: 'commodity_name',
+                    title: 'Declared Commodity Line Item',
+                    getValue: function() {
+                        const el = document.querySelector('tbody input[x-model="item.name"]');
+                        return el ? el.value.trim() : '';
+                    },
+                    prompt: function() {
+                        return 'What is the primary commodity or product being shipped? For example: Handmade Pashmina Shawl, Himalayan Orthodox Tea, or Singing Bowls. Netpack will automatically suggest WCO Harmonized System tariffs!';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `The declared commodity line item is currently set to "${curVal}". Would you like to keep this, or update it?`;
+                    },
+                    targetSelector: function() {
+                        return document.querySelector('tbody input[x-model="item.name"]');
+                    },
+                    parse: function(text) {
+                        return text.trim();
+                    },
+                    apply: function(val) {
+                        const input = document.querySelector('tbody input[x-model="item.name"]');
+                        if (input) typeIntoElement(input, val);
+                        const alpine = getAlpineConsoleData();
+                        if (alpine && alpine.invoiceItems && alpine.invoiceItems[0]) {
+                            alpine.invoiceItems[0].name = val;
+                            alpine.invoiceItems[0].searchQuery = val;
+                            if (typeof alpine.fetchHsSuggestions === 'function') {
+                                alpine.fetchHsSuggestions(0, val);
+                            }
+                        }
+                        return val;
+                    }
+                },
+                // Field 27: Declared Quantity & Unit Price
+                {
+                    id: 'commodity_qty_price',
+                    title: 'Declared Quantity & Unit Price',
+                    getValue: function() {
+                        const qty = document.querySelector('tbody input[x-model.number="item.qty"]')?.value;
+                        const uom = document.querySelector('tbody select[x-model="item.uom"]')?.value || 'PCS';
+                        const price = document.querySelector('tbody input[x-model.number="item.unit_price"]')?.value;
+                        return (qty && price) ? `${qty} ${uom} @ ${price}` : '';
+                    },
+                    prompt: function() {
+                        return 'How many units are being shipped, and what is the unit price in the invoice currency? For example: 5 pieces at 20 dollars.';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `Commodity quantity and unit price are currently recorded as "${curVal}". Does that look correct, or would you like to update?`;
+                    },
+                    targetSelector: function() {
+                        return document.querySelector('tbody input[x-model.number="item.qty"]');
+                    },
+                    parse: function(text) {
+                        const m = text.match(/(\d+(?:\.\d+)?)/);
+                        return m ? parseFloat(m[1]) : 1;
+                    },
+                    apply: function(val) {
+                        const qtyInput = document.querySelector('tbody input[x-model.number="item.qty"]');
+                        if (qtyInput) {
+                            qtyInput.value = val;
+                            qtyInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        }
+                        const alpine = getAlpineConsoleData();
+                        if (alpine && alpine.invoiceItems && alpine.invoiceItems[0]) {
+                            alpine.invoiceItems[0].qty = parseFloat(val) || 1;
+                            if (typeof alpine.syncInvoiceItemQty === 'function') alpine.syncInvoiceItemQty(0);
+                        }
+                        return `${val} units`;
+                    }
+                },
+                // Field 28: Total Cartons / Box Count
+                {
+                    id: 'total_boxes',
+                    title: 'Total Cartons / Box Count',
+                    getValue: function() {
+                        const el = document.querySelector('input[x-model.number="totalBoxes"]');
+                        return el && el.value ? el.value.trim() + ' Box(es)' : '1 Box';
+                    },
+                    prompt: function() {
+                        return 'How many total cartons or boxes will this consignment be packed into? For example: 1 box, 2 boxes, or 5 boxes.';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `Total carton count is currently set to "${curVal}". Is that correct, or packed into different boxes?`;
+                    },
+                    targetSelector: function() {
+                        return document.querySelector('input[x-model.number="totalBoxes"]');
+                    },
+                    parse: function(text) {
+                        const m = text.match(/\d+/);
+                        return m ? parseInt(m[0], 10) : 1;
+                    },
+                    apply: function(val) {
+                        const alpine = getAlpineConsoleData();
+                        if (alpine && typeof alpine.setBoxCount === 'function') {
+                            alpine.setBoxCount(val);
+                        }
+                        return `${val} Box(es)`;
+                    }
+                },
+                // Field 29: Consignment Gross Actual Weight (KG)
+                {
+                    id: 'weight',
+                    title: 'Consignment Gross Weight (KG)',
+                    getValue: function() {
+                        const el = document.getElementById('weight-input') || document.querySelector('input[name="weight"]');
+                        return el && el.value ? el.value.trim() + ' KG' : '';
+                    },
+                    prompt: function() {
+                        return 'What is the total gross weight of the package in kilograms? For example: 2.5 kg or 20 kg.';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `The consignment gross weight is currently recorded as "${curVal}". Does that look accurate, or would you like to change it?`;
+                    },
+                    targetSelector: function() {
+                        return document.getElementById('weight-input') || document.querySelector('input[name="weight"]');
+                    },
+                    parse: function(text) {
+                        return parseSpokenWeight(text);
+                    },
+                    apply: function(val) {
+                        const el = document.getElementById('weight-input') || document.querySelector('input[name="weight"]');
+                        if (el) {
+                            typeIntoElement(el, val.toString(), () => {
+                                if (typeof calculateVolumetricWeight === 'function') calculateVolumetricWeight();
+                                if (typeof updateSummaryStats === 'function') updateSummaryStats();
+                                const alpine = getAlpineConsoleData();
+                                if (alpine && alpine.boxes && alpine.boxes[0]) {
+                                    alpine.boxes[0].weight_kg = parseFloat(val);
+                                    if (typeof alpine.syncCargoWeight === 'function') alpine.syncCargoWeight();
+                                }
+                            });
+                        }
+                        return val + ' KG';
+                    }
+                },
+                // Field 30: Box Dimensions (L x W x H cm)
+                {
+                    id: 'dimensions',
+                    title: 'Box Dimensions (L x W x H cm)',
+                    getValue: function() {
+                        const l = document.getElementById('length-input')?.value;
+                        const w = document.getElementById('width-input')?.value;
+                        const h = document.getElementById('height-input')?.value;
+                        return (l && w && h) ? `${l} × ${w} × ${h} cm` : '';
+                    },
+                    prompt: function() {
+                        return 'What are the box dimensions in centimeters, length by width by height? Or say skip if standard.';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `The box dimensions are currently set to "${curVal}". Would you like to keep these, or update them?`;
+                    },
+                    targetSelector: function() {
+                        return document.getElementById('length-input');
+                    },
+                    parse: function(text) {
+                        return parseSpokenDimensions(text);
+                    },
+                    apply: function(dims) {
+                        if (!dims || typeof dims !== 'object') return 'Standard dimensions';
+                        const lEl = document.getElementById('length-input');
+                        const wEl = document.getElementById('width-input');
+                        const hEl = document.getElementById('height-input');
+                        if (lEl) lEl.value = dims.length || 20;
+                        if (wEl) wEl.value = dims.width || 20;
+                        if (hEl) hEl.value = dims.height || 20;
+                        [lEl, wEl, hEl].forEach(el => {
+                            if (el) {
+                                el.dispatchEvent(new Event('input', { bubbles: true }));
+                                el.classList.add('ring-2', 'ring-emerald-500');
+                                setTimeout(() => el.classList.remove('ring-2', 'ring-emerald-500'), 1500);
+                            }
+                        });
+                        if (typeof calculateVolumetricWeight === 'function') calculateVolumetricWeight();
+                        const alpine = getAlpineConsoleData();
+                        if (alpine && alpine.boxes && alpine.boxes[0]) {
+                            alpine.boxes[0].length_cm = parseFloat(dims.length || 20);
+                            alpine.boxes[0].width_cm = parseFloat(dims.width || 20);
+                            alpine.boxes[0].height_cm = parseFloat(dims.height || 20);
+                            if (typeof alpine.syncCargoWeight === 'function') alpine.syncCargoWeight();
+                        }
+                        return `${dims.length} × ${dims.width} × ${dims.height} cm`;
+                    }
+                },
+                // Field 31: Consignment Contents Description
+                {
+                    id: 'description',
+                    title: 'Consignment Contents Description',
+                    getValue: function() {
+                        const el = document.querySelector('input[name="description"]');
+                        return el ? el.value.trim() : '';
+                    },
+                    prompt: function() {
+                        return 'Please provide a brief general description of the consignment contents for the waybill. For example: Handmade apparel, organic tea, or handicraft samples.';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `The consignment description is currently set to "${curVal}". Would you like to keep this, or update it?`;
+                    },
+                    targetSelector: function() {
+                        return document.querySelector('input[name="description"]');
+                    },
+                    parse: function(text) {
+                        return text.trim();
+                    },
+                    apply: function(val) {
+                        const el = document.querySelector('input[name="description"]');
+                        if (el) typeIntoElement(el, val);
+                        return val;
+                    }
+                },
+                // Field 32: Supporting Tax / Customs Bill Type
+                {
+                    id: 'seller_bill_type',
+                    title: 'Supporting Tax / Customs Bill Type',
+                    getValue: function() {
+                        const sel = document.querySelector('select[name="seller_bill_type"]');
+                        return sel && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex]?.text?.trim() : '';
+                    },
+                    prompt: function() {
+                        return 'What type of supporting tax or customs documentation are you attaching? For example: Inland Revenue VAT Invoice, PAN Cash Bill, or Customs Export Declaration.';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `The supporting tax bill type is currently "${curVal}". Is that correct?`;
+                    },
+                    targetSelector: function() {
+                        return document.querySelector('select[name="seller_bill_type"]');
+                    },
+                    parse: function(text) {
+                        const t = text.toLowerCase();
+                        if (t.includes('pan')) return 'pan_bill';
+                        if (t.includes('customs') || t.includes('pragyapanpatra')) return 'customs_declaration';
+                        if (t.includes('origin')) return 'certificate_of_origin';
+                        return 'vat_invoice';
+                    },
+                    apply: function(val) {
+                        const sel = document.querySelector('select[name="seller_bill_type"]');
+                        if (sel) {
+                            sel.value = val;
+                            sel.dispatchEvent(new Event('change', { bubbles: true }));
+                            const alpine = getAlpineConsoleData();
+                            if (alpine) alpine.sellerBillType = val;
+                            return sel.options[sel.selectedIndex]?.text || val;
+                        }
+                        return val;
+                    }
+                },
+                // Field 33: Tax Invoice / Bill Reference Number
+                {
+                    id: 'seller_bill_number',
+                    title: 'Bill / Tax Reference Number',
+                    getValue: function() {
+                        const el = document.querySelector('input[name="seller_bill_number"]');
+                        return el ? el.value.trim() : '';
+                    },
+                    prompt: function() {
+                        return 'What is the supporting bill or tax invoice reference number? Or say skip if not applicable.';
+                    },
+                    confirmPrompt: function(ctx, curVal) {
+                        return `The bill reference number is recorded as "${curVal}". Would you like to keep this, or update it?`;
+                    },
+                    targetSelector: function() {
+                        return document.querySelector('input[name="seller_bill_number"]');
+                    },
+                    parse: function(text) {
+                        if (text.toLowerCase().includes('skip') || text.toLowerCase().includes('none')) return '';
+                        return text.trim();
+                    },
+                    apply: function(val) {
+                        const el = document.querySelector('input[name="seller_bill_number"]');
+                        if (el && val) typeIntoElement(el, val);
+                        const alpine = getAlpineConsoleData();
+                        if (alpine) alpine.sellerBillNumber = val;
+                        return val || 'None';
+                    }
                 }
-            }
-        );
+            );
+        }
 
         return steps;
     }
@@ -3964,6 +4917,8 @@ document.addEventListener('alpine:init', () => {
         isActive: false,
         isSpeaking: false,
         isListening: false,
+        isVerifying: false,
+        currentFieldValue: '',
         currentStepIndex: 0,
         recognition: null,
         audioStream: null,
@@ -3986,20 +4941,34 @@ document.addEventListener('alpine:init', () => {
         sessionStorage.setItem('ai_voice_autofill_dismissed', '1');
     };
 
-    // Helper to test if a step's underlying form element already has content typed
-    function isStepFieldFilled(step) {
-        if (!step) return false;
-        if (step.id === 'mode') return true;
+    // Helper to get current value of a step
+    function getStepCurrentValue(step) {
+        if (!step) return '';
         try {
-            const el = step.targetSelector ? step.targetSelector() : null;
-            if (!el) return false;
-            if (el.tagName === 'SELECT') {
-                return !!(el.value && el.value.trim() && el.selectedIndex > 0);
+            if (typeof step.getValue === 'function') {
+                const v = step.getValue();
+                if (v !== undefined && v !== null) return String(v).trim();
             }
-            return !!(el.value && String(el.value).trim().length > 0);
+            const el = step.targetSelector ? step.targetSelector() : null;
+            if (!el) return '';
+            if (el.tagName === 'SELECT') {
+                if (el.selectedIndex >= 0 && el.value) {
+                    return el.options[el.selectedIndex]?.text?.trim() || el.value.trim();
+                }
+                return '';
+            }
+            if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+                return String(el.value || '').trim();
+            }
+            return '';
         } catch(e) {
-            return false;
+            return '';
         }
+    }
+
+    function isStepFieldFilled(step) {
+        const val = getStepCurrentValue(step);
+        return val !== '' && val !== 'default' && val !== 'None';
     }
 
     function findFirstUnfilledStepIndex() {
@@ -4022,7 +4991,7 @@ document.addEventListener('alpine:init', () => {
         return -1;
     }
 
-    // Directly jumps to a specific field's step without restarting from Step 0 or re-asking completed fields!
+    // Directly jumps to a specific field's step without restarting from Step 0
     window.jumpToVoiceStepForField = function(fieldId) {
         if (!window.aiVoiceAutofill) return;
 
@@ -4030,25 +4999,67 @@ document.addEventListener('alpine:init', () => {
         window.aiVoiceAutofill.steps = buildVoiceStepsForMode(mode);
 
         const fieldMap = {
+            'mode': 'mode',
+            'shipment_type': 'mode',
+            'domestic_service_type': 'service_type',
+            'international_service_type': 'service_type',
+            'ecommerce_service_type': 'service_type',
+            'service_type': 'service_type',
+            'package_type': 'package_type',
+            'intl_package_type': 'package_type',
+            'ecom_package_type': 'package_type',
+            'schedule_doorstep_pickup': 'collection_method',
+            'collection_method': 'collection_method',
+            'scheduled_pickup_time': 'scheduled_pickup_time',
+            'pickup_notes': 'pickup_notes',
             'pickup_name_0': 'sender_name',
             'sender_name_input': 'sender_name',
+            'sender_name': 'sender_name',
             'pickup_phone_0': 'sender_phone',
             'sender_phone_input': 'sender_phone',
+            'sender_phone': 'sender_phone',
             'pickup_address_0': 'pickup_address',
             'sender_address_input': 'pickup_address',
-            'delivery_name_0': 'receiver_name',
-            'delivery_phone_0': 'receiver_phone',
-            'delivery_address_0': 'delivery_address',
+            'pickup_address': 'pickup_address',
             'receiver_country': 'receiver_country',
             'receiver_name': 'receiver_name',
             'receiver_phone': 'receiver_phone',
+            'receiver_tax_id': 'receiver_tax_id',
             'receiver_city': 'receiver_city',
-            'receiver_street': 'receiver_street',
+            'receiver_state': 'receiver_state',
             'receiver_postal_code': 'receiver_postal_code',
+            'receiver_street': 'receiver_street',
+            'delivery_name_0': 'delivery_name',
+            'delivery_name': 'delivery_name',
+            'delivery_phone_0': 'delivery_phone',
+            'delivery_phone': 'delivery_phone',
+            'shipment_deliv_0_province': 'delivery_province',
+            'delivery_province': 'delivery_province',
+            'shipment_deliv_0_district': 'destination_district',
+            'shipment_deliv_0_search': 'destination_district',
+            'destination_district': 'destination_district',
+            'delivery_address_0': 'delivery_address',
+            'delivery_address': 'delivery_address',
             'weight-input': 'weight',
             'weight': 'weight',
             'length-input': 'dimensions',
-            'dimensions': 'dimensions'
+            'width-input': 'dimensions',
+            'height-input': 'dimensions',
+            'dimensions': 'dimensions',
+            'description': 'description',
+            'invoice_currency': 'invoice_currency',
+            'invoice_number': 'invoice_number',
+            'invoice_date': 'invoice_date',
+            'incoterms': 'incoterms',
+            'reason_for_export': 'reason_for_export',
+            'acquisition_source': 'acquisition_source',
+            'exporter_pan_vat': 'exporter_pan_vat',
+            'exporter_exim_code': 'exporter_exim_code',
+            'commodity_name': 'commodity_name',
+            'commodity_qty_price': 'commodity_qty_price',
+            'total_boxes': 'total_boxes',
+            'seller_bill_type': 'seller_bill_type',
+            'seller_bill_number': 'seller_bill_number'
         };
 
         const targetStepId = fieldMap[fieldId] || fieldId;
@@ -4062,6 +5073,7 @@ document.addEventListener('alpine:init', () => {
             }
         }
     };
+
 
     // Draggable Cockpit Controller Support (Anywhere on screen, mouse & touch)
     window.setupAiBarDraggable = function() {
@@ -4253,10 +5265,11 @@ document.addEventListener('alpine:init', () => {
         if (forcedStartIndex !== null && forcedStartIndex >= 0 && forcedStartIndex < window.aiVoiceAutofill.steps.length) {
             startIndex = forcedStartIndex;
         } else {
-            startIndex = findFirstUnfilledStepIndex();
+            startIndex = 0;
         }
 
         window.aiVoiceAutofill.currentStepIndex = startIndex;
+        window.aiVoiceAutofill.hasIntroduced = false;
 
         // 1. Explicitly request microphone stream from user click gesture to grant permission,
         // and immediately release tracks so the physical device is NOT locked away from SpeechRecognition!
@@ -4409,6 +5422,13 @@ document.addEventListener('alpine:init', () => {
     window.exitVoiceAutofillAssistant = function() {
         window.aiVoiceAutofill.isActive = false;
 
+        if (typeof shipmentAudioPlayer !== 'undefined' && shipmentAudioPlayer) {
+            try {
+                shipmentAudioPlayer.pause();
+                shipmentAudioPlayer.currentTime = 0;
+            } catch(e) {}
+        }
+
         if (window.aiVoiceAutofill.speechSynthesis) {
             window.aiVoiceAutofill.speechSynthesis.cancel();
         }
@@ -4452,15 +5472,8 @@ document.addEventListener('alpine:init', () => {
     };
 
     window.voiceAssistantNext = function() {
-        if (!window.aiVoiceAutofill.isActive) return;
-        const next = findNextUnfilledStepIndex(window.aiVoiceAutofill.currentStepIndex);
-        if (next !== -1) {
-            executeVoiceStep(next);
-        } else if (window.aiVoiceAutofill.currentStepIndex + 1 < window.aiVoiceAutofill.steps.length) {
-            executeVoiceStep(window.aiVoiceAutofill.currentStepIndex + 1);
-        } else {
-            completeVoiceAutofill();
-        }
+        if (!window.aiVoiceAutofill || !window.aiVoiceAutofill.isActive) return;
+        advanceToNextStep();
     };
 
     // =========================================================================
@@ -4619,7 +5632,87 @@ document.addEventListener('alpine:init', () => {
         }
     }
 
+    // =========================================================================
+    // NATIVE WEB AUDIO CHIMES (Prompt, Affirmation, Finish)
+    // =========================================================================
+    function playAiChime(type = 'prompt') {
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            if (!window._aiAudioCtx) {
+                window._aiAudioCtx = new AudioCtx();
+            }
+            const ctx = window._aiAudioCtx;
+            if (ctx.state === 'suspended') {
+                ctx.resume();
+            }
+            const now = ctx.currentTime;
+
+            if (type === 'prompt') {
+                // Cheerful attentive double ping (C5 -> E5)
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523.25, now);
+                osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.08);
+                gain.gain.setValueAtTime(0.001, now);
+                gain.gain.linearRampToValueAtTime(0.12, now + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
+                osc.start(now);
+                osc.stop(now + 0.26);
+            } else if (type === 'confirm') {
+                // Upbeat positive confirmation chime (D5 -> A5)
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(587.33, now);
+                osc.frequency.exponentialRampToValueAtTime(880.00, now + 0.1);
+                gain.gain.setValueAtTime(0.001, now);
+                gain.gain.linearRampToValueAtTime(0.14, now + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
+                osc.start(now);
+                osc.stop(now + 0.33);
+            } else if (type === 'complete') {
+                // Triumphant celebratory 4-note arpeggio (C5 -> E5 -> G5 -> C6)
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((freq, idx) => {
+                    const noteOsc = ctx.createOscillator();
+                    const noteGain = ctx.createGain();
+                    noteOsc.connect(noteGain);
+                    noteGain.connect(ctx.destination);
+                    noteOsc.type = 'sine';
+                    noteOsc.frequency.setValueAtTime(freq, now + idx * 0.1);
+                    noteGain.gain.setValueAtTime(0.001, now + idx * 0.1);
+                    noteGain.gain.linearRampToValueAtTime(0.15, now + idx * 0.1 + 0.02);
+                    noteGain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.1 + 0.28);
+                    noteOsc.start(now + idx * 0.1);
+                    noteOsc.stop(now + idx * 0.1 + 0.29);
+                });
+            }
+        } catch(e) {
+            // AudioContext restrictions or unsupported
+        }
+    }
+
+    // =========================================================================
+    // SEQUENTIAL PROGRESSION ENGINE
+    // =========================================================================
+    function advanceToNextStep() {
+        if (!window.aiVoiceAutofill || !window.aiVoiceAutofill.isActive) return;
+        const nextIndex = window.aiVoiceAutofill.currentStepIndex + 1;
+        if (nextIndex < window.aiVoiceAutofill.steps.length) {
+            executeVoiceStep(nextIndex);
+        } else {
+            completeVoiceAutofill();
+        }
+    }
+
     function executeVoiceStep(stepIndex, focusElement = true) {
+        if (!window.aiVoiceAutofill || !window.aiVoiceAutofill.steps) return;
         window.aiVoiceAutofill.currentStepIndex = stepIndex;
         const step = window.aiVoiceAutofill.steps[stepIndex];
         if (!step) {
@@ -4635,9 +5728,34 @@ document.addEventListener('alpine:init', () => {
         const titleText = typeof step.title === 'function' ? step.title() : step.title;
         if (stepTitle) stepTitle.innerText = titleText;
 
-        const promptText = typeof step.prompt === 'function' ? step.prompt(window.aiVoiceAutofill) : step.prompt;
+        // Check if this field is already filled up
+        const curVal = getStepCurrentValue(step);
+        const isPreFilled = curVal !== '' && curVal !== 'default' && curVal !== 'None' && curVal !== undefined && curVal !== null;
+        window.aiVoiceAutofill.isVerifying = isPreFilled;
+        window.aiVoiceAutofill.currentVerifiedValue = isPreFilled ? curVal : null;
+
+        let promptText = '';
+        if (isPreFilled) {
+            if (typeof step.confirmPrompt === 'function') {
+                promptText = step.confirmPrompt(window.aiVoiceAutofill, curVal);
+            } else {
+                promptText = `I see your ${titleText} is currently set to "${curVal}". Does that look correct to you, or would you like to update it?`;
+            }
+        } else {
+            promptText = typeof step.prompt === 'function' ? step.prompt(window.aiVoiceAutofill) : step.prompt;
+        }
+
+        // Whenever anyone starts the conversation, Chanda starts with the Greeting and states her name for assistance!
+        if (!window.aiVoiceAutofill.hasIntroduced) {
+            window.aiVoiceAutofill.hasIntroduced = true;
+            const clientName = window.aiVoiceAutofill.clientPreferredName ? (window.aiVoiceAutofill.clientPreferredName + ' Ji') : 'Sir or Madam';
+            promptText = `Namaste ${clientName}! My name is Chanda, your dedicated NETPACK AI Assistant. I am very eager and delighted to support and assist you today! ` + promptText;
+        }
+
         const promptEl = document.getElementById('ai-voice-current-prompt');
-        if (promptEl) promptEl.innerText = promptText;
+        if (promptEl) {
+            promptEl.innerText = promptText;
+        }
 
         const previewEl = document.getElementById('ai-voice-transcript-preview');
         if (previewEl) previewEl.style.display = 'none';
@@ -4645,7 +5763,9 @@ document.addEventListener('alpine:init', () => {
         const quickInput = document.getElementById('ai-voice-quick-input');
         if (quickInput) {
             quickInput.value = '';
-            quickInput.placeholder = `Speak into mic or type answer for "${titleText}" & press Enter...`;
+            quickInput.placeholder = isPreFilled 
+                ? `Say "Yes" / "Correct" to confirm "${curVal}", or say new value...` 
+                : `Speak into mic or type answer for "${titleText}" & press Enter...`;
         }
 
         // Scroll to and highlight target field
@@ -4660,6 +5780,9 @@ document.addEventListener('alpine:init', () => {
                 targetEl.focus();
             }
         }
+
+        // Play gentle audio chime
+        playAiChime('prompt');
 
         // Speak question out loud, then start listening
         speakVoicePrompt(promptText, function() {
@@ -4686,31 +5809,47 @@ document.addEventListener('alpine:init', () => {
             previewEl.style.display = 'block';
         }
 
-        updateVoiceStatus('✨ Auto-typing...', 'text-emerald-300 font-bold');
+        const isVerifying = !!window.aiVoiceAutofill.isVerifying;
+        const currentVal = window.aiVoiceAutofill.currentVerifiedValue;
+
+        // Client-side quick affirmative check
+        const cleanT = transcript.toLowerCase().trim().replace(/^[.,!?]+|[.,!?]+$/g, '');
+        const affirmativeWords = [
+            'yes', 'yeah', 'yep', 'yup', 'correct', 'right', 'exact', 'exactly', 'sure', 
+            'ok', 'okay', 'fine', 'good', 'perfect', 'looks good', 'all good', 
+            'thik cha', 'theek chha', 'thik', 'theek', 'hunchha', 'hunxa', 'ho', 'hajur',
+            'confirm', 'confirmed', 'keep it', 'leave it', 'no change', 'proceed', 'done'
+        ];
+        const isClientAffirmative = affirmativeWords.some(w => cleanT === w || cleanT.startsWith(w + ' ') || cleanT.endsWith(' ' + w));
+
+        const proceedWithAck = (ackPhrase) => {
+            playAiChime('confirm');
+            updateVoiceStatus('✨ Confirmed', 'text-emerald-300 font-bold');
+            speakVoicePrompt(ackPhrase, function() {
+                advanceToNextStep();
+            });
+        };
 
         const applyAndProceed = (parsedVal, ackPhrase) => {
+            playAiChime('confirm');
+            updateVoiceStatus('✨ Auto-typing...', 'text-emerald-300 font-bold');
             const appliedLabel = step.apply ? step.apply(parsedVal) : parsedVal;
 
             setTimeout(() => {
-                const phrase = ackPhrase || `Got it, ${appliedLabel}!`;
-                speakVoicePrompt(phrase, function() {
-                    const nextStep = findNextUnfilledStepIndex(stepIndex);
-                    if (nextStep !== -1) {
-                        executeVoiceStep(nextStep);
-                    } else {
-                        // Check if any prior step was left unfilled
-                        const firstMissed = findFirstUnfilledStepIndex();
-                        if (!isStepFieldFilled(window.aiVoiceAutofill.steps[firstMissed])) {
-                            executeVoiceStep(firstMissed);
-                        } else {
-                            completeVoiceAutofill();
-                        }
-                    }
+                const politeAck = ackPhrase || `Wonderful, set to ${appliedLabel}!`;
+                speakVoicePrompt(politeAck, function() {
+                    advanceToNextStep();
                 });
-            }, 400);
+            }, 300);
         };
 
-        // Try AI Backend normalization endpoint first
+        // If in verification mode and user affirmatively agreed, keep current value and move on!
+        if (isVerifying && isClientAffirmative) {
+            proceedWithAck(`Splendid! Keeping ${currentVal || 'current value'}. Moving forward.`);
+            return;
+        }
+
+        // Call backend normalization endpoint
         fetch('/ai/voice-autofill-parse', {
             method: 'POST',
             headers: {
@@ -4727,7 +5866,11 @@ document.addEventListener('alpine:init', () => {
         .then(res => res.json())
         .then(data => {
             if (data && data.success && data.data) {
-                applyAndProceed(data.data.parsed_value, data.data.speech_ack);
+                if (data.data.is_confirmed && isVerifying) {
+                    proceedWithAck(data.data.speech_ack || `Splendid! Keeping ${currentVal || 'current value'}. Moving forward.`);
+                } else {
+                    applyAndProceed(data.data.parsed_value, data.data.speech_ack);
+                }
             } else {
                 const parsedVal = step.parse ? step.parse(transcript) : transcript;
                 applyAndProceed(parsedVal, null);
@@ -4741,10 +5884,11 @@ document.addEventListener('alpine:init', () => {
     }
 
     function completeVoiceAutofill() {
+        playAiChime('complete');
         const promptEl = document.getElementById('ai-voice-current-prompt');
-        if (promptEl) promptEl.innerText = 'All consignment fields have been successfully auto-typed!';
+        if (promptEl) promptEl.innerText = 'All consignment fields have been successfully verified and completed!';
 
-        updateVoiceStatus('✅ Autofill Completed', 'text-emerald-400 font-bold');
+        updateVoiceStatus('✅ Consignment Ready for Submission', 'text-emerald-400 font-bold');
         updateMicButton(false);
 
         // Scroll to submit button and pulse
@@ -4752,31 +5896,97 @@ document.addEventListener('alpine:init', () => {
         if (submitBtn) {
             submitBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
             submitBtn.classList.add('ring-4', 'ring-emerald-400', 'animate-bounce');
-            setTimeout(() => submitBtn.classList.remove('ring-4', 'ring-emerald-400', 'animate-bounce'), 4000);
+            setTimeout(() => submitBtn.classList.remove('ring-4', 'ring-emerald-400', 'animate-bounce'), 5000);
         }
 
-        speakVoicePrompt(`Wonderful ${window.aiVoiceAutofill.clientPreferredName}! All key shipment details have been auto-typed into your consignment form. Please review and click Submit to finalize your booking.`);
+        const clientName = window.aiVoiceAutofill.clientPreferredName ? (window.aiVoiceAutofill.clientPreferredName + ' Ji') : 'Sir/Madam';
+        speakVoicePrompt(`Delighted to have assisted you, ${clientName}! This is Chanda, confirming that every single field of your consignment form has been thoroughly verified and auto-filled. Please review and click Submit to confirm your booking!`);
     }
 
+    // =========================================================================
+    // VOICE SYNTHESIS & ACOUSTIC ENGINE (EXCITED, POLITE & PROFESSIONAL)
+    // =========================================================================
+    let _cachedVoices = [];
+    function getAvailableSpeechVoices() {
+        if (!('speechSynthesis' in window)) return [];
+        if (_cachedVoices && _cachedVoices.length) return _cachedVoices;
+        _cachedVoices = window.speechSynthesis.getVoices();
+        return _cachedVoices;
+    }
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.onvoiceschanged = function() {
+            _cachedVoices = window.speechSynthesis.getVoices();
+        };
+    }
+
+    function selectBestAssistantVoice() {
+        const voices = getAvailableSpeechVoices();
+        if (!voices || !voices.length) return null;
+
+        // Strict filter against any male voices
+        const isMale = (v) => {
+            const n = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
+            if (/\b(ravi|david|mark|george|guy|male|boy|hemant|madhur|prabhat|steve|alex|fred|daniel|oliver|thomas|paul|james|john|richard|deepak|karthik|ajay|tarun|neil|alec)\b/i.test(n)) {
+                return true;
+            }
+            if (n.includes('male') && !n.includes('female')) {
+                return true;
+            }
+            return false;
+        };
+
+        const femaleEligible = voices.filter(v => !isMale(v));
+
+        // 1. Native Nepali Female Voice (ne-NP, ne_NP, or containing 'nepal')
+        const nepaliFemale = femaleEligible.find(v => 
+            (v.lang === 'ne-NP' || v.lang === 'ne_NP' || v.lang.startsWith('ne') || v.name.toLowerCase().includes('nepal'))
+        );
+        if (nepaliFemale) return nepaliFemale;
+
+        // 2. Authentic South Asian / Indian English Female (Heera, Neerja, Swara, Kalpana, Aditi, Pooja, Veena, Kavya, Ananya)
+        const southAsianNamedFemale = femaleEligible.find(v => 
+            (v.lang === 'en-IN' || v.lang === 'hi-IN' || v.lang.startsWith('en-IN') || v.lang.startsWith('hi')) &&
+            /(heera|neerja|swara|kalpana|aditi|pooja|veena|kavya|ananya|shruti|sangeeta|female)/i.test(v.name)
+        );
+        if (southAsianNamedFemale) return southAsianNamedFemale;
+
+        // 3. Any South Asian English / Hindi female-eligible voice
+        const southAsianFemale = femaleEligible.find(v => 
+            (v.lang === 'en-IN' || v.lang === 'hi-IN' || v.lang.startsWith('en-IN') || v.lang.startsWith('hi'))
+        );
+        if (southAsianFemale) return southAsianFemale;
+
+        // 4. Natural / Online High-Quality Female voices (Jenny, Aria, Samantha, Zira, Victoria, Sonia)
+        const naturalFemale = femaleEligible.find(v => 
+            /(jenny|aria|samantha|zira|victoria|sonia|karen|susan|female)/i.test(v.name)
+        );
+        if (naturalFemale) return naturalFemale;
+
+        // 5. Any remaining female-eligible English voice
+        const anyEnglishFemale = femaleEligible.find(v => v.lang.startsWith('en'));
+        if (anyEnglishFemale) return anyEnglishFemale;
+
+        return femaleEligible[0] || null;
+    }
+
+    let shipmentAudioPlayer = null;
+
     function speakVoicePrompt(text, onComplete) {
-        if (!('speechSynthesis' in window)) {
+        if (shipmentAudioPlayer) {
+            try {
+                shipmentAudioPlayer.pause();
+                shipmentAudioPlayer.currentTime = 0;
+            } catch(e) {}
+        }
+        if (window.speechSynthesis) {
+            try { window.speechSynthesis.cancel(); } catch(e) {}
+        }
+
+        const clean = text.replace(/[#*`_~[\]()]/g, ' ').replace(/\s+/g, ' ').trim();
+        if (!clean) {
             if (typeof onComplete === 'function') onComplete();
             return;
         }
-
-        window.speechSynthesis.cancel();
-        const clean = text.replace(/[#*`_~[\]()]/g, ' ').replace(/\s+/g, ' ').trim();
-        const utterance = new SpeechSynthesisUtterance(clean);
-        // Nepalese English cadence: measured, polite tempo with warm, respectful pitch
-        utterance.rate = 0.94;
-        utterance.pitch = 1.04;
-
-        const voices = window.speechSynthesis.getVoices();
-        // Prioritize Nepali (ne-NP) -> South Asian English (en-IN / hi-IN) -> Natural English fallback
-        const nepaliVoice = voices.find(v => v.lang === 'ne-NP' || v.lang === 'ne_NP' || v.lang.startsWith('ne'));
-        const southAsianVoice = voices.find(v => (v.lang === 'en-IN' || v.lang === 'hi-IN' || v.lang.startsWith('en-IN')) && (v.name.includes('India') || v.name.includes('Hindi') || v.name.includes('Heera') || v.name.includes('Ravi') || v.name.includes('Neerja') || v.name.includes('Google')));
-        const naturalVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha')));
-        if (nepaliVoice || southAsianVoice || naturalVoice) utterance.voice = nepaliVoice || southAsianVoice || naturalVoice;
 
         let completed = false;
         const finishSpeaking = () => {
@@ -4788,18 +5998,67 @@ document.addEventListener('alpine:init', () => {
             }
         };
 
-        // Safety timeout: Chrome/Edge sometimes drop onend if tab is backgrounded or audio glitch occurs
-        const safetyTimeout = setTimeout(finishSpeaking, 7500);
+        const safetyTimeout = setTimeout(finishSpeaking, 12000);
 
-        utterance.onstart = function() {
+        const accent = localStorage.getItem('chanda_voice_accent') || 'en-GB';
+        const streamUrl = `/ai/speech/stream?text=${encodeURIComponent(clean)}&accent=${encodeURIComponent(accent)}`;
+
+        if (!shipmentAudioPlayer) {
+            shipmentAudioPlayer = new Audio();
+        }
+
+        shipmentAudioPlayer.src = streamUrl;
+
+        shipmentAudioPlayer.onplay = function() {
             window.aiVoiceAutofill.isSpeaking = true;
-            updateVoiceStatus('🗣️ Speaking...', 'text-teal-300');
+            updateVoiceStatus('🗣️ Speaking (Chanda AI)...', 'text-teal-300 font-bold');
         };
 
-        utterance.onend = finishSpeaking;
-        utterance.onerror = finishSpeaking;
+        shipmentAudioPlayer.onended = finishSpeaking;
 
-        window.speechSynthesis.speak(utterance);
+        shipmentAudioPlayer.onerror = function(err) {
+            console.warn('Neural audio stream error, falling back to speech synthesis:', err);
+            fallbackSynthesis();
+        };
+
+        const playPromise = shipmentAudioPlayer.play();
+        if (playPromise !== undefined) {
+            playPromise.catch(function(err) {
+                console.warn('Neural audio stream blocked, falling back to speech synthesis:', err);
+                fallbackSynthesis();
+            });
+        }
+
+        function fallbackSynthesis() {
+            if (!('speechSynthesis' in window)) {
+                finishSpeaking();
+                return;
+            }
+
+            try {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(clean);
+                utterance.rate = 1.05;
+                utterance.pitch = 1.18;
+
+                const chosenVoice = selectBestAssistantVoice();
+                if (chosenVoice) {
+                    utterance.voice = chosenVoice;
+                }
+
+                utterance.onstart = function() {
+                    window.aiVoiceAutofill.isSpeaking = true;
+                    updateVoiceStatus('🗣️ Speaking (Chanda AI)...', 'text-teal-300 font-bold');
+                };
+
+                utterance.onend = finishSpeaking;
+                utterance.onerror = finishSpeaking;
+
+                window.speechSynthesis.speak(utterance);
+            } catch(e) {
+                finishSpeaking();
+            }
+        }
     }
 
     function updateVoiceStatus(msg, colorClass) {

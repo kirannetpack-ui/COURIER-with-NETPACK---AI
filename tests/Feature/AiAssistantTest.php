@@ -51,6 +51,8 @@ class AiAssistantTest extends TestCase
 
         $data = $response->json('data');
         $this->assertStringContainsString('Aarav Ji', $data['client_name']);
+        $this->assertStringContainsString('Chanda', $data['greeting']);
+        $this->assertStringContainsString('Namaste', $data['greeting']);
         $this->assertNotEmpty($data['quick_suggestions']);
     }
 
@@ -587,6 +589,85 @@ class AiAssistantTest extends TestCase
         $createPage->assertSee('destination_district');
         $createPage->assertSee('receiver_street');
     }
+
+    public function test_ai_chat_provides_post_delivery_damage_and_returns_resolution_guidance(): void
+    {
+        $user = User::factory()->create(['name' => 'Sunil Acharya']);
+
+        $response = $this->actingAs($user)->postJson('/ai/chat', [
+            'message' => 'My shipment arrived yesterday but the carton was damaged and an item is broken inside. What is the process?',
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'success' => true,
+        ]);
+
+        $content = $response->json('response');
+        $this->assertStringContainsString('Post-Delivery Assistance & Resolution Desk', $content);
+        $this->assertStringContainsString('Zero-Hassle Resolution Guarantee', $content);
+        $this->assertStringContainsString('Safe-Transit Review within 2 hours', $content);
+        $this->assertStringContainsString('Return to Origin (RTO)', $content);
+        $this->assertStringContainsString('Proof of Delivery (POD)', $content);
+
+        $actions = $response->json('actions');
+        $this->assertNotEmpty($actions);
+        $this->assertEquals('Report Issue / Damage', $actions[0]['label']);
+        $this->assertEquals('/tracking', $actions[0]['url']);
+    }
+
+    public function test_ai_chat_understands_nepali_damage_and_rto_keywords(): void
+    {
+        $user = User::factory()->create(['name' => 'Binod']);
+
+        // Romanized Nepali query for broken / damaged parcel: "bhitra phuteko cha"
+        $response = $this->actingAs($user)->postJson('/ai/chat', [
+            'message' => 'Delivery bhaisakyo tara box bhitra phuteko cha, return kasari garne?',
+        ]);
+
+        $response->assertStatus(200);
+        $content = $response->json('response');
+        $this->assertStringContainsString('Post-Delivery Assistance & Resolution Desk', $content);
+        $this->assertStringContainsString('Zero-Hassle Resolution Guarantee', $content);
+    }
+
+    public function test_public_tracking_page_renders_ai_logistics_radar_and_telemetry(): void
+    {
+        $user = User::factory()->create(['name' => 'Test Customer']);
+        $shipment = \App\Models\Shipment::create([
+            'customer_id' => $user->id,
+            'tracking_number' => 'NPI-2026-999999-1',
+            'sender_name' => 'Sender Test',
+            'receiver_name' => 'Receiver Test',
+            'sender_phone' => '9841111111',
+            'receiver_phone' => '9842222222',
+            'origin_city' => 'Kathmandu',
+            'destination_city' => 'Warsaw',
+            'receiver_city' => 'Warsaw',
+            'receiver_country' => 'Poland',
+            'status' => 'in_transit',
+            'shipment_type' => 'international',
+            'weight' => 5.0,
+        ]);
+
+        $response = $this->get('/tracking/' . $shipment->tracking_number);
+
+        $response->assertStatus(200);
+        $response->assertSee('AI Logistics Concierge');
+        $response->assertSee('Continuous Telemetry');
+        $response->assertSee('ai-tracking-query-input');
+        $response->assertSee('Listen AI Voice');
+    }
+
+    public function test_speech_stream_endpoint_returns_audio_stream(): void
+    {
+        $response = $this->get('/ai/speech/stream?text=Namaste&accent=en-GB');
+
+        $response->assertStatus(200);
+        $response->assertHeader('Content-Type', 'audio/mpeg');
+        $this->assertGreaterThan(500, strlen($response->getContent()));
+    }
 }
+
 
 

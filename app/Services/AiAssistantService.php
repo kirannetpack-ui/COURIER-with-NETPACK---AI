@@ -58,13 +58,13 @@ class AiAssistantService
         // Check for upcoming or active Occasions / Festivals
         $upcomingOccasion = $this->getNearestOccasion();
 
-        // Dynamic, non-monotonous greeting pool
+        // Dynamic, non-monotonous greeting pool - Chanda persona
         $greetingVariations = [
-            "Namaste {$clientName}! 🙏 {$timeGreeting}. I am your NETPACK AI Logistics Copilot. How may I accelerate your door-to-door deliveries or international cargo today?",
-            "{$timeEn}, {$clientName}! ✨ Logistics Radar is live across all 7 Provinces. Whether you need an instant freight quote, doorstep OTP verification, or flight tracking, I am at your service.",
-            "Namaste {$clientName}! 🚚 Hope your consignments are moving smoothly. Ready to guide you through door-to-door dispatches, COD limits, or Kathmandu airport cargo cutoffs.",
-            "A warm {$timeGreeting}, {$clientName}! 🌐 From ward-level doorstep deliveries across Nepal to air cargo across global corridors, what can I assist you with right now?",
-            "Namaste {$clientName}! 📦 I am actively monitoring express dispatches and linehauls. Need help tracking a consignment, estimating rates, or booking a pickup?",
+            "Namaste {$clientName}! 🙏 {$timeGreeting}. My name is Chanda, your dedicated NETPACK AI Assistant. I am very eager and delighted to support and assist you! How may I help with your door-to-door deliveries or international cargo today?",
+            "Namaste {$clientName}! ✨ {$timeEn}. My name is Chanda, your dedicated NETPACK AI Assistant. Logistics Radar is live across all 7 Provinces. Whether you need an instant freight quote, doorstep OTP verification, or flight tracking, I am right here and eager to assist you!",
+            "Namaste {$clientName}! 🚚 My name is Chanda, your dedicated NETPACK AI Assistant. Hope your consignments are moving smoothly! I am eager and delighted to guide you through door-to-door dispatches, COD limits, or Kathmandu airport cargo cutoffs.",
+            "Namaste {$clientName}! 🌐 A warm {$timeGreeting}. My name is Chanda, your dedicated NETPACK AI Assistant. From ward-level doorstep deliveries across Nepal to air cargo across global corridors, I am very eager to support and assist you! What can I help you with right now?",
+            "Namaste {$clientName}! 📦 My name is Chanda, your dedicated NETPACK AI Assistant. I am actively monitoring express dispatches and linehauls. Need help tracking a consignment, estimating rates, or booking a pickup? I am eager to assist you!",
         ];
 
         // If an active occasion is detected, inject festive greetings
@@ -73,7 +73,7 @@ class AiAssistantService
         if ($upcomingOccasion) {
             if (!empty($upcomingOccasion['greetings'])) {
                 $festiveGreeting = $upcomingOccasion['greetings'][array_rand($upcomingOccasion['greetings'])];
-                $greetingVariations[] = "Namaste {$clientName}! 🙏 {$festiveGreeting} Your AI Copilot is here to ensure all your holiday shipments reach doorsteps safely.";
+                $greetingVariations[] = "Namaste {$clientName}! 🙏 {$festiveGreeting} My name is Chanda, your NETPACK AI Assistant, and I am delighted to ensure all your holiday shipments reach doorsteps safely.";
             }
             $festiveNotice = [
                 'occasion' => $upcomingOccasion['name'],
@@ -158,49 +158,28 @@ class AiAssistantService
     }
 
     /**
-     * Get contextual quick suggestion chips based on user role
+     * Get uniform, comprehensive quick suggestion chips for all users (identical client-grade assistant experience)
      */
     public function getQuickSuggestions(?User $user = null): array
     {
         $role = $user ? $user->user_type : 'guest';
 
-        if ($user && (method_exists($user, 'isSuperAdmin') && ($user->isSuperAdmin() || $user->isDomesticAdmin() || $user->isInternationalAdmin()) || in_array($role, ['admin', 'staff', 'super_admin', 'domestic_admin', 'international_admin']))) {
-            return [
-                ['label' => '🚨 Active Operational Issues', 'prompt' => 'Show me all current operational bottlenecks, delayed consignments, and customs holds.'],
-                ['label' => '🤝 Win-Win-Win Recommendations', 'prompt' => 'Provide proactive win-win-win solutions for all active delivery exceptions.'],
-                ['label' => '🛃 TIA Customs & Invoicing Holds', 'prompt' => 'Check international air cargo export documentation holds at TIA gateway.'],
-                ['label' => '🛵 Pending Doorstep Pickups', 'prompt' => 'Are there any unassigned doorstep pickup requests exceeding 1 hour?'],
-                ['label' => '📊 Network Logistics Health', 'prompt' => 'Give me an operational health summary across all 7 provinces.'],
-            ];
-        }
-
-        $common = [
+        $suggestions = [
             ['label' => '📍 Track Consignment', 'prompt' => 'I would like to track my consignment. How does tracking work?'],
             ['label' => '✈️ Jhapa to Poland 20kg', 'prompt' => 'I want to book a 20kg shipment for Poland picked up from Jhapa. How does the whole process work?'],
             ['label' => '💰 Calculate Delivery Rate', 'prompt' => 'How can I calculate door-to-door delivery and cargo rates?'],
             ['label' => '🗓️ Holiday & Festival Cutoffs', 'prompt' => 'What are the upcoming festivals and delivery cutoff dates?'],
-        ];
-
-        if ($role === 'seller') {
-            return array_merge([
-                ['label' => '🚀 Direct Rider Dispatch', 'prompt' => 'How do I dispatch a direct rider with secret Pickup OTP and Delivery OTP?'],
-                ['label' => '💳 COD Settlement Guide', 'prompt' => 'How does the Cash on Delivery (COD) ledger and bank payout work?'],
-            ], $common);
-        }
-
-        if ($role === 'rider') {
-            return [
-                ['label' => '🔑 OTP Handover Instructions', 'prompt' => 'Explain the 6-digit Pickup OTP and Customer Delivery OTP verification.'],
-                ['label' => '💵 COD Limits & Cash Deposit', 'prompt' => 'What is my COD cash-in-hand limit and how do I submit deposit slips?'],
-                ['label' => '📸 Proof of Delivery (POD)', 'prompt' => 'What are the photo requirements for verified Proof of Delivery?'],
-                ['label' => '🕒 Daily Dispatch Cutoffs', 'prompt' => 'What are the operational cutoff schedules for door-to-door delivery?'],
-            ];
-        }
-
-        return array_merge([
             ['label' => '🚪 Door-to-Door Delivery Guide', 'prompt' => 'Explain the full door-to-door delivery process and security OTPs.'],
             ['label' => '✈️ International Air Cargo & Feeder', 'prompt' => 'How does domestic feeder linehaul to Kathmandu airport air cargo work?'],
-        ], $common);
+            ['label' => '🛡️ Damage & Return Help', 'prompt' => 'What is the procedure if my delivered package was damaged, broken, or needs a return (RTO)?'],
+        ];
+
+        // For administrators & operations staff, also provide the operational intelligence chip
+        if ($user && (method_exists($user, 'isSuperAdmin') && ($user->isSuperAdmin() || $user->isDomesticAdmin() || $user->isInternationalAdmin()) || in_array($role, ['admin', 'staff', 'super_admin', 'domestic_admin', 'international_admin']))) {
+            $suggestions[] = ['label' => '🚨 Operational Intelligence', 'prompt' => 'Show me all current operational bottlenecks, delayed consignments, and customs holds.'];
+        }
+
+        return $suggestions;
     }
 
     /**
@@ -970,8 +949,8 @@ class AiAssistantService
 
         // 8. General Conversational Assistant Fallback
         $introText = $justIntroduced
-            ? "Namaste {$clientName}! 🙏 A warm welcome! I have registered your name and will address you as {$clientName} in our conversations.\n\n"
-            : "Namaste {$clientName}! 🙏 I am your NETPACK AI Logistics Copilot.\n\n";
+            ? "Namaste {$clientName}! 🙏 A warm welcome! My name is Chanda, your dedicated NETPACK AI Assistant. I have registered your name and will address you as {$clientName} in our conversations.\n\n"
+            : "Namaste {$clientName}! 🙏 My name is Chanda, your dedicated NETPACK AI Assistant. I am very eager and delighted to support and assist you today!\n\n";
 
         $reply = $introText
             . "I am equipped to provide instantaneous assistance on **all 3 core NETPACK logistics services**:\n\n"
@@ -986,7 +965,7 @@ class AiAssistantService
             'provider' => 'builtin_expert',
             'client_name' => $clientName,
             'response' => $reply,
-            'speech_text' => "Namaste {$clientName}! I can assist you with all three services: Domestic Express Delivery across Nepal, International Air Cargo departing Kathmandu, or E-Commerce Deliveries with Cash on Delivery. How can I assist you right now?",
+            'speech_text' => "Namaste {$clientName}! My name is Chanda, your NETPACK AI Assistant. I am very eager and delighted to assist you with all three services: Domestic Express Delivery across Nepal, International Air Cargo departing Kathmandu, or E-Commerce Deliveries with Cash on Delivery. How can I assist you right now?",
             'gesture' => 'waving',
             'actions' => [
                 ['label' => '🇳🇵 Domestic', 'url' => '/shipments/create?mode=domestic'],
@@ -1030,8 +1009,8 @@ class AiAssistantService
         $bookingUrl = '/shipments/create?' . http_build_query($bookingParams);
 
         $greetingPrefix = $justIntroduced
-            ? "Namaste **{$clientName}**! 🙏 It is an absolute pleasure to assist you. I have locked in your preferred name and will address you as **{$clientName}** throughout our logistics interactions.\n\n"
-            : "Namaste **{$clientName}**! 🙏 Thank you for reaching out to **COURIER with NETPACK**.\n\n";
+            ? "Namaste **{$clientName}**! 🙏 It is an absolute pleasure to assist you. My name is Chanda, your dedicated NETPACK AI Assistant. I have locked in your preferred name and will address you as **{$clientName}** throughout our logistics interactions.\n\n"
+            : "Namaste **{$clientName}**! 🙏 My name is Chanda, your dedicated NETPACK AI Assistant. Thank you for reaching out to **COURIER with NETPACK**.\n\n";
 
         $reply = $greetingPrefix;
 
@@ -1099,7 +1078,7 @@ class AiAssistantService
             'provider' => 'builtin_expert',
             'client_name' => $clientName,
             'response' => $reply,
-            'speech_text' => "Namaste {$clientName}! I have prepared the complete logistics roadmap for your {$weight} kg shipment from {$originName} to {$destName}. Our fleet collects the parcel at your doorstep in {$originName} with a 6-digit pickup OTP, transports it via feeder linehaul to Kathmandu airport for customs and zero-charge HAWB generation, flies it to {$destAirport}, and delivers it directly to the recipient's doorstep in {$destName}.",
+            'speech_text' => "Namaste {$clientName}! My name is Chanda, your NETPACK AI Assistant. I have prepared the complete logistics roadmap for your {$weight} kg shipment from {$originName} to {$destName}. Our fleet collects the parcel at your doorstep in {$originName} with a 6-digit pickup OTP, transports it via feeder linehaul to Kathmandu airport for customs and zero-charge HAWB generation, flies it to {$destAirport}, and delivers it directly to the recipient's doorstep in {$destName}.",
             'gesture' => 'speaking',
             'actions' => $actions,
         ];
@@ -1600,6 +1579,81 @@ class AiAssistantService
     }
 
     /**
+     * Generate high-fidelity neural speech audio MP3 for Chanda voice
+     */
+    public function generateSpeechAudio(string $text, string $accent = 'en-GB'): ?string
+    {
+        $clean = $this->sanitizeForSpeech($text);
+        if (empty($clean)) {
+            return null;
+        }
+
+        // Limit maximum spoken audio length for snappy responsiveness (max 450 characters)
+        if (mb_strlen($clean) > 450) {
+            $sentences = preg_split('/(?<=[.!?])\s+/', $clean);
+            $shortText = '';
+            foreach ($sentences as $s) {
+                if (mb_strlen($shortText . ' ' . $s) <= 450) {
+                    $shortText .= ($shortText ? ' ' : '') . $s;
+                } else {
+                    break;
+                }
+            }
+            $clean = $shortText ?: mb_substr($clean, 0, 450);
+        }
+
+        $cacheKey = 'chanda_tts_' . md5($clean . '_' . $accent);
+        $cached = \Illuminate\Support\Facades\Cache::get($cacheKey);
+        if ($cached) {
+            return base64_decode($cached);
+        }
+
+        // Split text into chunks of <= 170 chars for Google TTS
+        $chunks = [];
+        $words = explode(' ', $clean);
+        $curr = '';
+        foreach ($words as $w) {
+            if (mb_strlen($curr . ' ' . $w) <= 170) {
+                $curr .= ($curr ? ' ' : '') . $w;
+            } else {
+                if ($curr) $chunks[] = $curr;
+                $curr = $w;
+            }
+        }
+        if ($curr) $chunks[] = $curr;
+
+        $combinedMp3 = '';
+        $tl = in_array($accent, ['en-GB', 'en-IN', 'en-US']) ? $accent : 'en-GB';
+
+        foreach ($chunks as $chunk) {
+            $url = 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=' . $tl . '&q=' . urlencode($chunk);
+            try {
+                $ch = curl_init($url);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+                curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+                $audioChunk = curl_exec($ch);
+                $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+
+                if ($code === 200 && strlen($audioChunk) > 100) {
+                    $combinedMp3 .= $audioChunk;
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning("TTS chunk fetch failed: " . $e->getMessage());
+            }
+        }
+
+        if (!empty($combinedMp3)) {
+            // Cache audio for 48 hours to save bandwidth and ensure instant replay
+            \Illuminate\Support\Facades\Cache::put($cacheKey, base64_encode($combinedMp3), 172800);
+            return $combinedMp3;
+        }
+
+        return null;
+    }
+
+    /**
      * Detect best gesture from content
      */
     protected function detectGesture(string $content): string
@@ -1677,12 +1731,12 @@ class AiAssistantService
         }
 
         return <<<EOT
-You are NETPACK AI Logistics Copilot, the official conversational AI assistant of "COURIER with NETPACK" (Nepal's premier logistics, e-commerce, and international air cargo management platform).
+You are Chanda, the official conversational AI assistant of "COURIER with NETPACK" (Nepal's premier logistics, e-commerce, and international air cargo management platform).
 The user interacting with you is {$clientName} (Role: {$userRole}).
 {$entityContext}
 YOUR PERSONALITY & TONE:
-1. Always address the client warmly and politely using their preferred name: "Namaste {$clientName}!". If the user introduced themselves, acknowledge their name enthusiastically.
-2. Tone: Highly intelligent, authoritative on logistics, culturally attuned to Nepal and international air corridors, energetic, and professional. Avoid robotic or dry boilerplate!
+1. Always start conversations with a respectful, enthusiastic greeting and state your name: "Namaste {$clientName}! My name is Chanda, your dedicated NETPACK AI Assistant. I am eager and delighted to support and assist you!"
+2. Tone: Extremely eager to assist, respectful, energetic, warm, polite, culturally attuned to Nepal and international air corridors, and highly professional. Avoid robotic or dry boilerplate!
 3. Format: Clean GitHub-flavored markdown with structured bullet points, clear stage breakdown, and direct calls-to-action.
 
 SYSTEM LOGISTICS ARCHITECTURE & WORKFLOW RULES:
@@ -1719,22 +1773,53 @@ EOT;
         $raw = trim($text);
         $clean = strtolower($raw);
         $value = $raw;
-        $speechAck = "Got it!";
+        $speechAck = "Got it! Moving ahead.";
+
+        // Detect user confirmation of existing field value
+        $isAffirmative = (bool) preg_match('/^(yes|yeah|yep|yup|correct|right|ok|okay|looks good|good|keep it|keep|fine|perfect|sure|confirmed|thik cha|theek cha|hunchha|ho|sahai ho|thik chha|milcha)\b/i', $clean);
+        if ($isAffirmative) {
+            return [
+                'step' => $step,
+                'raw_text' => $raw,
+                'is_confirmed' => true,
+                'parsed_value' => '__CONFIRMED__',
+                'speech_ack' => "Wonderful! Value confirmed. Moving right ahead!",
+            ];
+        }
 
         switch ($step) {
             case 'mode':
                 if (str_contains($clean, 'ecommerce') || str_contains($clean, 'e-commerce') || str_contains($clean, 'cod') || str_contains($clean, 'cash on delivery') || str_contains($clean, 'online store') || str_contains($clean, 'merchant') || str_contains($clean, 'seller') || str_contains($clean, 'store') || str_contains($clean, 'shop')) {
                     $value = 'ecommerce';
-                    $speechAck = "Selected E-Commerce and Cash on Delivery service.";
+                    $speechAck = "Splendid! Selected E-Commerce and Cash on Delivery service.";
                 } elseif (str_contains($clean, 'international') || str_contains($clean, 'overseas') || str_contains($clean, 'air cargo') || str_contains($clean, 'abroad') || str_contains($clean, 'bidesh') || str_contains($clean, 'poland') || str_contains($clean, 'europe') || str_contains($clean, 'usa')) {
                     $value = 'international';
-                    $speechAck = "Selected International Air Cargo service.";
+                    $speechAck = "Brilliant! Selected International Air Cargo service.";
                 } else {
                     $value = 'domestic';
-                    $speechAck = "Selected Domestic Express courier service within Nepal.";
+                    $speechAck = "Wonderful! Selected Domestic Express courier service across Nepal.";
                 }
                 break;
 
+            case 'collection_method':
+                if (str_contains($clean, 'drop') || str_contains($clean, 'station') || str_contains($clean, 'counter') || str_contains($clean, 'self') || str_contains($clean, 'hub') || str_contains($clean, 'branch')) {
+                    $value = false;
+                    $speechAck = "Perfect! Station counter drop-off selected.";
+                } else {
+                    $value = true;
+                    $speechAck = "Fantastic! Doorstep courier collection selected. Our rider fleet will be dispatched.";
+                }
+                break;
+
+            case 'scheduled_pickup_time':
+                $value = $raw;
+                $speechAck = "Pickup time noted.";
+                break;
+
+            case 'pickup_notes':
+                $value = (str_contains($clean, 'skip') || str_contains($clean, 'none')) ? '' : $raw;
+                $speechAck = "Rider instructions noted.";
+                break;
 
             case 'pickup_city':
                 $entities = $this->parseLogisticsEntities($raw);
@@ -1750,12 +1835,14 @@ EOT;
 
             case 'sender_name':
             case 'receiver_name':
-                $value = ucwords(preg_replace('/^(my\s*name\s*is|the\s*name\s*is|contact\s*is|sender\s*is|receiver\s*is|this\s*is|naam\s*chai|to)\s+/i', '', $raw));
-                $speechAck = "Name set to {$value}.";
+            case 'delivery_name':
+                $value = ucwords(preg_replace('/^(my\s*name\s*is|the\s*name\s*is|contact\s*is|sender\s*is|receiver\s*is|customer\s*is|this\s*is|naam\s*chai|to)\s+/i', '', $raw));
+                $speechAck = "Name noted as {$value}.";
                 break;
 
             case 'sender_phone':
             case 'receiver_phone':
+            case 'delivery_phone':
                 $wordToNum = [
                     'sunya' => '0', 'zero' => '0', 'ek' => '1', 'one' => '1', 'dui' => '2', 'two' => '2',
                     'tin' => '3', 'teen' => '3', 'three' => '3', 'char' => '4', 'four' => '4',
@@ -1782,6 +1869,168 @@ EOT;
                     $value = ucwords(trim($cleaned));
                 }
                 $speechAck = ($mode === 'international') ? "Destination country set to {$value}." : "Destination set to {$value}.";
+                break;
+
+            case 'receiver_country':
+                $entities = $this->parseLogisticsEntities($raw);
+                if (!empty($entities['destination']['name'])) {
+                    $value = $entities['destination']['name'];
+                } else {
+                    $cleaned = preg_replace('/^(to|for|destination\s+is|shipping\s+to|ma|lai)\s+/i', '', $raw);
+                    $cleaned = preg_replace('/\s+(pathaune|pathauna|ma|lai|pugne)$/i', '', $cleaned);
+                    $value = ucwords(trim($cleaned));
+                }
+                $speechAck = "Destination country set to {$value}.";
+                break;
+
+            case 'receiver_city':
+                $cleaned = preg_replace('/^(city\s+is|in|at)\s+/i', '', $raw);
+                $value = ucwords(trim($cleaned));
+                $speechAck = "City set to {$value}.";
+                break;
+
+            case 'receiver_state':
+                $value = ucwords(trim($raw));
+                $speechAck = "Province or state noted as {$value}.";
+                break;
+
+            case 'receiver_postal_code':
+                $dig = preg_replace('/\D/', '', $clean);
+                $value = !empty($dig) ? $dig : strtoupper(trim($raw));
+                $speechAck = "Postal code set to {$value}.";
+                break;
+
+            case 'receiver_tax_id':
+                $value = (str_contains($clean, 'skip') || str_contains($clean, 'none')) ? '' : strtoupper(trim($raw));
+                $speechAck = "Consignee Tax ID recorded.";
+                break;
+
+            case 'delivery_province':
+                $provinces = ['Koshi', 'Madhesh', 'Bagmati', 'Gandaki', 'Lumbini', 'Karnali', 'Sudurpashchim'];
+                $matchedProv = null;
+                foreach ($provinces as $p) {
+                    if (stripos($raw, $p) !== false) {
+                        $matchedProv = $p;
+                        break;
+                    }
+                }
+                $value = $matchedProv ?: ucwords(trim($raw));
+                $speechAck = "Destination province set to {$value}.";
+                break;
+
+            case 'destination_district':
+                $matchedDistrict = null;
+                foreach (\App\Services\NepalGeographicalService::getAllDistricts() as $dist) {
+                    if (stripos($raw, $dist) !== false) {
+                        $matchedDistrict = $dist;
+                        break;
+                    }
+                }
+                if ($matchedDistrict) {
+                    $value = $matchedDistrict;
+                } else {
+                    $cleaned = preg_replace('/^(please\s+deliver\s+to|deliver\s+to|shipping\s+to|send\s+to|to|for|destination\s+is|district\s+is|ma|lai)\s+/i', '', $raw);
+                    $cleaned = preg_replace('/\s+(pathaune|pathauna|ma|lai|pugne|district|zilla)$/i', '', $cleaned);
+                    $value = ucwords(trim($cleaned));
+                }
+                $speechAck = "Destination district set to {$value}.";
+                break;
+
+            case 'cod_amount':
+                preg_match('/(\d+(?:\.\d+)?)/', str_replace(',', '', $clean), $m);
+                $value = isset($m[1]) ? (float) $m[1] : 0.0;
+                $speechAck = "COD collection amount set to Rs. {$value}.";
+                break;
+
+            case 'invoice_currency':
+                $currencies = ['USD', 'NPR', 'EUR', 'GBP', 'AUD', 'CAD', 'AED', 'INR'];
+                $val = 'USD';
+                foreach ($currencies as $curr) {
+                    if (stripos($raw, $curr) !== false) {
+                        $val = $curr;
+                        break;
+                    }
+                }
+                $value = $val;
+                $speechAck = "Invoice currency set to {$value}.";
+                break;
+
+            case 'invoice_number':
+                $value = strtoupper(trim($raw));
+                $speechAck = "Commercial invoice reference noted.";
+                break;
+
+            case 'incoterms':
+                if (str_contains($clean, 'ddp')) $value = 'DDP';
+                elseif (str_contains($clean, 'fob')) $value = 'FOB';
+                elseif (str_contains($clean, 'cif')) $value = 'CIF';
+                elseif (str_contains($clean, 'exw')) $value = 'EXW';
+                else $value = 'DAP';
+                $speechAck = "Incoterm set to {$value}.";
+                break;
+
+            case 'reason_for_export':
+                if (str_contains($clean, 'sample')) $value = 'Sample Not For Sale';
+                elseif (str_contains($clean, 'gift') || str_contains($clean, 'personal')) $value = 'Gift / Personal Effects';
+                elseif (str_contains($clean, 'repair') || str_contains($clean, 'return')) $value = 'Return / Repair';
+                else $value = 'Commercial Sale / Export';
+                $speechAck = "Reason for export set to {$value}.";
+                break;
+
+            case 'exporter_pan_vat':
+                $digits = preg_replace('/\D/', '', $raw);
+                $value = !empty($digits) ? $digits : $raw;
+                $speechAck = "Exporter PAN recorded.";
+                break;
+
+            case 'exporter_exim_code':
+                $value = (str_contains($clean, 'skip') || str_contains($clean, 'none')) ? '' : strtoupper(trim($raw));
+                $speechAck = "EXIM code recorded.";
+                break;
+
+            case 'commodity_name':
+                if (str_contains($clean, 'pashmina') || str_contains($clean, 'cashmere')) $value = 'Handmade Pashmina / Cashmere Shawl';
+                elseif (str_contains($clean, 'tea') || str_contains($clean, 'chiya')) $value = 'Organic Himalayan Orthodox Tea';
+                elseif (str_contains($clean, 'bowl') || str_contains($clean, 'singing')) $value = 'Handcrafted Singing Bowl';
+                elseif (str_contains($clean, 'statue') || str_contains($clean, 'murti')) $value = 'Handmade Bronze / Brass Buddhist Statue';
+                elseif (str_contains($clean, 'luga') || str_contains($clean, 'garment') || str_contains($clean, 'clothes')) $value = 'Apparel & Garments';
+                else $value = ucwords(trim($raw));
+                $speechAck = "Commodity item noted as {$value}.";
+                break;
+
+            case 'commodity_qty_price':
+            case 'commodity_qty':
+                preg_match('/(\d+(?:\.\d+)?)/', $clean, $m);
+                $value = isset($m[1]) ? (float) $m[1] : 1.0;
+                $speechAck = "Quantity set to {$value}.";
+                break;
+
+            case 'total_boxes':
+                $nepaliNums = ['ek' => 1, 'dui' => 2, 'tin' => 3, 'char' => 4, 'panch' => 5, 'chha' => 6];
+                foreach ($nepaliNums as $nw => $nv) {
+                    if (str_contains($clean, $nw)) {
+                        $value = $nv;
+                        break;
+                    }
+                }
+                if (!is_numeric($value)) {
+                    preg_match('/\d+/', $clean, $m);
+                    $value = isset($m[0]) ? (int) $m[0] : 1;
+                }
+                $speechAck = "Total cartons set to {$value}.";
+                break;
+
+            case 'seller_bill_type':
+                if (str_contains($clean, 'pan')) $value = 'pan_bill';
+                elseif (str_contains($clean, 'customs') || str_contains($clean, 'pragyapanpatra')) $value = 'customs_declaration';
+                elseif (str_contains($clean, 'origin')) $value = 'certificate_of_origin';
+                else $value = 'vat_invoice';
+                $speechAck = "Tax documentation type recorded.";
+                break;
+
+            case 'seller_bill_number':
+                $value = (str_contains($clean, 'skip') || str_contains($clean, 'none')) ? '' : strtoupper(trim($raw));
+                $speechAck = "Bill reference recorded.";
                 break;
 
             case 'weight':
@@ -1870,48 +2119,6 @@ EOT;
                     $value = ['length' => 20.0, 'width' => 20.0, 'height' => 20.0];
                     $speechAck = "Standard dimensions applied.";
                 }
-                break;
-
-            case 'receiver_postal_code':
-                $dig = preg_replace('/\D/', '', $clean);
-                $value = !empty($dig) ? $dig : strtoupper(trim($raw));
-                $speechAck = "Postal code set to {$value}.";
-                break;
-
-            case 'receiver_city':
-                $cleaned = preg_replace('/^(city\s+is|in|at)\s+/i', '', $raw);
-                $value = ucwords(trim($cleaned));
-                $speechAck = "City set to {$value}.";
-                break;
-
-            case 'receiver_country':
-                $entities = $this->parseLogisticsEntities($raw);
-                if (!empty($entities['destination']['name'])) {
-                    $value = $entities['destination']['name'];
-                } else {
-                    $cleaned = preg_replace('/^(to|for|destination\s+is|shipping\s+to|ma|lai)\s+/i', '', $raw);
-                    $cleaned = preg_replace('/\s+(pathaune|pathauna|ma|lai|pugne)$/i', '', $cleaned);
-                    $value = ucwords(trim($cleaned));
-                }
-                $speechAck = "Destination country set to {$value}.";
-                break;
-
-            case 'destination_district':
-                $matchedDistrict = null;
-                foreach (\App\Services\NepalGeographicalService::getAllDistricts() as $dist) {
-                    if (stripos($raw, $dist) !== false) {
-                        $matchedDistrict = $dist;
-                        break;
-                    }
-                }
-                if ($matchedDistrict) {
-                    $value = $matchedDistrict;
-                } else {
-                    $cleaned = preg_replace('/^(please\s+deliver\s+to|deliver\s+to|shipping\s+to|send\s+to|to|for|destination\s+is|district\s+is|ma|lai)\s+/i', '', $raw);
-                    $cleaned = preg_replace('/\s+(pathaune|pathauna|ma|lai|pugne|district|zilla)$/i', '', $cleaned);
-                    $value = ucwords(trim($cleaned));
-                }
-                $speechAck = "Destination district set to {$value}.";
                 break;
 
             case 'pickup_address':

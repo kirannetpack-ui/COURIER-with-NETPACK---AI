@@ -34,7 +34,20 @@ class HubController extends Controller
 
     public function create()
     {
-        return view('international.hubs.create');
+        $allAgencies = \App\Models\Agency::where('is_active', true)->orderBy('name')->get();
+        $suggestedCoverage = OverseasHub::autoFigureOutCoverage(request('country'), request('hub_code'));
+        return view('international.hubs.create', compact('allAgencies', 'suggestedCoverage'));
+    }
+
+    /**
+     * API endpoint to dynamically auto figure out pre-defined delivery areas and transit services
+     */
+    public function autoCoverage(Request $request)
+    {
+        $country = $request->query('country');
+        $code = $request->query('code') ?? $request->query('hub_code');
+        $data = OverseasHub::autoFigureOutCoverage($country, $code);
+        return response()->json($data);
     }
 
     public function store(Request $request)
@@ -66,13 +79,28 @@ class HubController extends Controller
             'hub_type' => 'nullable|in:main_hub,transit_point,sorting_center,delivery_hub',
             'mode_type' => 'required|string|max:100',
             'address' => 'nullable|string',
+            'main_delivery_countries' => 'nullable',
+            'transit_countries' => 'nullable',
             'coverage_countries' => 'nullable',
             'service_routes' => 'nullable',
             'sort_order' => 'nullable|integer|min:0',
             'is_active' => 'nullable',
+            'is_mandatory' => 'nullable',
+            'partner_agency_ids' => 'nullable|array',
+            'partner_agency_ids.*' => 'exists:agencies,id',
         ]);
 
+        $mainCountries = $this->parseCommaSeparatedList($request->input('main_delivery_countries'));
+        $transitCountries = $this->parseCommaSeparatedList($request->input('transit_countries'));
         $coverageCountries = $this->parseCommaSeparatedList($request->input('coverage_countries'));
+        
+        if (empty($coverageCountries)) {
+            $coverageCountries = array_values(array_unique(array_merge($mainCountries, $transitCountries)));
+        }
+        if (empty($mainCountries) && !empty($coverageCountries)) {
+            $mainCountries = $coverageCountries;
+        }
+
         $serviceRoutes = $this->parseCommaSeparatedList($request->input('service_routes'));
 
         $hub = OverseasHub::create([
@@ -83,12 +111,17 @@ class HubController extends Controller
             'hub_type' => $validated['hub_type'] ?? 'main_hub',
             'mode_type' => $validated['mode_type'],
             'address' => $validated['address'] ?? ($validated['country'] . ' Airport Cargo Terminal'),
+            'main_delivery_countries' => $mainCountries,
+            'transit_countries' => $transitCountries,
             'coverage_countries' => $coverageCountries,
             'service_routes' => $serviceRoutes,
             'is_active' => $request->boolean('is_active', true),
             'is_mandatory' => $request->boolean('is_mandatory', false),
             'sort_order' => $validated['sort_order'] ?? (OverseasHub::max('sort_order') + 1),
         ]);
+
+        // Sync selected multiple existing partner agencies
+        $selectedAgencyIds = $request->input('partner_agency_ids', []);
 
         // Merge Partner Agency function: create attached agency if details provided
         if ($request->filled('handling_agency_name')) {
@@ -105,18 +138,46 @@ class HubController extends Controller
                 'password' => bcrypt('Netpack@123'),
                 'is_active' => true,
             ]);
-            $hub->agencies()->syncWithoutDetaching([$agency->id]);
+            $selectedAgencyIds[] = $agency->id;
+        }
+
+        // Support multiple dynamic inline partners
+        if ($request->has('additional_partners') && is_array($request->input('additional_partners'))) {
+            foreach ($request->input('additional_partners') as $extra) {
+                if (!empty($extra['name'])) {
+                    $extraAgency = \App\Models\Agency::create([
+                        'hub_id' => $hub->id,
+                        'name' => $extra['name'],
+                        'code' => strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $extra['name']), 0, 4)) . '-' . rand(10, 99) . '-' . $hub->code,
+                        'country' => $extra['country'] ?? $hub->country,
+                        'city' => $extra['city'] ?? $hub->location,
+                        'address' => $extra['address'] ?? $hub->address,
+                        'phone' => $extra['phone'] ?? '+000-0000',
+                        'primary_contact' => $extra['contact_person'] ?? 'Operations Partner',
+                        'email' => $extra['email'] ?? ('partner.' . uniqid() . '@netpack.com'),
+                        'password' => bcrypt('Netpack@123'),
+                        'is_active' => true,
+                    ]);
+                    $selectedAgencyIds[] = $extraAgency->id;
+                }
+            }
+        }
+
+        if (!empty($selectedAgencyIds)) {
+            $hub->agencies()->sync(array_values(array_unique(array_filter($selectedAgencyIds))));
         }
 
         return redirect()->route('international.hubs.index')
-            ->with('success', "International Hub '{$hub->hub_name}' created successfully.");
+            ->with('success', "International Hub '{$hub->hub_name}' created successfully with " . count($hub->agencies) . " partner(s).");
     }
 
     public function edit($id)
     {
         $hub = OverseasHub::with('agencies')->findOrFail($id);
+        $allAgencies = \App\Models\Agency::where('is_active', true)->orderBy('name')->get();
+        $attachedAgencyIds = $hub->agencies->pluck('id')->toArray();
         $agency = $hub->agencies->first();
-        return view('international.hubs.edit', compact('hub', 'agency'));
+        return view('international.hubs.edit', compact('hub', 'allAgencies', 'attachedAgencyIds', 'agency'));
     }
 
     public function update(Request $request, $id)
@@ -147,13 +208,28 @@ class HubController extends Controller
             'hub_type' => 'nullable|in:main_hub,transit_point,sorting_center,delivery_hub',
             'mode_type' => 'required|string|max:100',
             'address' => 'nullable|string',
+            'main_delivery_countries' => 'nullable',
+            'transit_countries' => 'nullable',
             'coverage_countries' => 'nullable',
             'service_routes' => 'nullable',
             'sort_order' => 'nullable|integer|min:0',
             'is_active' => 'nullable',
+            'is_mandatory' => 'nullable',
+            'partner_agency_ids' => 'nullable|array',
+            'partner_agency_ids.*' => 'exists:agencies,id',
         ]);
 
+        $mainCountries = $this->parseCommaSeparatedList($request->input('main_delivery_countries'));
+        $transitCountries = $this->parseCommaSeparatedList($request->input('transit_countries'));
         $coverageCountries = $this->parseCommaSeparatedList($request->input('coverage_countries'));
+        
+        if (empty($coverageCountries)) {
+            $coverageCountries = array_values(array_unique(array_merge($mainCountries, $transitCountries)));
+        }
+        if (empty($mainCountries) && !empty($coverageCountries)) {
+            $mainCountries = $coverageCountries;
+        }
+
         $serviceRoutes = $this->parseCommaSeparatedList($request->input('service_routes'));
 
         $hub->update([
@@ -164,12 +240,17 @@ class HubController extends Controller
             'hub_type' => $validated['hub_type'] ?? $hub->hub_type,
             'mode_type' => $validated['mode_type'],
             'address' => $validated['address'] ?? $hub->address,
+            'main_delivery_countries' => $mainCountries,
+            'transit_countries' => $transitCountries,
             'coverage_countries' => $coverageCountries,
             'service_routes' => $serviceRoutes,
             'sort_order' => $validated['sort_order'] ?? $hub->sort_order,
             'is_active' => $request->boolean('is_active', true),
             'is_mandatory' => $request->boolean('is_mandatory', false),
         ]);
+
+        // Sync selected multiple existing partner agencies
+        $selectedAgencyIds = $request->input('partner_agency_ids', []);
 
         // Merge Partner Agency function: update or create attached agency
         if ($request->filled('handling_agency_name')) {
@@ -184,6 +265,7 @@ class HubController extends Controller
                     'primary_contact' => $request->input('agency_contact_person') ?? $agency->primary_contact,
                     'email' => $request->input('agency_email') ?? $agency->email,
                 ]);
+                $selectedAgencyIds[] = $agency->id;
             } else {
                 $agency = \App\Models\Agency::create([
                     'hub_id' => $hub->id,
@@ -198,8 +280,34 @@ class HubController extends Controller
                     'password' => bcrypt('Netpack@123'),
                     'is_active' => true,
                 ]);
-                $hub->agencies()->syncWithoutDetaching([$agency->id]);
+                $selectedAgencyIds[] = $agency->id;
             }
+        }
+
+        // Support multiple dynamic inline partners
+        if ($request->has('additional_partners') && is_array($request->input('additional_partners'))) {
+            foreach ($request->input('additional_partners') as $extra) {
+                if (!empty($extra['name'])) {
+                    $extraAgency = \App\Models\Agency::create([
+                        'hub_id' => $hub->id,
+                        'name' => $extra['name'],
+                        'code' => strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $extra['name']), 0, 4)) . '-' . rand(10, 99) . '-' . $hub->code,
+                        'country' => $extra['country'] ?? $hub->country,
+                        'city' => $extra['city'] ?? $hub->location,
+                        'address' => $extra['address'] ?? $hub->address,
+                        'phone' => $extra['phone'] ?? '+000-0000',
+                        'primary_contact' => $extra['contact_person'] ?? 'Operations Partner',
+                        'email' => $extra['email'] ?? ('partner.' . uniqid() . '@netpack.com'),
+                        'password' => bcrypt('Netpack@123'),
+                        'is_active' => true,
+                    ]);
+                    $selectedAgencyIds[] = $extraAgency->id;
+                }
+            }
+        }
+
+        if ($request->has('partner_agency_ids') || !empty($selectedAgencyIds)) {
+            $hub->agencies()->sync(array_values(array_unique(array_filter($selectedAgencyIds))));
         }
 
         return redirect()->route('international.hubs.index')
