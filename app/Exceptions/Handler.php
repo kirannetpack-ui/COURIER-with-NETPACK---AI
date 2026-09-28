@@ -44,5 +44,16 @@ class Handler extends ExceptionHandler
         $this->reportable(function (Throwable $e) {
             //
         });
+
+        $this->renderable(function (\Illuminate\Session\TokenMismatchException $e, $request) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Your session has expired. Please refresh the page and try again.',
+                    'csrf_token' => csrf_token(),
+                ], 419);
+            }
+
+            return redirect()->route('login')->with('warning', 'Your session expired. Please sign in again.');
+        });
     }
 }

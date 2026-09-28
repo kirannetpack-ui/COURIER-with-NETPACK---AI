@@ -4,11 +4,11 @@
  * Capabilities: Offline caching, Background Sync, Push Notifications for Status Changes
  */
 
-const CACHE_NAME = 'netpack-ai-v2.1.0';
+const CACHE_NAME = 'netpack-ai-v2.2.0';
 const OFFLINE_URL = '/offline.html';
 
 const STATIC_ASSETS = [
-    '/',
+    '/offline.html',
     '/manifest.json',
     '/images/logo-icon.png',
     '/images/logo.png',
@@ -44,7 +44,10 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// Fetch Strategy: Stale-While-Revalidate for Static Assets, Network-First for API/Dynamic Tracking
+// Fetch Strategy:
+// 1. Navigation/HTML: Network-First (ensures fresh CSRF token and session cookies on every page load)
+// 2. API/Tracking: Network-First
+// 3. Static Assets: Stale-While-Revalidate
 self.addEventListener('fetch', (event) => {
     const request = event.request;
     const url = new URL(request.url);
@@ -54,12 +57,22 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Bypass Chrome Extension / external tracking schemes
+    // Bypass non-HTTP schemes
     if (!url.protocol.startsWith('http')) {
         return;
     }
 
-    // Network-First for live tracking, API data, and AI Chat endpoints
+    // 1. HTML Page Navigation: ALWAYS Network-First to prevent stale CSRF tokens
+    if (request.mode === 'navigate' || request.headers.get('accept')?.includes('text/html')) {
+        event.respondWith(
+            fetch(request).catch(() => {
+                return caches.match(OFFLINE_URL);
+            })
+        );
+        return;
+    }
+
+    // 2. Network-First for live tracking, API data, and AI Chat endpoints
     if (url.pathname.startsWith('/api/') || 
         url.pathname.startsWith('/tracking') || 
         url.pathname.startsWith('/ai/')) {
@@ -71,7 +84,7 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Stale-While-Revalidate for static assets, scripts, stylesheets, and images
+    // 3. Stale-While-Revalidate for static assets, scripts, stylesheets, and images
     event.respondWith(
         caches.match(request).then((cachedResponse) => {
             const fetchPromise = fetch(request).then((networkResponse) => {
@@ -83,10 +96,7 @@ self.addEventListener('fetch', (event) => {
                 }
                 return networkResponse;
             }).catch(() => {
-                // If network fails and no cache exists, fallback if HTML
-                if (request.headers.get('accept')?.includes('text/html')) {
-                    return caches.match('/');
-                }
+                return null;
             });
 
             return cachedResponse || fetchPromise;

@@ -24,6 +24,14 @@ foreach ($dirs as $dir) {
     }
 }
 
+// Ensure database file exists in /tmp when using sqlite
+if (getenv('DB_CONNECTION') === 'sqlite' || !getenv('DB_CONNECTION')) {
+    $dbPath = getenv('DB_DATABASE') ?: '/tmp/database.sqlite';
+    if (!file_exists($dbPath)) {
+        @touch($dbPath);
+    }
+}
+
 // Normalize script name for Laravel routing on Vercel
 $_SERVER['SCRIPT_NAME'] = '/index.php';
 $_SERVER['SCRIPT_FILENAME'] = __DIR__ . '/../public/index.php';

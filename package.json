@@ -2,8 +2,9 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "dev": "vite --configLoader runner",
-        "build": "vite build --configLoader runner"
+        "dev": "vite",
+        "build": "vite build",
+        "vercel-build": "vite build"
     },
     "devDependencies": {
         "autoprefixer": "^10.5.4",
