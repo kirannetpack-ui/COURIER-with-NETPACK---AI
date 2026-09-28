@@ -667,6 +667,55 @@ class AiAssistantTest extends TestCase
         $response->assertHeader('Content-Type', 'audio/mpeg');
         $this->assertGreaterThan(500, strlen($response->getContent()));
     }
+
+    public function test_ai_fast_dispatch_parse_extracts_minimal_voice_parameters(): void
+    {
+        $user = User::factory()->create(['name' => 'Dipesh Sharma']);
+
+        $response = $this->actingAs($user)->postJson('/ai/fast-dispatch-parse', [
+            'query' => 'Send 2.5kg organic honey to Pokhara to Hari Thapa 9841234567',
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'success' => true,
+            'service_tier' => 'domestic',
+            'destination' => 'Pokhara',
+            'recipient_name' => 'Hari Thapa',
+            'recipient_phone' => '9841234567',
+        ]);
+
+        $data = $response->json();
+        $this->assertEquals(2.5, $data['weight']);
+        $this->assertGreaterThan(0, $data['estimated_cost']);
+        $this->assertNotEmpty($data['speech_summary']);
+    }
+
+    public function test_ai_explain_status_returns_4_pillars(): void
+    {
+        $user = User::factory()->create(['name' => 'Maya Gurung']);
+
+        $response = $this->actingAs($user)->postJson('/ai/explain-status', [
+            'status' => 'in_transit',
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJsonStructure([
+            'success',
+            'data' => [
+                'what',
+                'where',
+                'why',
+                'next_step',
+                'nepali',
+                'speech_text',
+            ],
+        ]);
+
+        $data = $response->json('data');
+        $this->assertStringContainsString('Highway Linehaul', $data['what']);
+        $this->assertNotEmpty($data['nepali']);
+    }
 }
 
 

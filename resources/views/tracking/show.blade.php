@@ -132,10 +132,79 @@
                 <i class="fas fa-calendar-alt"></i>
                 <span>Ordered: {{ $shipment->created_at->format('M d, Y') }}</span>
             </div>
-        </div>
     </div>
 </div>
 
+    <!-- AI Status Explainer Card (Maximum Communication: What, Where, Why, Next Step) -->
+    @php
+        $aiService = app(\App\Services\AiAssistantService::class);
+        $aiExplanation = $aiService->explainShipmentStatus($shipment->status, $shipment);
+    @endphp
+    <div class="bg-white rounded-2xl border border-teal-200/90 p-5 shadow-xs mb-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-600 text-lg shadow-2xs">
+                    <i class="fas fa-brain"></i>
+                </div>
+                <div>
+                    <h3 class="text-xs sm:text-sm font-black text-slate-900 flex items-center gap-2">
+                        <span>Chanda AI &bull; Operational Status Intelligence</span>
+                        <span class="px-2 py-0.5 rounded text-[9px] font-bold bg-teal-50 text-teal-700 border border-teal-200 uppercase">Live Telemetry</span>
+                    </h3>
+                    <p class="text-[11px] text-slate-500">Real-time contextual transparency behind this milestone</p>
+                </div>
+            </div>
+
+            <!-- Voice Readout Button -->
+            <button type="button"
+                    onclick="const a = new Audio('{{ route('ai.speech.stream') }}?accent=en-IN&text=' + encodeURIComponent('{{ addslashes($aiExplanation['speech_text']) }}')); a.play();"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-bold rounded-xl transition shadow-2xs focus:outline-none">
+                <i class="fas fa-volume-high text-teal-600"></i>
+                <span>Listen to Status Brief</span>
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-4 text-xs">
+            <div class="bg-slate-50/70 p-3 rounded-xl border border-slate-200/70">
+                <div class="flex items-center gap-1.5 text-teal-700 font-bold uppercase tracking-wider text-[10px] mb-1">
+                    <i class="fas fa-gears"></i>
+                    <span>What is happening</span>
+                </div>
+                <p class="text-slate-800 font-medium leading-snug">{{ $aiExplanation['what'] }}</p>
+            </div>
+
+            <div class="bg-slate-50/70 p-3 rounded-xl border border-slate-200/70">
+                <div class="flex items-center gap-1.5 text-sky-700 font-bold uppercase tracking-wider text-[10px] mb-1">
+                    <i class="fas fa-location-dot"></i>
+                    <span>Current Waypoint</span>
+                </div>
+                <p class="text-slate-800 font-medium leading-snug">{{ $aiExplanation['where'] }}</p>
+            </div>
+
+            <div class="bg-slate-50/70 p-3 rounded-xl border border-slate-200/70">
+                <div class="flex items-center gap-1.5 text-amber-700 font-bold uppercase tracking-wider text-[10px] mb-1">
+                    <i class="fas fa-circle-info"></i>
+                    <span>Why (Operational Reason)</span>
+                </div>
+                <p class="text-slate-800 font-medium leading-snug">{{ $aiExplanation['why'] }}</p>
+            </div>
+
+            <div class="bg-slate-50/70 p-3 rounded-xl border border-slate-200/70">
+                <div class="flex items-center gap-1.5 text-emerald-700 font-bold uppercase tracking-wider text-[10px] mb-1">
+                    <i class="fas fa-forward-step"></i>
+                    <span>Next Step & Handover</span>
+                </div>
+                <p class="text-slate-800 font-medium leading-snug">{{ $aiExplanation['next_step'] }}</p>
+            </div>
+        </div>
+
+        @if(!empty($aiExplanation['nepali']))
+            <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center gap-2 text-xs text-slate-600">
+                <span class="text-xs">🇳🇵</span>
+                <span class="font-medium text-slate-700 font-serif italic">{{ $aiExplanation['nepali'] }}</span>
+            </div>
+        @endif
+    </div>
 
     <!-- Status Summary -->
     @php

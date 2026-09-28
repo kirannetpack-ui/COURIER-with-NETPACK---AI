@@ -1,0 +1,58 @@
+{
+  "name": "COURIER with NETPACK - AI Logistics",
+  "short_name": "NETPACK AI",
+  "description": "Next-Gen AI Powered Logistics, Domestic Courier across 77 Districts of Nepal, and Global Air Cargo to 190+ Countries.",
+  "start_url": "/client/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F8FAFC",
+  "theme_color": "#0D9488",
+  "lang": "en-US",
+  "categories": ["business", "logistics", "productivity"],
+  "icons": [
+    {
+      "src": "/images/logo-icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Instant Dispatch",
+      "short_name": "Ship Now",
+      "description": "Book a pickup in 3 taps with AI assistance",
+      "url": "/shipments/create",
+      "icons": [{ "src": "/images/logo-icon.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Live GPS Tracking",
+      "short_name": "Track",
+      "description": "Track shipments via live radar",
+      "url": "/tracking",
+      "icons": [{ "src": "/images/logo-icon.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Ask Chanda (AI Copilot)",
+      "short_name": "AI Copilot",
+      "description": "Voice & Chat Logistics Assistant",
+      "url": "/ai/assistant",
+      "icons": [{ "src": "/images/logo-icon.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Rate Calculator",
+      "short_name": "Tariff Calc",
+      "description": "Instant Domestic & International Tariff Estimator",
+      "url": "/tools/rates",
+      "icons": [{ "src": "/images/logo-icon.png", "sizes": "192x192" }]
+    }
+  ],
+  "prefer_related_applications": false
+}

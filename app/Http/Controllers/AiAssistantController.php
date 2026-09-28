@@ -180,6 +180,51 @@ class AiAssistantController extends Controller
 
         return response()->json(['error' => 'TTS audio stream temporarily unavailable'], 502);
     }
+
+    /**
+     * 3-Tap Zero-Form Dispatch Parser for Web & Mobile App
+     */
+    public function fastDispatchParse(Request $request): JsonResponse
+    {
+        $request->validate([
+            'query' => 'required|string|max:1000',
+        ]);
+
+        $query = $request->input('query');
+        $user = $request->user();
+
+        $result = $this->aiService->parseFastDispatch($query, $user);
+
+        return response()->json($result);
+    }
+
+    /**
+     * 4-Pillar AI Status Explainer for Tracking & Consignment History
+     */
+    public function explainStatus(Request $request): JsonResponse
+    {
+        $request->validate([
+            'status' => 'required|string|max:50',
+            'tracking_number' => 'nullable|string|max:50',
+        ]);
+
+        $status = $request->input('status');
+        $trackingNumber = $request->input('tracking_number');
+
+        $shipment = null;
+        if ($trackingNumber) {
+            $shipment = \App\Models\Shipment::where('tracking_number', $trackingNumber)
+                ->orWhere('hawb', $trackingNumber)
+                ->first();
+        }
+
+        $result = $this->aiService->explainShipmentStatus($status, $shipment);
+
+        return response()->json([
+            'success' => true,
+            'data' => $result,
+        ]);
+    }
 }
 
 

@@ -6,25 +6,25 @@
 @section('content')
 <div class="space-y-6">
     <!-- Welcome Header Banner -->
-    <div class="bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 rounded-2xl p-6 text-white shadow-sm border border-teal-900/40">
+    <div class="bg-white rounded-2xl p-6 text-slate-800 shadow-xs border border-slate-200/90 relative overflow-hidden">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
                 <div class="flex items-center gap-2 mb-1.5">
-                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase bg-teal-50 text-teal-700 border border-teal-200/70">
                         Unified Client Portal
                     </span>
-                    <span class="text-xs text-slate-400">&bull; Verified Logistics Account</span>
+                    <span class="text-xs text-slate-500">&bull; Verified Logistics Account</span>
                 </div>
-                <h1 class="text-2xl font-black tracking-tight flex items-center gap-2">
+                <h1 class="text-2xl font-black tracking-tight flex items-center gap-2 text-slate-900">
                     <span>Welcome back, {{ Auth::user()->name }}!</span>
                 </h1>
-                <p class="text-xs text-slate-300 mt-1 max-w-xl">
+                <p class="text-xs text-slate-600 mt-1 max-w-xl">
                     Manage pickup inquiries, calculate real-time courier tariffs, track live consignments via GPS radar, and view proof-of-delivery receipts.
                 </p>
             </div>
             <div class="flex items-center gap-2.5 flex-wrap">
                 <a href="{{ route('shipments.create') }}" 
-                   class="px-4 py-2.5 bg-gradient-to-r from-teal-400 to-emerald-400 hover:from-teal-300 hover:to-emerald-300 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition flex items-center gap-2">
+                   class="px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-xs transition flex items-center gap-2">
                     <i class="fas fa-box-archive"></i>
                     <span>Create Shipment & Pickup</span>
                 </a>
@@ -37,30 +37,28 @@
         $aiService = app(\App\Services\AiAssistantService::class);
         $aiGreeting = $aiService->generateGreeting(Auth::user());
     @endphp
-    <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-teal-950 via-slate-900 to-teal-950 border border-teal-500/30 p-4 sm:p-5 shadow-sm text-white">
+    <div class="relative overflow-hidden rounded-2xl bg-white border border-teal-200/90 p-4 sm:p-5 shadow-xs text-slate-800">
         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div class="flex items-center gap-3.5 min-w-0">
-                <div class="relative w-11 h-11 rounded-2xl bg-gradient-to-tr from-teal-500 to-emerald-400 p-0.5 shadow-md flex-shrink-0">
-                    <div class="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center text-xl">
-                        <span>🤖</span>
-                    </div>
-                    <span class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 border-2 border-slate-950 rounded-full flex items-center justify-center text-[8px] text-slate-950 font-bold">
+                <div class="relative w-11 h-11 rounded-2xl bg-teal-50 border border-teal-200/80 p-0.5 shadow-2xs flex-shrink-0 flex items-center justify-center text-xl text-teal-600">
+                    <span>🤖</span>
+                    <span class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full flex items-center justify-center text-[8px] text-white font-bold">
                         <i class="fas fa-check"></i>
                     </span>
                 </div>
                 <div class="min-w-0">
                     <div class="flex items-center gap-2 flex-wrap">
-                        <span class="text-xs font-black text-teal-300">NETPACK AI Copilot</span>
-                        <span class="px-2 py-0.5 rounded text-[9px] font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30 uppercase tracking-wider">
+                        <span class="text-xs font-black text-teal-800">NETPACK AI Copilot</span>
+                        <span class="px-2 py-0.5 rounded text-[9px] font-bold bg-teal-50 text-teal-700 border border-teal-200/70 uppercase tracking-wider">
                             Voice & Chat Ready
                         </span>
                         @if(!empty($aiGreeting['festive_notice']))
-                            <span class="px-2 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase tracking-wider">
+                            <span class="px-2 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-800 border border-amber-200 uppercase tracking-wider">
                                 🗓️ {{ $aiGreeting['festive_notice']['occasion'] }} (Cutoff: {{ $aiGreeting['festive_notice']['cutoff'] }})
                             </span>
                         @endif
                     </div>
-                    <p class="text-xs text-slate-200 mt-1 leading-snug">
+                    <p class="text-xs text-slate-600 mt-1 leading-snug">
                         {{ $aiGreeting['greeting'] }}
                     </p>
                 </div>
@@ -69,18 +67,21 @@
             <div class="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto">
                 <button type="button"
                         onclick="document.querySelector('#netpack-ai-copilot button[aria-label=\'Open AI Logistics Copilot\']')?.click()"
-                        class="w-full sm:w-auto px-3.5 py-2 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5 focus:outline-none">
+                        class="w-full sm:w-auto px-3.5 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 focus:outline-none">
                     <i class="fas fa-microphone"></i>
                     <span>Talk with AI</span>
                 </button>
                 <a href="{{ route('ai.assistant') }}" 
-                   class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-medium text-xs border border-slate-700 transition flex items-center justify-center gap-1 whitespace-nowrap">
+                   class="px-3 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-slate-900 font-medium text-xs border border-slate-200 transition flex items-center justify-center gap-1 whitespace-nowrap">
                     <span>Schedules & Hubs</span>
                     <i class="fas fa-arrow-right text-[10px]"></i>
                 </a>
             </div>
         </div>
     </div>
+
+    <!-- 3-Tap Zero-Form Fast Dispatch & 5 Major Services Showcase -->
+    <x-fast-dispatch-card />
 
     <!-- Quick Metrics Cards -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">

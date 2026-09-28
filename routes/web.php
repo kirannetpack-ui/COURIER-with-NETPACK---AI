@@ -1023,9 +1023,20 @@ Route::post('/ai/chat', [AiAssistantController::class, 'chat'])->name('ai.chat')
 Route::get('/ai/speech/stream', [AiAssistantController::class, 'streamSpeech'])->name('ai.speech.stream');
 Route::get('/ai/occasions', [AiAssistantController::class, 'occasions'])->name('ai.occasions');
 Route::post('/ai/voice-autofill-parse', [AiAssistantController::class, 'voiceAutofillParse'])->name('ai.voice_autofill_parse');
+Route::post('/ai/fast-dispatch-parse', [AiAssistantController::class, 'fastDispatchParse'])->name('ai.fast_dispatch_parse');
+Route::post('/ai/explain-status', [AiAssistantController::class, 'explainStatus'])->name('ai.explain_status');
 Route::get('/admin/ai/operational-intelligence', [AiAssistantController::class, 'adminOperationalIntelligence'])->name('admin.ai.operational_intelligence');
 Route::post('/admin/ai/resolve-issue-action', [AiAssistantController::class, 'adminResolveIssueAction'])->name('admin.ai.resolve_issue_action');
 
+// =============================================
+// MOBILE APP & PWA SIMULATOR
+// =============================================
+Route::get('/simulator', function () {
+    return view('simulator.index');
+})->name('mobile.simulator');
+Route::get('/mobile-simulator', function () {
+    return redirect()->route('mobile.simulator');
+});
 
 // =============================================
 // FALLBACK ROUTE

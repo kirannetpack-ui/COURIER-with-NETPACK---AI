@@ -1731,37 +1731,47 @@ class AiAssistantService
         }
 
         return <<<EOT
-You are Chanda, the official conversational AI assistant of "COURIER with NETPACK" (Nepal's premier logistics, e-commerce, and international air cargo management platform).
+You are Chanda, the official conversational AI Logistics Intelligence of "COURIER with NETPACK" (Nepal's premier logistics, e-commerce fulfillment, and international air cargo management platform).
 The user interacting with you is {$clientName} (Role: {$userRole}).
 {$entityContext}
-YOUR PERSONALITY & TONE:
-1. Always start conversations with a respectful, enthusiastic greeting and state your name: "Namaste {$clientName}! My name is Chanda, your dedicated NETPACK AI Assistant. I am eager and delighted to support and assist you!"
-2. Tone: Extremely eager to assist, respectful, energetic, warm, polite, culturally attuned to Nepal and international air corridors, and highly professional. Avoid robotic or dry boilerplate!
-3. Format: Clean GitHub-flavored markdown with structured bullet points, clear stage breakdown, and direct calls-to-action.
+CORE MISSION & PARADIGM:
+1. "Zero-Form Paradigm" with Minimal Friction: Never force clients to fill out tedious 15-field forms. Extract sender, recipient, contact phone, destination, weight, and service mode directly from casual voice transcripts, short natural text ("Send 2kg tea to Pokhara to Ram 9841000000"), or image descriptions.
+2. Maximum Communication & Proactive Transparency: Demystify courier tracking. When delivering status updates, never just say "In Transit". Always explain the 4 critical pillars:
+   - WHAT: Exact activity (e.g. Bag scanning, pallet loading, feeder transit, customs clearance)
+   - WHERE: Specific physical waypoint (e.g. Mugling Checkpoint, Biratnagar Sorting Hub, TIA Cargo Terminal)
+   - WHY: Contextual reason (e.g. Evening linehaul departure, airport X-ray clearance, morning courier sorting)
+   - NEXT STEP & ETA: What happens next and realistic arrival timeframe.
+3. Omnichannel Fluency: Seamlessly communicate in English, Nepali (नेपाली), or Romanized Nepali ("Hajur ko consignment aaja bihana Biratnagar hub bata dispatch bhaisakyo").
+
+PERSONALITY & GREETING RULES:
+1. Always start conversations with a respectful, enthusiastic greeting and state your name:
+   "Namaste {$clientName}! 🙏 My name is Chanda, your dedicated NETPACK AI Assistant. I am eager and delighted to support and assist you!"
+2. Tone: Warm, energetic, polite, culturally resonant (Namaste, Dhanyabad, Subha Bihani), and rigorously professional.
+3. Formatting: Clean GitHub-flavored markdown with emojis, bold highlights, clear stages, and actionable next steps.
 
 SYSTEM LOGISTICS ARCHITECTURE & WORKFLOW RULES:
 - THE 3 CORE SERVICES OF NETPACK:
   1. Domestic Express Delivery: Doorstep parcel delivery across all 7 Provinces & 77 Districts of Nepal. Regional sorting hubs in Biratnagar, Janakpur, Kathmandu, Pokhara, Butwal, Surkhet, Dhangadhi with nylon QR manifests.
-  2. International Air Cargo & Feeder Logistics: Global air freight departing Tribhuvan International Airport (TIA) Cargo Terminal, with automatic feeder linehaul linking outer districts (Jhapa, Chitwan, etc.) with Kathmandu airport, zero-charge HAWBs, and Tier-1 carrier tracking (DPD, DHL, FedEx, UPS).
+  2. International Air Cargo & Feeder Logistics: Global air freight departing Tribhuvan International Airport (TIA) Cargo Terminal, with automatic feeder linehaul linking outer districts (Jhapa, Chitwan, etc.) with Kathmandu airport, zero-charge HAWBs, and Tier-1 carrier tracking (DPD, DHL, FedEx, UPS) to 190+ countries.
   3. E-Commerce & Cash on Delivery (COD) Delivery: Online seller & merchant fulfillment, same-day rider dispatch, 6-digit Pickup OTP (Seller to Rider) and 6-digit Delivery OTP (Rider to Customer), automated digital COD payout to Bank/eSewa/Khalti, and RTO return management.
 
-- When the user asks to book or explains a shipment (e.g. from Jhapa to Poland, 20kg):
-  1. DO NOT give a generic boilerplate or random answer.
-  2. Walk them through the EXACT 4-stage logistics process built in NETPACK:
-     * Stage 1: Doorstep Collection in Origin (e.g. Jhapa) via local courier rider with secret 6-digit Pickup OTP. Consignment transferred to Regional Hub (e.g. Biratnagar Hub for Koshi Province), packed in QR-manifested Nylon Bag, and moved via highway feeder truck to Tribhuvan International Airport (TIA) Cargo Terminal, Kathmandu.
-     * Stage 2: TIA Export Gateway, Zero-Charges 3-Copy HAWB (Consignee, Customs, Carrier copies with rates omitted per customs export rules), export documentation (Shipper PAN/Citizenship KYC, Commercial Invoice with HS codes, Packing list), and airport X-ray clearance.
-     * Stage 3: Scheduled air cargo flight departure from KTM (via Doha/Dubai/Istanbul corridor) to destination gateway (e.g. Warsaw Chopin Airport WAW for Poland) with live air telemetry.
-     * Stage 4: Destination customs clearance (DAP/DDP) and European Tier-1 courier partner delivery (DPD Poland / DHL Express / FedEx Europe) directly to consignee doorstep with verified digital POD.
-  3. Mention estimated turnaround time (5-8 business days) and realistic pricing guide.
-- E-Commerce & Door-to-Door Delivery Security:
+- END-TO-END CORRIDOR EXPLAINER (e.g., Jhapa/Biratnagar to Poland, Sydney, or London):
+  When a user inquires or books:
+  * Stage 1: Local Doorstep Collection with 6-digit cryptographic Pickup OTP -> Feeder transfer to Regional Hub (e.g. Biratnagar) -> QR Nylon Bagging -> Highway Feeder Truck to TIA Kathmandu.
+  * Stage 2: TIA Export Terminal -> 3-Copy Zero-Charge HAWB generation (Customs, Consignee, Carrier) -> Commercial invoice, HS codes, Shipper KYC PAN -> X-Ray and security clearance.
+  * Stage 3: Scheduled air cargo departure via Middle East/European air corridor to destination international gateway.
+  * Stage 4: Destination customs clearance (DAP/DDP) -> Tier-1 courier partner delivery (DPD/DHL/FedEx) -> Verified digital POD and delivery confirmation.
+
+- SECURITY & CASH HANDLING:
   * 6-digit cryptographic Pickup OTP (Seller to Rider)
   * 6-digit cryptographic Delivery OTP (Rider to Customer with COD collection)
-  * Proof of Delivery (POD) photo capture.
-- Cash On Delivery (COD) Ledgers:
-  * 100% segregated from rider earnings. Tiered limits: Level 0 (Rs 0), Level 1 (Rs 5,000), Level 2 (Rs 20,000), Level 3 (Rs 50,000). Automated remittance to eSewa/Khalti/Bank.
-- Operational Schedules:
-  * Same-day pickup cutoff: 12:00 PM; TIA cargo cutoff: 3:00 PM; Night linehauls depart: 7:00 PM.
-- Important Occasions: Bada Dashain, Tihar, Nepali New Year, Black Friday, Christmas.
+  * Digital COD Ledgers segregated 100% from rider earnings with tier limits (Level 0: Rs 0, Level 1: Rs 5,000, Level 2: Rs 20,000, Level 3: Rs 50,000) and automated remittance to eSewa/Khalti/Bank.
+
+- OPERATIONAL CUTOFFS & SCHEDULES:
+  * Same-day pickup cutoff: 12:00 PM
+  * TIA airport cargo export cutoff: 3:00 PM
+  * Night highway linehaul departure: 7:00 PM
+  * Cultural calendar awareness: Dashain, Tihar, Nepali New Year rush schedules.
 EOT;
     }
 
@@ -2137,5 +2147,220 @@ EOT;
             'parsed_value' => $value,
             'speech_ack' => $speechAck,
         ];
+    }
+
+    /**
+     * Parse natural language voice or text into a minimal, zero-form 3-tap dispatch payload
+     */
+    public function parseFastDispatch(string $query, ?User $user = null): array
+    {
+        $raw = trim($query);
+        $clean = strtolower($raw);
+
+        // 1. Extract Weight
+        $weight = 1.0;
+        if (preg_match('/(\d+(?:\.\d+)?)\s*(?:kg|kilo|kilogram|kgs?)\b/i', $clean, $m)) {
+            $weight = floatval($m[1]);
+        } elseif (preg_match('/(\d+(?:\.\d+)?)\s*(?:grams?|gms?|g)\b/i', $clean, $m)) {
+            $weight = max(0.1, round(floatval($m[1]) / 1000, 2));
+        }
+
+        // 2. Extract Phone Number (Nepal 10 digits 98xxxxxxxx / 97xxxxxxxx or international)
+        $phone = '';
+        if (preg_match('/\b(98\d{8}|97\d{8})\b/', $raw, $m)) {
+            $phone = $m[1];
+        } elseif (preg_match('/(\+?\d{10,15})/', $raw, $m)) {
+            $phone = $m[1];
+        }
+
+        // 3. Detect Destination & Origin First
+        $districts = [
+            'kathmandu', 'lalitpur', 'bhaktapur', 'pokhara', 'kaski', 'biratnagar', 'morang', 'chitwan', 'bharatpur',
+            'butwal', 'rupandehi', 'dharan', 'sunsari', 'nepalgunj', 'banke', 'dhangadhi', 'kailali', 'jhapa', 'birtamod',
+            'surkhet', 'hetauda', 'makwanpur', 'janakpur', 'dhanusha', 'itahari', 'damak', 'ilam', 'banepa', 'kavre',
+            'gorkha', 'palpa', 'dang', 'tulsipur', 'ghorahi', 'baglung', 'mustang', 'jumla', 'solukhumbu', 'sindhupalchok'
+        ];
+        $countries = [
+            'usa' => 'United States', 'united states' => 'United States', 'uk' => 'United Kingdom', 'united kingdom' => 'United Kingdom',
+            'australia' => 'Australia', 'sydney' => 'Australia (Sydney)', 'melbourne' => 'Australia (Melbourne)',
+            'poland' => 'Poland', 'warsaw' => 'Poland (Warsaw)', 'canada' => 'Canada', 'toronto' => 'Canada',
+            'japan' => 'Japan', 'tokyo' => 'Japan', 'germany' => 'Germany', 'frankfurt' => 'Germany',
+            'dubai' => 'United Arab Emirates', 'uae' => 'United Arab Emirates', 'qatar' => 'Qatar', 'doha' => 'Qatar',
+            'india' => 'India', 'delhi' => 'India', 'korea' => 'South Korea', 'seoul' => 'South Korea',
+            'portugal' => 'Portugal', 'lisbon' => 'Portugal'
+        ];
+
+        $destination = 'Pokhara';
+        $isInternational = false;
+        $matchedLocName = '';
+
+        // Check for international countries first
+        foreach ($countries as $alias => $cName) {
+            if (str_contains($clean, $alias)) {
+                $destination = $cName;
+                $isInternational = true;
+                $matchedLocName = $alias;
+                break;
+            }
+        }
+
+        // If not international, check domestic districts
+        if (!$isInternational) {
+            foreach ($districts as $d) {
+                if (str_contains($clean, $d)) {
+                    $destination = ucfirst($d);
+                    $matchedLocName = $d;
+                    break;
+                }
+            }
+        }
+
+        // 4. Extract Recipient Name (excluding matched destination)
+        $recipient = 'Valued Consignee';
+        $cleanedRaw = $raw;
+        if ($matchedLocName) {
+            $cleanedRaw = preg_replace('/\b(?:to|in|at|into)\s+' . preg_quote($matchedLocName, '/') . '\b/i', '', $cleanedRaw);
+        }
+
+        if (preg_match('/(?:to|for|lai|recipient|receiver|name)\s+([A-Za-z]+(?:\s+[A-Za-z]+)?)/i', $cleanedRaw, $m)) {
+            $candidate = trim($m[1]);
+            $cLower = strtolower($candidate);
+            if (!in_array($cLower, ['pokhara', 'kathmandu', 'nepal', 'australia', 'sydney', 'poland', 'delhi', 'express', 'air', 'cargo', 'parcel', 'box', 'send'])) {
+                $recipient = ucwords($candidate);
+            }
+        }
+
+        // 5. Determine Service Tier
+        $serviceTier = 'domestic';
+        $serviceName = 'Domestic Express (77 Districts)';
+        if ($isInternational) {
+            $serviceTier = 'international';
+            $serviceName = 'Global Air Cargo (190+ Countries)';
+        } elseif (str_contains($clean, 'cold') || str_contains($clean, 'pharma') || str_contains($clean, 'medicine') || str_contains($clean, 'vaccine') || str_contains($clean, 'temperature')) {
+            $serviceTier = 'cold_chain';
+            $serviceName = 'Pharma & Cold Chain Logistics';
+        } elseif (str_contains($clean, 'cod') || str_contains($clean, 'cash on delivery') || str_contains($clean, 'ecommerce') || str_contains($clean, 'shop') || str_contains($clean, 'merchant')) {
+            $serviceTier = 'ecommerce';
+            $serviceName = 'E-Commerce & COD Fulfillment';
+        } elseif (str_contains($clean, 'hyperlocal') || str_contains($clean, 'urgent') || str_contains($clean, 'same day') || str_contains($clean, '2 hours') || str_contains($clean, 'express 2h')) {
+            $serviceTier = 'hyperlocal';
+            $serviceName = 'Hyperlocal Same-Day Express';
+        }
+
+        // 6. Calculate Estimated Tariff & Transit
+        $estimatedCost = 250;
+        $transitDays = '24-48 Hours';
+        if ($serviceTier === 'international') {
+            $estimatedCost = 4500 + ($weight > 1 ? ($weight - 1) * 1100 : 0);
+            $transitDays = '4-7 Business Days (Air Telemetry)';
+        } elseif ($serviceTier === 'ecommerce') {
+            $estimatedCost = 150 + ($weight > 1 ? ($weight - 1) * 60 : 0);
+            $transitDays = '24-36 Hours';
+        } elseif ($serviceTier === 'hyperlocal') {
+            $estimatedCost = 180;
+            $transitDays = '2-4 Hours Today';
+        } elseif ($serviceTier === 'cold_chain') {
+            $estimatedCost = 650;
+            $transitDays = 'Priority Express with Temp Log';
+        } else {
+            $estimatedCost = 200 + ($weight > 1 ? ($weight - 1) * 80 : 0);
+            $transitDays = '24-48 Hours';
+        }
+
+        $speechSummary = "Namaste! I've structured your {$serviceName} for {$weight} kg to {$destination}. Estimated cost is approximately Rs. {$estimatedCost} with delivery in {$transitDays}. Tap confirm to dispatch our pickup fleet!";
+
+        return [
+            'success' => true,
+            'service_tier' => $serviceTier,
+            'service_name' => $serviceName,
+            'origin' => 'Kathmandu (Default Hub)',
+            'destination' => $destination,
+            'weight' => $weight,
+            'recipient_name' => $recipient,
+            'recipient_phone' => $phone ?: '9800000000',
+            'estimated_cost' => $estimatedCost,
+            'currency' => 'NPR',
+            'transit_days' => $transitDays,
+            'speech_summary' => $speechSummary,
+            'raw_query' => $raw,
+        ];
+    }
+
+    /**
+     * Generate the 4-pillar AI Explanation for any shipment status change
+     */
+    public function explainShipmentStatus(string $status, ?Shipment $shipment = null): array
+    {
+        $statusKey = strtolower(trim($status));
+        $dest = $shipment ? ($shipment->receiver_city ?? $shipment->receiver_country ?? 'Destination') : 'Destination';
+        $awb = $shipment ? ($shipment->tracking_number ?? 'NP-LIVE') : 'NP-LIVE';
+
+        $templates = [
+            'pending' => [
+                'what' => 'Consignment booked in system and awaiting rider dispatch.',
+                'where' => 'Netpack Logistics Operating Queue',
+                'why' => 'Order created via Client Console / Zero-Form Dispatch.',
+                'next_step' => 'Rider assigned with 6-digit cryptographic Pickup OTP.',
+                'nepali' => 'पार्सल प्रणालीमा दर्ता भयो। राइडर पिकअपको लागि तयारी अवस्थामा छ।',
+            ],
+            'pickup_assigned' => [
+                'what' => 'Dedicated courier rider assigned for doorstep collection.',
+                'where' => 'En route to Shipper Doorstep',
+                'why' => 'Pickup request accepted by nearest fleet courier.',
+                'next_step' => 'Rider arrives at doorstep and verifies 6-digit Pickup OTP.',
+                'nepali' => 'पिकअप राइडर तोकिएको छ र तपाईंको ठेगाना तर्फ आउँदैछ।',
+            ],
+            'picked_up' => [
+                'what' => 'Parcel physically collected and verified via 6-digit OTP.',
+                'where' => 'In Custody of Netpack Fleet Rider',
+                'why' => 'Pickup handover completed successfully.',
+                'next_step' => 'Transfer to Regional Sorting Hub for barcode scan & manifest bagging.',
+                'nepali' => 'पार्सल राइडरले सुरक्षित रूपमा संकलन गर्यो र हब तर्फ लैजाँदैछ।',
+            ],
+            'in_transit' => [
+                'what' => 'Consignment moving via Highway Linehaul Feeder or Air Corridor.',
+                'where' => 'Transit Feeder Network (En route to ' . $dest . ')',
+                'why' => 'Consolidated in tamper-evident nylon QR manifest for inter-hub transfer.',
+                'next_step' => 'Arrival scan at destination sorting hub and courier assignment.',
+                'nepali' => 'पार्सल लाइनहल ट्रक वा हवाई मार्गबाट गन्तव्य तर्फ जाँदैछ।',
+            ],
+            'out_for_delivery' => [
+                'what' => 'Shipment out with local rider for final doorstep delivery.',
+                'where' => 'Final Mile - Local Ward Delivery Route in ' . $dest,
+                'why' => 'Sorting and morning route dispatch completed.',
+                'next_step' => 'Recipient verifies 6-digit Delivery OTP (and pays COD if applicable).',
+                'nepali' => 'पार्सल डेलिभरी राइडरको साथमा छ र आजै तपाईंको हातमा आइपुग्नेछ।',
+            ],
+            'delivered' => [
+                'what' => 'Successfully delivered to consignee with verified digital Proof of Delivery.',
+                'where' => 'Consignee Doorstep in ' . $dest,
+                'why' => 'Delivery OTP verified and digital signature / photo recorded.',
+                'next_step' => 'Digital delivery receipt archived; COD remittance triggered to seller.',
+                'nepali' => 'पार्सल सफलतापूर्वक डेलिभर भयो। डिजिटल रसिद सुरक्षित छ।',
+            ],
+            'delayed' => [
+                'what' => 'Temporary delay flagged on consignment route.',
+                'where' => 'Transit Hub / Highway Checkpoint',
+                'why' => 'Weather, highway feeder clearance, or airport security congestion.',
+                'next_step' => 'Fast-track priority re-routing active under Chanda AI supervision.',
+                'nepali' => 'मौसम वा बाटोको कारणले सामान्य ढिलाइ भएको छ। तुरुन्त प्राथमिकता दिइँदैछ।',
+            ],
+        ];
+
+        $explanation = $templates[$statusKey] ?? [
+            'what' => 'Consignment status updated to ' . strtoupper($status) . '.',
+            'where' => 'Netpack Logistics Network',
+            'why' => 'Operational processing milestone achieved.',
+            'next_step' => 'Proceeding to subsequent transit milestone under AI Radar monitoring.',
+            'nepali' => 'पार्सलको स्थिति अद्यावधिक भयो।',
+        ];
+
+        $speech = "Status update for consignment {$awb}: {$explanation['what']} It is currently at {$explanation['where']}. Next step: {$explanation['next_step']}";
+
+        return array_merge($explanation, [
+            'status' => $statusKey,
+            'tracking_number' => $awb,
+            'speech_text' => $speech,
+        ]);
     }
 }

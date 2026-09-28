@@ -4,6 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', config('app.name'))</title>
+    <!-- PWA & Mobile Meta Tags -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="NETPACK AI">
+    <link rel="apple-touch-icon" href="/images/logo-icon.png">
+    <meta name="mobile-web-app-capable" content="yes">
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -87,6 +96,36 @@
 
     <!-- Omnipresent AI Logistics Copilot (Voice & Text) -->
     <x-ai-copilot-widget />
+
+    <!-- PWA Install Banner Component -->
+    <x-pwa-install-banner />
+
+    <!-- PWA Service Worker Registration & App Install Handler -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then((reg) => console.log('[PWA] Service Worker registered with scope:', reg.scope))
+                    .catch((err) => console.warn('[PWA] Service Worker registration failed:', err));
+            });
+        }
+
+        // Global PWA Install Prompt Handler
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            window.dispatchEvent(new CustomEvent('pwa-installable'));
+        });
+        window.installNetpackApp = async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log(`[PWA] User response to install prompt: ${outcome}`);
+                deferredPrompt = null;
+            }
+        };
+    </script>
 
     @stack('scripts')
 </body>

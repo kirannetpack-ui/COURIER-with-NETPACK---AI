@@ -41,6 +41,8 @@ Route::prefix('ai')->group(function () {
     Route::get('/greeting', [\App\Http\Controllers\AiAssistantController::class, 'greeting'])->name('api.ai.greeting');
     Route::post('/chat', [\App\Http\Controllers\AiAssistantController::class, 'chat'])->name('api.ai.chat');
     Route::get('/occasions', [\App\Http\Controllers\AiAssistantController::class, 'occasions'])->name('api.ai.occasions');
+    Route::post('/fast-dispatch-parse', [\App\Http\Controllers\AiAssistantController::class, 'fastDispatchParse'])->name('api.ai.fast-dispatch-parse');
+    Route::post('/explain-status', [\App\Http\Controllers\AiAssistantController::class, 'explainStatus'])->name('api.ai.explain-status');
 });
 
 Route::prefix('auth')->middleware('throttle:5,1')->group(function () {

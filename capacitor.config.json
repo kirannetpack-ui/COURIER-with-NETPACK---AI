@@ -1,0 +1,39 @@
+{
+  "appId": "com.netpack.courier.ai",
+  "appName": "NETPACK AI",
+  "webDir": "public",
+  "bundledWebRuntime": false,
+  "server": {
+    "url": "https://netpack.com.np",
+    "cleartext": true,
+    "allowNavigation": [
+      "netpack.com.np",
+      "*.netpack.com.np",
+      "cdnjs.cloudflare.com",
+      "unpkg.com",
+      "fonts.googleapis.com"
+    ]
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1500,
+      "launchAutoHide": true,
+      "backgroundColor": "#F8FAFC",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false
+    },
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#FFFFFF"
+    },
+    "Keyboard": {
+      "resize": "body",
+      "style": "LIGHT",
+      "resizeOnFullScreen": true
+    }
+  }
+}
