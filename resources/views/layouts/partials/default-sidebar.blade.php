@@ -1,5 +1,5 @@
 <!-- Default Sidebar -->
-<aside class="bg-slate-900 text-white flex-shrink-0 h-screen overflow-y-auto sticky top-0 custom-scrollbar select-none z-50 fixed lg:static top-0 left-0 transition-all duration-300 ease-in-out w-72 max-w-[85vw] lg:w-64 shadow-2xl lg:shadow-none"
+<aside class="fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] lg:w-64 lg:static lg:inset-auto h-screen bg-slate-900 text-white flex-shrink-0 overflow-y-auto custom-scrollbar select-none shadow-2xl lg:shadow-none transition-all duration-300 ease-in-out -translate-x-full lg:translate-x-0"
        :class="sidebarOpen ? 'translate-x-0 lg:ml-0' : '-translate-x-full lg:-ml-64'">
     <div class="p-4 border-b border-gray-700 flex items-center justify-between">
         <div>

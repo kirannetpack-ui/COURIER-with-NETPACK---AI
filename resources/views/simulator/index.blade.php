@@ -294,11 +294,19 @@
                     </button>
 
                     <button type="button"
+                            @click="setScreen('{{ route('rates.inquiry') }}')"
+                            :class="currentScreen.includes('rates/inquiry') ? 'bg-teal-600 text-white font-bold' : 'bg-slate-900 text-slate-300 hover:bg-slate-800'"
+                            class="p-2.5 rounded-xl border border-slate-700/60 text-left transition flex items-center gap-2">
+                        <i class="fas fa-calculator text-emerald-400"></i>
+                        <span>Rate Calculator</span>
+                    </button>
+
+                    <button type="button"
                             @click="setScreen('/offline.html')"
                             :class="currentScreen.includes('offline.html') ? 'bg-teal-600 text-white font-bold' : 'bg-slate-900 text-slate-300 hover:bg-slate-800'"
-                            class="p-2.5 rounded-xl border border-slate-700/60 text-left transition flex items-center gap-2 col-span-2">
+                            class="p-2.5 rounded-xl border border-slate-700/60 text-left transition flex items-center gap-2">
                         <i class="fas fa-wifi-slash text-rose-400"></i>
-                        <span>Test PWA Offline Fallback Screen</span>
+                        <span>Offline Fallback</span>
                     </button>
                 </div>
             </div>
