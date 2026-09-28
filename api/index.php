@@ -32,6 +32,13 @@ if (getenv('DB_CONNECTION') === 'sqlite' || !getenv('DB_CONNECTION')) {
     }
 }
 
+// Ensure APP_KEY exists for encryption/sessions
+if (!getenv('APP_KEY')) {
+    putenv('APP_KEY=base64:7genAr6vdKRc37ptrhKOuTO5+aDkJIL96kUUGqV11F8=');
+    $_ENV['APP_KEY'] = 'base64:7genAr6vdKRc37ptrhKOuTO5+aDkJIL96kUUGqV11F8=';
+    $_SERVER['APP_KEY'] = 'base64:7genAr6vdKRc37ptrhKOuTO5+aDkJIL96kUUGqV11F8=';
+}
+
 // Normalize script name for Laravel routing on Vercel
 $_SERVER['SCRIPT_NAME'] = '/index.php';
 $_SERVER['SCRIPT_FILENAME'] = __DIR__ . '/../public/index.php';

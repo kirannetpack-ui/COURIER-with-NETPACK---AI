@@ -1,48 +1,19 @@
 {
     "version": 2,
     "framework": null,
-    "buildCommand": "npm run build",
     "functions": {
-        "api/index.php": {
+        "api/*.php": {
             "runtime": "vercel-php@0.7.4"
         }
     },
     "routes": [
         {
-            "src": "/build/(.*)",
-            "dest": "/public/build/$1"
+            "src": "/(build|images|css|js)/(.*)",
+            "dest": "/public/$1/$2"
         },
         {
-            "src": "/manifest.json",
-            "dest": "/public/manifest.json"
-        },
-        {
-            "src": "/service-worker.js",
-            "dest": "/public/service-worker.js"
-        },
-        {
-            "src": "/offline.html",
-            "dest": "/public/offline.html"
-        },
-        {
-            "src": "/images/(.*)",
-            "dest": "/public/images/$1"
-        },
-        {
-            "src": "/css/(.*)",
-            "dest": "/public/css/$1"
-        },
-        {
-            "src": "/js/(.*)",
-            "dest": "/public/js/$1"
-        },
-        {
-            "src": "/favicon.ico",
-            "dest": "/public/favicon.ico"
-        },
-        {
-            "src": "/robots.txt",
-            "dest": "/public/robots.txt"
+            "src": "/(manifest\\.json|service-worker\\.js|offline\\.html|favicon\\.ico|robots\\.txt)",
+            "dest": "/public/$1"
         },
         {
             "src": "/(.*)",
@@ -66,12 +37,5 @@
         "SESSION_DRIVER": "cookie",
         "DB_CONNECTION": "sqlite",
         "DB_DATABASE": "/tmp/database.sqlite"
-    },
-    "build": {
-        "env": {
-            "APP_ENV": "production",
-            "APP_KEY": "base64:7genAr6vdKRc37ptrhKOuTO5+aDkJIL96kUUGqV11F8=",
-            "VERCEL": "1"
-        }
     }
 }
