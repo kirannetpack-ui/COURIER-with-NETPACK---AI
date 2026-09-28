@@ -3,11 +3,12 @@
     <div class="flex items-center justify-between gap-3">
         <!-- Left: Hamburger (Mobile Only) & Namaste Greeting -->
         <div class="flex items-center gap-3 sm:gap-4 min-w-0">
-            <button @click="sidebarOpen = !sidebarOpen" 
+            <button @click="typeof toggleSidebar === 'function' ? toggleSidebar() : sidebarOpen = !sidebarOpen" 
                     type="button"
-                    class="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition focus:outline-none lg:hidden"
-                    aria-label="Toggle Navigation">
-                <i class="fas fa-bars text-lg"></i>
+                    class="p-2 text-slate-600 hover:text-teal-700 hover:bg-slate-100 rounded-xl transition focus:outline-none flex items-center justify-center flex-shrink-0"
+                    title="Toggle Sidebar (Full App Display)"
+                    aria-label="Toggle Sidebar">
+                <i class="fas fa-bars text-base sm:text-lg"></i>
             </button>
 
             <!-- Permanent Static Greeting -->

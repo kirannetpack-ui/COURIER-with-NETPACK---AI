@@ -164,4 +164,33 @@ class PersistentSidebarTest extends TestCase
             (bool) preg_match('/<aside[^>]+x-show="sidebarOpen"/', $content)
         );
     }
+
+    public function test_mobile_simulator_renders_successfully(): void
+    {
+        $response = $this->get('/simulator');
+
+        $response->assertStatus(200);
+        $content = $response->getContent();
+
+        $this->assertStringContainsString('App Simulator & Studio', $content);
+        $this->assertStringContainsString('iPhone 16 Pro', $content);
+        $this->assertStringContainsString('Galaxy S24 Ultra', $content);
+        $this->assertStringContainsString('Pixel 9 Pro', $content);
+        $this->assertStringContainsString('id="simulatorFrame"', $content);
+    }
+
+    public function test_sidebar_has_non_distorting_responsive_toggle_classes(): void
+    {
+        $response = $this->get('/rates/inquiry');
+
+        $response->assertStatus(200);
+        $content = $response->getContent();
+
+        // Check for non-distorting slide transition classes
+        $this->assertStringContainsString('lg:-ml-64', $content);
+        $this->assertStringContainsString('-translate-x-full', $content);
+        $this->assertStringContainsString('toggleSidebar()', $content);
+        $this->assertStringContainsString('window.innerWidth >= 1024', $content);
+    }
 }
+

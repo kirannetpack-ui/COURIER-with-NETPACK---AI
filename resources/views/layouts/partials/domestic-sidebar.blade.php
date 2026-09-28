@@ -1,12 +1,20 @@
 <!-- Domestic Admin & Operations Staff Sidebar -->
-<aside class="w-64 bg-slate-900 text-white flex-shrink-0 h-screen overflow-y-auto sticky top-0 custom-scrollbar select-none z-40 transition-transform duration-200 fixed lg:static top-0 left-0"
-       :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'">
+<aside class="bg-slate-900 text-white flex-shrink-0 h-screen overflow-y-auto sticky top-0 custom-scrollbar select-none z-50 fixed lg:static top-0 left-0 transition-all duration-300 ease-in-out w-72 max-w-[85vw] lg:w-64 shadow-2xl lg:shadow-none"
+       :class="sidebarOpen ? 'translate-x-0 lg:ml-0' : '-translate-x-full lg:-ml-64'">
     <!-- Brand Header -->
-    <div class="p-4 border-b border-slate-800 flex flex-col gap-2">
-        <x-logo variant="white" size="sm" :href="route('domestic.dashboard')" />
-        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30 w-fit tracking-wider uppercase">
-            <i class="fas fa-truck-fast text-[9px] text-teal-400"></i> Domestic Operations
-        </span>
+    <div class="p-4 border-b border-slate-800 flex items-center justify-between gap-2">
+        <div class="flex flex-col gap-1.5">
+            <x-logo variant="white" size="sm" :href="route('domestic.dashboard')" />
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30 w-fit tracking-wider uppercase">
+                <i class="fas fa-truck-fast text-[9px] text-teal-400"></i> Domestic Operations
+            </span>
+        </div>
+        <button @click="sidebarOpen = false" 
+                type="button" 
+                class="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg lg:hidden"
+                title="Close Sidebar">
+            <i class="fas fa-times text-sm"></i>
+        </button>
     </div>
     
     <!-- User Info Card -->

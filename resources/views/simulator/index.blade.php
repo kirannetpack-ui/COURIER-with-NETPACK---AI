@@ -230,7 +230,8 @@
                     </div>
 
                     <!-- The Live App Iframe -->
-                    <iframe x-ref="simFrame"
+                    <iframe id="simulatorFrame"
+                            x-ref="simFrame"
                             :src="currentScreen"
                             class="w-full h-full border-0 pt-10 pb-6 bg-slate-50"
                             allow="geolocation; microphone; camera"></iframe>

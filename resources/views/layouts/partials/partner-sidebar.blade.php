@@ -1,12 +1,20 @@
 <!-- Partner Sidebar (Nordic Light Theme) -->
-<aside class="w-64 bg-white text-slate-800 border-r border-slate-200/90 flex-shrink-0 h-screen overflow-y-auto sticky top-0 custom-scrollbar select-none z-40 transition-transform duration-200 fixed lg:static top-0 left-0 shadow-xs"
-       :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'">
+<aside class="bg-white text-slate-800 border-r border-slate-200/90 flex-shrink-0 h-screen overflow-y-auto sticky top-0 custom-scrollbar select-none z-50 fixed lg:static top-0 left-0 shadow-lg lg:shadow-none transition-all duration-300 ease-in-out w-72 max-w-[85vw] lg:w-64"
+       :class="sidebarOpen ? 'translate-x-0 lg:ml-0' : '-translate-x-full lg:-ml-64'">
     <!-- Brand Header -->
-    <div class="p-4 border-b border-slate-100 flex flex-col gap-2 bg-slate-50/50">
-        <x-logo variant="dark" size="sm" :href="route('partner.dashboard')" />
-        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200/80 w-fit tracking-wider uppercase">
-            <i class="fas fa-handshake text-[9px] text-amber-600"></i> Partner Network
-        </span>
+    <div class="p-4 border-b border-slate-100 flex items-center justify-between gap-2 bg-slate-50/50">
+        <div class="flex flex-col gap-1.5">
+            <x-logo variant="dark" size="sm" :href="route('partner.dashboard')" />
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200/80 w-fit tracking-wider uppercase">
+                <i class="fas fa-handshake text-[9px] text-amber-600"></i> Partner Network
+            </span>
+        </div>
+        <button @click="sidebarOpen = false" 
+                type="button" 
+                class="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg lg:hidden"
+                title="Close Sidebar">
+            <i class="fas fa-times text-sm"></i>
+        </button>
     </div>
     
     <!-- Partner Info Card -->

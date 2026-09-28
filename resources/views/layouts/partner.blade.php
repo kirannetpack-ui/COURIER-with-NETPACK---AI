@@ -10,18 +10,30 @@
     @stack('styles')
 </head>
 <body>
-    <div x-data="{ sidebarOpen: true }" class="flex min-h-screen bg-gray-100 relative">
+    <div x-data="{ 
+            sidebarOpen: window.innerWidth >= 1024,
+            toggleSidebar() {
+                this.sidebarOpen = !this.sidebarOpen;
+            }
+         }" 
+         class="flex min-h-screen bg-gray-100 relative overflow-x-hidden">
         <!-- Partner Sidebar -->
         @include('layouts.partials.partner-sidebar')
 
         <!-- Mobile Backdrop Overlay -->
         <div x-show="sidebarOpen" 
              @click="sidebarOpen = false" 
-             class="fixed inset-0 z-30 bg-slate-900/60 backdrop-blur-xs lg:hidden"
+             x-transition:enter="transition-opacity ease-linear duration-200"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition-opacity ease-linear duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             class="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-xs lg:hidden"
              style="display: none;"></div>
 
         <!-- Main Content -->
-        <main class="flex-1 min-w-0 overflow-y-auto">
+        <main class="flex-1 min-w-0 overflow-y-auto transition-all duration-300">
             <!-- Top Bar -->
             @include('layouts.partials.header')
 
