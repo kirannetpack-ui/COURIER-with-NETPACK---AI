@@ -4,6 +4,7 @@
 /.backups
 /.composer-cache
 /node_modules
+/dist
 /.npm-cache
 /public/hot
 /public/storage
@@ -23,3 +24,5 @@ yarn-error.log
 routes/*.backup
 /.codex-build
 /.codex-build/*
+
+.vercel
