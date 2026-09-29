@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             if (!Schema::hasColumn('users', 'password_changed')) {
-                $table->boolean('password_changed')->default(false)->after('password');
+                $table->boolean('password_changed')->default(true)->after('password');
             }
         });
     }

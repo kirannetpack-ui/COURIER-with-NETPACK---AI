@@ -25,7 +25,7 @@
             this.sidebarOpen = !this.sidebarOpen;
         }
      }" 
-     class="flex min-h-screen bg-gray-100 relative overflow-x-hidden">
+     class="flex min-h-screen bg-slate-50 relative overflow-x-hidden">
         <!-- Sidebar: Always displayed for all users at all times -->
         @php
             $sidebar = 'layouts.partials.customer-sidebar';

@@ -16,7 +16,7 @@
                 this.sidebarOpen = !this.sidebarOpen;
             }
          }" 
-         class="flex min-h-screen bg-gray-100 relative overflow-x-hidden">
+         class="flex min-h-screen bg-slate-50 relative overflow-x-hidden">
         <!-- Seller Sidebar -->
         @include('layouts.partials.seller-sidebar')
 

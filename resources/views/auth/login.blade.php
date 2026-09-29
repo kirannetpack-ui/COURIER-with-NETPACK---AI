@@ -21,22 +21,22 @@
         body { font-family: 'Inter', sans-serif; }
         .font-heading { font-family: 'Outfit', 'Inter', sans-serif; }
         .hero-mesh {
-            background: radial-gradient(at 0% 0%, rgba(13, 148, 136, 0.25) 0px, transparent 50%),
-                        radial-gradient(at 100% 100%, rgba(10, 25, 47, 0.4) 0px, transparent 50%),
-                        linear-gradient(135deg, #0A192F 0%, #0F2D4A 55%, #0B3B48 100%);
+            background: radial-gradient(at 0% 0%, rgba(204, 251, 241, 0.6) 0px, transparent 50%),
+                        radial-gradient(at 100% 100%, rgba(224, 242, 254, 0.5) 0px, transparent 50%),
+                        linear-gradient(135deg, #f8fafc 0%, #f1f5f9 55%, #e2e8f0 100%);
         }
     </style>
 </head>
 <body class="min-h-full hero-mesh flex flex-col justify-center py-12 sm:px-6 lg:px-8 text-slate-800 antialiased selection:bg-teal-500 selection:text-white">
 
     <!-- Top Navigation Bar -->
-    <div class="fixed top-0 left-0 right-0 z-20 px-6 py-4 flex justify-between items-center bg-slate-950/30 backdrop-blur-md border-b border-white/10">
-        <a href="{{ route('home') }}" class="inline-flex items-center gap-2 text-white/80 hover:text-white text-xs font-semibold tracking-wider transition">
-            <i class="fas fa-arrow-left text-teal-400"></i> Back to Homepage
+    <div class="fixed top-0 left-0 right-0 z-20 px-6 py-4 flex justify-between items-center bg-white/80 backdrop-blur-md border-b border-slate-200/80">
+        <a href="{{ route('home') }}" class="inline-flex items-center gap-2 text-slate-600 hover:text-teal-700 text-xs font-semibold tracking-wider transition">
+            <i class="fas fa-arrow-left text-teal-600"></i> Back to Homepage
         </a>
         <div class="flex items-center gap-3 text-xs">
-            <span class="text-white/60 hidden sm:inline">Need assistance?</span>
-            <a href="tel:+97715970123" class="text-teal-300 font-semibold hover:text-teal-200 transition flex items-center gap-1.5">
+            <span class="text-slate-500 hidden sm:inline">Need assistance?</span>
+            <a href="tel:+97715970123" class="text-teal-700 font-semibold hover:text-teal-800 transition flex items-center gap-1.5">
                 <i class="fas fa-phone-volume"></i> +977-1-5970123
             </a>
         </div>
@@ -44,7 +44,7 @@
 
     <div class="sm:mx-auto sm:w-full sm:max-w-md px-4 mt-8">
         <!-- Main Login Card -->
-        <div class="bg-white/95 backdrop-blur-2xl py-8 px-6 sm:px-10 rounded-3xl shadow-2xl border border-white/60 space-y-6">
+        <div class="bg-white py-8 px-6 sm:px-10 rounded-3xl shadow-xl border border-slate-200/90 space-y-6">
             
             <!-- Brand Logo Center -->
             <div class="text-center">

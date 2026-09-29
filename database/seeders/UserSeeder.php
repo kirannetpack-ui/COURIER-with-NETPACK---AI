@@ -37,7 +37,7 @@ class UserSeeder extends Seeder
                     'user_type' => $account['user_type'],
                     'verification_status' => 'approved',
                     'registration_completed' => true,
-                    'password_changed' => false,
+                    'password_changed' => true,
                 ]
             );
         }

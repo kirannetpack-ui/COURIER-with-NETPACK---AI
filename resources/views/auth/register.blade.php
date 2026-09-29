@@ -10,10 +10,10 @@
 <body class="bg-gray-50 font-sans">
     <div class="min-h-screen flex flex-col">
         <!-- Header -->
-        <header class="bg-slate-900 text-white py-3.5 shadow-md border-b border-slate-800">
+        <header class="bg-white text-slate-800 py-3.5 shadow-xs border-b border-slate-200">
             <div class="container mx-auto px-4 flex items-center justify-between">
-                <x-logo variant="white" size="sm" :href="route('home')" />
-                <a href="{{ route('login') }}" class="text-xs font-semibold text-teal-300 hover:text-white transition flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20">
+                <x-logo variant="dark" size="sm" :href="route('home')" />
+                <a href="{{ route('login') }}" class="text-xs font-semibold text-teal-700 hover:text-teal-900 transition flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-50 border border-teal-200 hover:bg-teal-100">
                     <i class="fas fa-sign-in-alt"></i> Back to Login
                 </a>
             </div>

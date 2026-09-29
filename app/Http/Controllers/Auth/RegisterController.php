@@ -43,6 +43,8 @@ class RegisterController extends Controller
             'province' => $request->province,
             'user_type' => $request->user_type ?? 'customer',
             'verification_status' => 'approved',
+            'registration_completed' => true,
+            'password_changed' => true,
         ]);
         
         // Create wallet

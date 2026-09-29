@@ -6,41 +6,40 @@
 @section('content')
 <div class="max-w-7xl mx-auto space-y-6">
     <!-- Header Banner with Nationwide Hub Status -->
-    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-teal-950 via-slate-900 to-emerald-950 p-6 sm:p-8 text-white border border-teal-500/20 shadow-xl">
-        <div class="absolute -right-10 -bottom-10 w-72 h-72 bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="relative overflow-hidden rounded-2xl bg-white p-6 sm:p-7 text-slate-800 border border-slate-200/90 shadow-xs">
         <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div class="space-y-2">
                 <div class="flex items-center gap-2">
-                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30 uppercase tracking-widest">
-                        <i class="fas fa-truck-fast text-[9px] mr-1"></i> Nepal Provincial Network
+                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200/70 uppercase tracking-widest">
+                        <i class="fas fa-truck-fast text-[9px] mr-1 text-teal-600"></i> Nepal Provincial Network
                     </span>
-                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                        <i class="fas fa-circle text-[8px] mr-1 text-emerald-400 animate-pulse"></i> 7 Provinces Operational
+                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200/80">
+                        <i class="fas fa-circle text-[8px] mr-1 text-emerald-500 animate-pulse"></i> 7 Provinces Operational
                     </span>
                 </div>
-                <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-white">
+                <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">
                     Domestic & Fleet Command Tower
                 </h1>
-                <p class="text-sm text-slate-300 max-w-xl">
+                <p class="text-xs text-slate-600 max-w-xl">
                     Nationwide sortation manifests, regional arrival notice verification, barcode & QR scan desks, and last-mile partner SLA delivery dispatch.
                 </p>
             </div>
 
             <!-- Command Action CTAs -->
-            <div class="flex flex-wrap items-center gap-3">
+            <div class="flex flex-wrap items-center gap-2.5">
                 <a href="{{ route('domestic.manifests.scan') }}" 
-                   class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 text-white font-bold text-sm shadow-lg shadow-teal-900/40 transition transform hover:-translate-y-0.5">
-                    <i class="fas fa-barcode text-base"></i>
+                   class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs uppercase tracking-wider shadow-xs transition">
+                    <i class="fas fa-barcode text-sm"></i>
                     <span>Nepal Scan Desk</span>
                 </a>
                 <a href="{{ route('domestic.manifests.create') }}" 
-                   class="inline-flex items-center gap-2 px-4 py-3 rounded-2xl bg-slate-800/90 hover:bg-slate-700 text-white font-semibold text-sm border border-slate-700 transition">
-                    <i class="fas fa-plus-circle text-base text-teal-400"></i>
+                   class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold text-xs border border-slate-200 transition">
+                    <i class="fas fa-plus-circle text-sm text-teal-600"></i>
                     <span>Create Manifest</span>
                 </a>
                 <a href="{{ route('tracking.page') }}" target="_blank"
-                   class="inline-flex items-center gap-2 px-4 py-3 rounded-2xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 font-semibold text-sm border border-slate-700 transition">
-                    <i class="fas fa-satellite-dish text-base text-emerald-400"></i>
+                   class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold text-xs border border-slate-200 transition">
+                    <i class="fas fa-satellite-dish text-sm text-teal-600"></i>
                     <span>Radar Map</span>
                 </a>
             </div>

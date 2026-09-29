@@ -6,41 +6,40 @@
 @section('content')
 <div class="max-w-7xl mx-auto space-y-6">
     <!-- Header with Global Hub Status -->
-    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-sky-950 via-slate-900 to-indigo-950 p-6 sm:p-8 text-white border border-sky-500/20 shadow-xl">
-        <div class="absolute -right-10 -bottom-10 w-72 h-72 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="relative overflow-hidden rounded-2xl bg-white p-6 sm:p-7 text-slate-800 border border-slate-200/90 shadow-xs">
         <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div class="space-y-2">
                 <div class="flex items-center gap-2">
-                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sky-500/20 text-sky-300 border border-sky-500/30 uppercase tracking-widest">
-                        <i class="fas fa-plane-departure text-[9px] mr-1"></i> Global Freight Command
+                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200/70 uppercase tracking-widest">
+                        <i class="fas fa-plane-departure text-[9px] mr-1 text-sky-600"></i> Global Freight Command
                     </span>
-                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                        <i class="fas fa-network-wired text-[9px] mr-1 text-sky-400"></i> 4 Gateway Hubs Active
+                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/80">
+                        <i class="fas fa-network-wired text-[9px] mr-1 text-sky-600"></i> 4 Gateway Hubs Active
                     </span>
                 </div>
-                <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-white">
+                <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">
                     International Air Cargo & Hub Gateway
                 </h1>
-                <p class="text-sm text-slate-300 max-w-xl">
+                <p class="text-xs text-slate-600 max-w-xl">
                     Express 3-4 days air courier from Nepal (DHL, UPS, FedEx, SF) and agency-based economy hubs connecting Dubai, UK/Europe, Australia, and New Zealand.
                 </p>
             </div>
 
             <!-- Fast Action CTAs -->
-            <div class="flex flex-wrap items-center gap-3">
+            <div class="flex flex-wrap items-center gap-2.5">
                 <a href="{{ route('international.manifests.create') }}" 
-                   class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold text-sm shadow-lg shadow-sky-900/40 transition transform hover:-translate-y-0.5">
-                    <i class="fas fa-file-invoice-dollar text-base"></i>
+                   class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs uppercase tracking-wider shadow-xs transition">
+                    <i class="fas fa-file-invoice-dollar text-sm"></i>
                     <span>Build Flight Manifest</span>
                 </a>
                 <a href="{{ route('agency.manifests.index') }}" 
-                   class="inline-flex items-center gap-2 px-4 py-3 rounded-2xl bg-slate-800/90 hover:bg-slate-700 text-white font-semibold text-sm border border-slate-700 transition">
-                    <i class="fas fa-inbox text-base text-emerald-400"></i>
+                   class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold text-xs border border-slate-200 transition">
+                    <i class="fas fa-inbox text-sm text-emerald-600"></i>
                     <span>Agency Inbound</span>
                 </a>
                 <a href="{{ route('tracking.page') }}" target="_blank"
-                   class="inline-flex items-center gap-2 px-4 py-3 rounded-2xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 font-semibold text-sm border border-slate-700 transition">
-                    <i class="fas fa-satellite-dish text-base text-sky-400"></i>
+                   class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold text-xs border border-slate-200 transition">
+                    <i class="fas fa-satellite-dish text-sm text-sky-600"></i>
                     <span>Radar Map</span>
                 </a>
             </div>
