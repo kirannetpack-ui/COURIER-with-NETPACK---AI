@@ -5,8 +5,8 @@
     },
     "scripts": {
         "dev": "vite",
-        "build": "vite build && node -e \"const fs=require('fs'); fs.cpSync('public', 'dist', {recursive: true});\"",
-        "vercel-build": "vite build && node -e \"const fs=require('fs'); fs.cpSync('public', 'dist', {recursive: true});\""
+        "build": "node scripts/vercel-build.js",
+        "vercel-build": "node scripts/vercel-build.js"
     },
     "dependencies": {
         "@libphp/almalinux-9-v85": "^0.0.3",
