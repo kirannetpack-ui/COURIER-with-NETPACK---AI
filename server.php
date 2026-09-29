@@ -77,6 +77,12 @@ foreach ($envOverrides as $key => $val) {
     $_SERVER[$key] = $val;
 }
 
+// Enforce HTTPS server variables when behind Vercel SSL
+if ((isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') || getenv('VERCEL') || getenv('APP_ENV') === 'production') {
+    $_SERVER['HTTPS'] = 'on';
+    $_SERVER['SERVER_PORT'] = '443';
+}
+
 // Normalize script name for Laravel routing
 $_SERVER['SCRIPT_NAME'] = '/index.php';
 $_SERVER['SCRIPT_FILENAME'] = __DIR__ . '/public/index.php';

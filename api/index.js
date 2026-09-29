@@ -184,6 +184,8 @@ module.exports = async (req, res) => {
                 host,
                 'x-forwarded-host': host,
                 'x-forwarded-proto': 'https',
+                'x-forwarded-port': '443',
+                'x-forwarded-ssl': 'on',
                 'x-forwarded-for': req.headers['x-forwarded-for'] || req.socket.remoteAddress
             }
         };
