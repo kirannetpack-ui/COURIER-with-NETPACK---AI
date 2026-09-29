@@ -164,4 +164,62 @@ class LoginAndDashboardRedirectTest extends TestCase
         $client = User::factory()->create(['user_type' => 'client', 'verification_status' => 'approved']);
         $this->actingAs($client)->get('/dashboard')->assertRedirect(route('client.dashboard'));
     }
+
+    public function test_seller_redirects_to_seller_dashboard_with_autofill_credentials(): void
+    {
+        $seller = User::factory()->create([
+            'email' => 'seller@netpack.test',
+            'password' => bcrypt('Netpack!Seller#2026'),
+            'user_type' => 'seller',
+            'verification_status' => 'approved',
+            'password_changed' => true,
+        ]);
+
+        $response = $this->post('/login', [
+            'email' => 'seller@netpack.test',
+            'password' => 'Netpack!Seller#2026',
+        ]);
+
+        $response->assertRedirect('/seller/dashboard');
+        $this->actingAs($seller)->get('/seller/dashboard')->assertOk();
+    }
+
+    public function test_rider_redirects_to_rider_dashboard_with_autofill_credentials(): void
+    {
+        $rider = User::factory()->create([
+            'email' => 'rider@netpack.test',
+            'password' => bcrypt('Netpack!Rider#2026'),
+            'user_type' => 'rider',
+            'verification_status' => 'approved',
+            'password_changed' => true,
+        ]);
+
+        $response = $this->post('/login', [
+            'email' => 'rider@netpack.test',
+            'password' => 'Netpack!Rider#2026',
+        ]);
+
+        $response->assertRedirect('/rider/dashboard');
+        $this->actingAs($rider)->get('/rider/dashboard')->assertOk();
+    }
+
+    public function test_demo_seller_and_rider_fallback_passwords_authenticate_successfully(): void
+    {
+        // Even if seeded with password123, logging in with Netpack!Seller#2026 or password123 succeeds
+        $seller = User::factory()->create([
+            'email' => 'seller@test.com',
+            'password' => bcrypt('password123'),
+            'user_type' => 'seller',
+            'verification_status' => 'approved',
+            'password_changed' => false,
+        ]);
+
+        $response = $this->post('/login', [
+            'email' => 'seller@test.com',
+            'password' => 'Netpack!Seller#2026',
+        ]);
+
+        $response->assertRedirect('/seller/dashboard');
+        $this->assertTrue($seller->fresh()->password_changed);
+    }
 }

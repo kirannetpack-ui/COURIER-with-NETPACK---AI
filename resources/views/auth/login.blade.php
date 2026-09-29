@@ -112,11 +112,11 @@
                             class="py-1.5 px-2 rounded-lg bg-white border border-slate-200 text-slate-800 hover:border-teal-500 hover:text-teal-700 font-semibold transition text-center shadow-2xs">
                         🚚 Domestic Admin
                     </button>
-                    <button type="button" onclick="fillRole('seller@test.com', 'Netpack!Seller#2026', 'E-Commerce Seller')" 
+                    <button type="button" onclick="fillRole('seller@netpack.test', 'Netpack!Seller#2026', 'E-Commerce Seller')" 
                             class="py-1.5 px-2 rounded-lg bg-white border border-slate-200 text-slate-800 hover:border-teal-500 hover:text-teal-700 font-semibold transition text-center shadow-2xs">
                         🏪 Seller Merchant
                     </button>
-                    <button type="button" onclick="fillRole('rider@test.com', 'Netpack!Rider#2026', 'Delivery Rider')" 
+                    <button type="button" onclick="fillRole('rider@netpack.test', 'Netpack!Rider#2026', 'Delivery Rider')" 
                             class="py-1.5 px-2 rounded-lg bg-white border border-slate-200 text-slate-800 hover:border-teal-500 hover:text-teal-700 font-semibold transition text-center shadow-2xs">
                         🛵 Delivery Rider
                     </button>
