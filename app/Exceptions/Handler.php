@@ -42,7 +42,8 @@ class Handler extends ExceptionHandler
     public function register(): void
     {
         $this->reportable(function (Throwable $e) {
-            //
+            error_log('[LARAVEL EXCEPTION] ' . get_class($e) . ': ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+            error_log($e->getTraceAsString());
         });
 
         $this->renderable(function (\Illuminate\Session\TokenMismatchException $e, $request) {

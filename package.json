@@ -1,12 +1,15 @@
 {
     "private": true,
-    "type": "module",
+    "engines": {
+        "node": "20.x"
+    },
     "scripts": {
         "dev": "vite",
         "build": "vite build && node -e \"const fs=require('fs'); fs.cpSync('public', 'dist', {recursive: true});\"",
         "vercel-build": "vite build && node -e \"const fs=require('fs'); fs.cpSync('public', 'dist', {recursive: true});\""
     },
     "dependencies": {
+        "@libphp/almalinux-9-v85": "^0.0.3",
         "alpinejs": "^3.15.8",
         "autoprefixer": "^10.5.4",
         "axios": "^1.6.0",

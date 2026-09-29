@@ -3,8 +3,9 @@
     "framework": null,
     "outputDirectory": "public",
     "functions": {
-        "api/*.php": {
-            "runtime": "vercel-php@0.9.0"
+        "api/index.js": {
+            "includeFiles": "{server.php,composer.json,composer.lock,app/**,bootstrap/**,config/**,database/**,public/**,resources/**,routes/**,vendor/**}",
+            "maxDuration": 30
         }
     },
     "routes": [
@@ -46,7 +47,7 @@
         },
         {
             "src": "/(.*)",
-            "dest": "/api/index.php"
+            "dest": "/api/index.js"
         }
     ],
     "env": {
@@ -65,6 +66,7 @@
         "LOG_CHANNEL": "stderr",
         "SESSION_DRIVER": "cookie",
         "DB_CONNECTION": "sqlite",
-        "DB_DATABASE": "/tmp/database.sqlite"
+        "DB_DATABASE": "/tmp/database.sqlite",
+        "APP_TIMEZONE": "Asia/Kathmandu"
     }
 }
