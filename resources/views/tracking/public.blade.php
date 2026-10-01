@@ -1282,7 +1282,7 @@ function playChandaTrackingAudio(text, onStart, onEnd) {
         return;
     }
 
-    const accent = localStorage.getItem('chanda_voice_accent') || 'en-GB';
+    const accent = localStorage.getItem('chanda_voice_accent') || 'en-IN';
     const streamUrl = `/ai/speech/stream?text=${encodeURIComponent(clean)}&accent=${encodeURIComponent(accent)}`;
 
     if (!trackingAudioPlayer) {
@@ -1322,8 +1322,8 @@ function playChandaTrackingAudio(text, onStart, onEnd) {
         try {
             window.speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(clean);
-            utterance.rate = 1.05;
-            utterance.pitch = 1.18;
+            utterance.rate = 0.98;
+            utterance.pitch = 1.0;
             const preferredVoice = getChandaTrackingFemaleVoice();
             if (preferredVoice) utterance.voice = preferredVoice;
 

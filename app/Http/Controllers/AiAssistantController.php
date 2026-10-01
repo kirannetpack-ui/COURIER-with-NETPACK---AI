@@ -160,12 +160,14 @@ class AiAssistantController extends Controller
         }
 
         // Available accents:
-        // 'en-GB' -> Global British / International (immaculate clarity, prestigious, easily understood worldwide)
-        // 'en-IN' -> Authentic South Asian / Nepalese English (polite, warm, respectful)
-        // 'en-US' -> Dynamic American (high-energy, motivated executive)
-        $accent = $request->input('accent', 'en-GB');
-        if (!in_array($accent, ['en-GB', 'en-IN', 'en-US'])) {
-            $accent = 'en-GB';
+        // 'en-IN' -> Authentic South Asian / Nepalese English (polite, warm, familiar pronunciation) - DEFAULT
+        // 'ne-NP' / 'ne' -> Native Nepali
+        // 'en-GB' -> British International
+        // 'en-US' -> American English
+        $accent = $request->input('accent', 'en-IN');
+        $validAccents = ['en-IN', 'ne-NP', 'ne', 'hi-IN', 'en-GB', 'en-US'];
+        if (!in_array($accent, $validAccents)) {
+            $accent = 'en-IN';
         }
 
         $audioData = $this->aiService->generateSpeechAudio($text, $accent);

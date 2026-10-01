@@ -58,13 +58,13 @@ class AiAssistantService
         // Check for upcoming or active Occasions / Festivals
         $upcomingOccasion = $this->getNearestOccasion();
 
-        // Dynamic, non-monotonous greeting pool - Chanda persona
+        // Dynamic, natural, conversational greeting pool - friendly & respectful for Nepali users
         $greetingVariations = [
-            "Namaste {$clientName}! 🙏 {$timeGreeting}. My name is Chanda, your dedicated NETPACK AI Assistant. I am very eager and delighted to support and assist you! How may I help with your door-to-door deliveries or international cargo today?",
-            "Namaste {$clientName}! ✨ {$timeEn}. My name is Chanda, your dedicated NETPACK AI Assistant. Logistics Radar is live across all 7 Provinces. Whether you need an instant freight quote, doorstep OTP verification, or flight tracking, I am right here and eager to assist you!",
-            "Namaste {$clientName}! 🚚 My name is Chanda, your dedicated NETPACK AI Assistant. Hope your consignments are moving smoothly! I am eager and delighted to guide you through door-to-door dispatches, COD limits, or Kathmandu airport cargo cutoffs.",
-            "Namaste {$clientName}! 🌐 A warm {$timeGreeting}. My name is Chanda, your dedicated NETPACK AI Assistant. From ward-level doorstep deliveries across Nepal to air cargo across global corridors, I am very eager to support and assist you! What can I help you with right now?",
-            "Namaste {$clientName}! 📦 My name is Chanda, your dedicated NETPACK AI Assistant. I am actively monitoring express dispatches and linehauls. Need help tracking a consignment, estimating rates, or booking a pickup? I am eager to assist you!",
+            "Namaste {$clientName}! 🙏 {$timeGreeting}. I am Chanda from NETPACK. How can I assist with your shipments or deliveries today?",
+            "Namaste {$clientName}! ✨ {$timeEn}. I am Chanda. I can help you with freight rates, shipment booking, or live tracking across Nepal.",
+            "Namaste {$clientName}! 🚚 Hope your consignments are moving smoothly! Chanda here, ready to assist with door-to-door delivery, COD, or airport cargo.",
+            "Namaste {$clientName}! 🌐 {$timeGreeting}. I am Chanda from NETPACK. Ready to support your local deliveries and international air cargo. How may I help you?",
+            "Namaste {$clientName}! 📦 I'm Chanda from NETPACK, here to help you track parcels, calculate rates, or book a quick dispatch. What would you like to do?",
         ];
 
         // If an active occasion is detected, inject festive greetings
@@ -949,8 +949,8 @@ class AiAssistantService
 
         // 8. General Conversational Assistant Fallback
         $introText = $justIntroduced
-            ? "Namaste {$clientName}! 🙏 A warm welcome! My name is Chanda, your dedicated NETPACK AI Assistant. I have registered your name and will address you as {$clientName} in our conversations.\n\n"
-            : "Namaste {$clientName}! 🙏 My name is Chanda, your dedicated NETPACK AI Assistant. I am very eager and delighted to support and assist you today!\n\n";
+            ? "Namaste {$clientName}! 🙏 Pleased to meet you. I will address you as {$clientName}.\n\n"
+            : "Namaste {$clientName}! 🙏 How can I assist you with your shipments today?\n\n";
 
         $reply = $introText
             . "I am equipped to provide instantaneous assistance on **all 3 core NETPACK logistics services**:\n\n"
@@ -965,7 +965,7 @@ class AiAssistantService
             'provider' => 'builtin_expert',
             'client_name' => $clientName,
             'response' => $reply,
-            'speech_text' => "Namaste {$clientName}! My name is Chanda, your NETPACK AI Assistant. I am very eager and delighted to assist you with all three services: Domestic Express Delivery across Nepal, International Air Cargo departing Kathmandu, or E-Commerce Deliveries with Cash on Delivery. How can I assist you right now?",
+            'speech_text' => "Namaste {$clientName}! How can I assist you today? I can help with Domestic delivery across Nepal, International air cargo, or E-Commerce with Cash on Delivery.",
             'gesture' => 'waving',
             'actions' => [
                 ['label' => '🇳🇵 Domestic', 'url' => '/shipments/create?mode=domestic'],
@@ -1078,7 +1078,7 @@ class AiAssistantService
             'provider' => 'builtin_expert',
             'client_name' => $clientName,
             'response' => $reply,
-            'speech_text' => "Namaste {$clientName}! My name is Chanda, your NETPACK AI Assistant. I have prepared the complete logistics roadmap for your {$weight} kg shipment from {$originName} to {$destName}. Our fleet collects the parcel at your doorstep in {$originName} with a 6-digit pickup OTP, transports it via feeder linehaul to Kathmandu airport for customs and zero-charge HAWB generation, flies it to {$destAirport}, and delivers it directly to the recipient's doorstep in {$destName}.",
+            'speech_text' => "Namaste {$clientName}! Here is the delivery plan for your {$weight} kg shipment from {$originName} to {$destName}. We collect from your doorstep with a 6-digit pickup OTP, route through Kathmandu airport, and deliver to the recipient.",
             'gesture' => 'speaking',
             'actions' => $actions,
         ];
@@ -1581,7 +1581,7 @@ class AiAssistantService
     /**
      * Generate high-fidelity neural speech audio MP3 for Chanda voice
      */
-    public function generateSpeechAudio(string $text, string $accent = 'en-GB'): ?string
+    public function generateSpeechAudio(string $text, string $accent = 'en-IN'): ?string
     {
         $clean = $this->sanitizeForSpeech($text);
         if (empty($clean)) {
@@ -1623,7 +1623,15 @@ class AiAssistantService
         if ($curr) $chunks[] = $curr;
 
         $combinedMp3 = '';
-        $tl = in_array($accent, ['en-GB', 'en-IN', 'en-US']) ? $accent : 'en-GB';
+        $tlMap = [
+            'en-IN' => 'en-IN',
+            'ne-NP' => 'ne',
+            'ne'    => 'ne',
+            'hi-IN' => 'hi',
+            'en-GB' => 'en-GB',
+            'en-US' => 'en-US',
+        ];
+        $tl = $tlMap[$accent] ?? 'en-IN';
 
         foreach ($chunks as $chunk) {
             $url = 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=' . $tl . '&q=' . urlencode($chunk);
@@ -1744,9 +1752,9 @@ CORE MISSION & PARADIGM:
 3. Omnichannel Fluency: Seamlessly communicate in English, Nepali (नेपाली), or Romanized Nepali ("Hajur ko consignment aaja bihana Biratnagar hub bata dispatch bhaisakyo").
 
 PERSONALITY & GREETING RULES:
-1. Always start conversations with a respectful, enthusiastic greeting and state your name:
-   "Namaste {$clientName}! 🙏 My name is Chanda, your dedicated NETPACK AI Assistant. I am eager and delighted to support and assist you!"
-2. Tone: Warm, energetic, polite, culturally resonant (Namaste, Dhanyabad, Subha Bihani), and rigorously professional.
+1. Always start conversations with a respectful, natural greeting:
+   "Namaste {$clientName}! 🙏 How can I assist with your shipments today?"
+2. Tone: Warm, natural, polite, culturally resonant (Namaste, Dhanyabad), and professional. Avoid robotic or telemarketing scripts.
 3. Formatting: Clean GitHub-flavored markdown with emojis, bold highlights, clear stages, and actionable next steps.
 
 SYSTEM LOGISTICS ARCHITECTURE & WORKFLOW RULES:
@@ -1793,7 +1801,7 @@ EOT;
                 'raw_text' => $raw,
                 'is_confirmed' => true,
                 'parsed_value' => '__CONFIRMED__',
-                'speech_ack' => "Wonderful! Value confirmed. Moving right ahead!",
+                'speech_ack' => "Confirmed, moving ahead.",
             ];
         }
 
@@ -1801,23 +1809,23 @@ EOT;
             case 'mode':
                 if (str_contains($clean, 'ecommerce') || str_contains($clean, 'e-commerce') || str_contains($clean, 'cod') || str_contains($clean, 'cash on delivery') || str_contains($clean, 'online store') || str_contains($clean, 'merchant') || str_contains($clean, 'seller') || str_contains($clean, 'store') || str_contains($clean, 'shop')) {
                     $value = 'ecommerce';
-                    $speechAck = "Splendid! Selected E-Commerce and Cash on Delivery service.";
+                    $speechAck = "Selected E-Commerce and Cash on Delivery.";
                 } elseif (str_contains($clean, 'international') || str_contains($clean, 'overseas') || str_contains($clean, 'air cargo') || str_contains($clean, 'abroad') || str_contains($clean, 'bidesh') || str_contains($clean, 'poland') || str_contains($clean, 'europe') || str_contains($clean, 'usa')) {
                     $value = 'international';
-                    $speechAck = "Brilliant! Selected International Air Cargo service.";
+                    $speechAck = "Selected International Air Cargo.";
                 } else {
                     $value = 'domestic';
-                    $speechAck = "Wonderful! Selected Domestic Express courier service across Nepal.";
+                    $speechAck = "Selected Domestic Express delivery.";
                 }
                 break;
 
             case 'collection_method':
                 if (str_contains($clean, 'drop') || str_contains($clean, 'station') || str_contains($clean, 'counter') || str_contains($clean, 'self') || str_contains($clean, 'hub') || str_contains($clean, 'branch')) {
                     $value = false;
-                    $speechAck = "Perfect! Station counter drop-off selected.";
+                    $speechAck = "Selected station counter drop-off.";
                 } else {
                     $value = true;
-                    $speechAck = "Fantastic! Doorstep courier collection selected. Our rider fleet will be dispatched.";
+                    $speechAck = "Selected doorstep courier pickup.";
                 }
                 break;
 

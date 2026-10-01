@@ -3501,10 +3501,10 @@ document.addEventListener('alpine:init', () => {
                     return 'Domestic Express Delivery across Nepal';
                 },
                 prompt: function(ctx) {
-                    return `Namaste ${ctx.clientPreferredName}! I am your Netpack AI Logistics Copilot, and I am absolutely delighted to assist you with booking your consignment today. Which of our 3 service categories would you like to book? 1: Domestic Delivery across Nepal, 2: International Air Cargo, or 3: E-Commerce Delivery with Cash on Delivery?`;
+                    return `Which service category would you like to book? Domestic delivery across Nepal, International air cargo, or E-Commerce with Cash on Delivery?`;
                 },
                 confirmPrompt: function(ctx, curVal) {
-                    return `I see that your service category is currently selected as "${curVal}". Does that look perfect to you, or would you like to switch to a different service?`;
+                    return `Service is currently set to "${curVal}". Keep this or change?`;
                 },
                 targetSelector: function() {
                     const cur = document.getElementById('shipment_type')?.value;
@@ -3540,12 +3540,12 @@ document.addEventListener('alpine:init', () => {
                     return sel && sel.selectedIndex >= 0 ? (sel.options[sel.selectedIndex]?.text?.trim() || sel.value) : '';
                 },
                 prompt: function() {
-                    if (isIntl) return 'Which international courier mode do you require? 1: Priority Express Service (3-4 working days), or 2: Economy Air Cargo (6-8 working days)?';
-                    if (isEcom) return 'Which rider SLA do you need? 1: Instant Flash Dispatch within 60-90 minutes, 2: Same-Day Delivery, or 3: Standard Next-Day Collection?';
-                    return 'Which delivery speed would you like? 1: Standard 1-2 days normal transit, 2: Flash 1-2 hours urgent, 3: Same-Day express, or 4: Himalayan remote?';
+                    if (isIntl) return 'Which international mode do you require? Express service (3-4 days) or Economy cargo (6-8 days)?';
+                    if (isEcom) return 'Which rider speed do you need? Flash dispatch (60-90 min), Same-Day delivery, or Standard?';
+                    return 'Which delivery speed would you like? Standard (1-2 days), Flash urgent, or Same-Day?';
                 },
                 confirmPrompt: function(ctx, curVal) {
-                    return `Your delivery speed SLA is currently set to "${curVal}". Does that timeline work nicely for you, or would you like to update it?`;
+                    return `Delivery speed is set to "${curVal}". Keep this or change?`;
                 },
                 targetSelector: function() {
                     if (isIntl) return document.getElementById('international_service_type');
@@ -3592,10 +3592,10 @@ document.addEventListener('alpine:init', () => {
                     return sel && sel.selectedIndex >= 0 ? (sel.options[sel.selectedIndex]?.text?.trim() || sel.value) : '';
                 },
                 prompt: function() {
-                    return 'What is the package classification for this consignment? For example: Standard Parcel, Heavy Box Carton, Documents or Legal Envelopes, or Fragile Items?';
+                    return 'What is the package type? Standard parcel, Box carton, Document envelope, or Fragile?';
                 },
                 confirmPrompt: function(ctx, curVal) {
-                    return `Your package classification is currently set to "${curVal}". Would you like to keep this, or update it?`;
+                    return `Package type is set to "${curVal}". Keep this or update?`;
                 },
                 targetSelector: function() {
                     return isIntl 
@@ -3634,10 +3634,10 @@ document.addEventListener('alpine:init', () => {
                     return input && input.value === '1' ? 'Doorstep Courier Collection' : 'Station / Counter Drop-off';
                 },
                 prompt: function() {
-                    return 'How would you prefer your packages to be collected? Option 1: Doorstep Courier Collection where our rider fleet picks them up directly from you, or Option 2: Station Counter Drop-off where you drop them off at a Netpack hub?';
+                    return 'How should packages be collected? Doorstep courier pickup by rider, or Station counter drop-off?';
                 },
                 confirmPrompt: function(ctx, curVal) {
-                    return `Your collection method is currently selected as "${curVal}". Would you like to keep this, or switch to the other option?`;
+                    return `Collection method is set to "${curVal}". Keep this or switch?`;
                 },
                 targetSelector: function() {
                     return document.getElementById('schedule_doorstep_pickup');
@@ -3670,10 +3670,10 @@ document.addEventListener('alpine:init', () => {
                     return el ? el.value.trim() : '';
                 },
                 prompt: function() {
-                    return 'What is your preferred collection date and time slot for our courier rider to arrive?';
+                    return 'What is your preferred pickup date and time?';
                 },
                 confirmPrompt: function(ctx, curVal) {
-                    return `Your scheduled pickup time is currently set to "${curVal}". Does that time work perfectly for you, or would you like to adjust it?`;
+                    return `Pickup time is set to "${curVal}". Keep or update?`;
                 },
                 targetSelector: function() {
                     return document.querySelector('input[name="scheduled_pickup_time"]');
@@ -3697,10 +3697,10 @@ document.addEventListener('alpine:init', () => {
                     return el ? el.value.trim() : '';
                 },
                 prompt: function() {
-                    return 'Do you have any special instructions or directions for our courier rider? For example: 2nd floor, ring doorbell, or call upon arrival. Or say skip if none.';
+                    return 'Any instructions for the rider? Say skip if none.';
                 },
                 confirmPrompt: function(ctx, curVal) {
-                    return `Your rider pickup instructions are currently recorded as: "${curVal}". Would you like to keep this, or update it?`;
+                    return `Rider note is "${curVal}". Keep or update?`;
                 },
                 targetSelector: function() {
                     return document.querySelector('input[name="pickup_notes"]');
@@ -3726,11 +3726,11 @@ document.addEventListener('alpine:init', () => {
                 },
                 prompt: function() {
                     return isEcom 
-                        ? 'Who is the merchant or store contact person for parcel pickup?' 
-                        : 'Who is the sender or contact person for parcel pickup?';
+                        ? 'Who is the store contact person for pickup?' 
+                        : 'Who is the sender or contact person for pickup?';
                 },
                 confirmPrompt: function(ctx, curVal) {
-                    return `I see the sender contact person is currently set to "${curVal}". Does that look correct, or would you like to update the name?`;
+                    return `Sender name is "${curVal}". Keep or change?`;
                 },
                 targetSelector: function() {
                     return document.getElementById('pickup_name_0') || document.getElementById('sender_name_input') || document.querySelector('input[name="pickup_name[]"]');
@@ -3754,10 +3754,10 @@ document.addEventListener('alpine:init', () => {
                     return el ? el.value.trim() : '';
                 },
                 prompt: function() {
-                    return 'What is the active Nepal mobile phone number for sender pickup coordination?';
+                    return 'What is the sender mobile phone number?';
                 },
                 confirmPrompt: function(ctx, curVal) {
-                    return `The sender mobile phone is currently recorded as "${curVal}". Is this number correct, or would you like to update it?`;
+                    return `Sender phone is "${curVal}". Keep or update?`;
                 },
                 targetSelector: function() {
                     return document.getElementById('pickup_phone_0') || document.getElementById('sender_phone_input') || document.querySelector('input[name="pickup_phone[]"]');
@@ -3781,10 +3781,10 @@ document.addEventListener('alpine:init', () => {
                     return el ? el.value.trim() : '';
                 },
                 prompt: function() {
-                    return 'Please provide the detailed street address, ward number, or nearby landmark for collection in Nepal.';
+                    return 'What is the pickup street address or landmark in Nepal?';
                 },
                 confirmPrompt: function(ctx, curVal) {
-                    return `The pickup address is currently set to "${curVal}". Does that look accurate, or would you like to modify it?`;
+                    return `Pickup address is "${curVal}". Keep or change?`;
                 },
                 targetSelector: function() {
                     return document.getElementById('pickup_address_0') || document.getElementById('sender_address_input') || document.querySelector('textarea[name="pickup_address[]"]');
@@ -5271,9 +5271,8 @@ document.addEventListener('alpine:init', () => {
         window.aiVoiceAutofill.currentStepIndex = startIndex;
         window.aiVoiceAutofill.hasIntroduced = false;
 
-        // 1. Explicitly request microphone stream from user click gesture to grant permission,
-        // and immediately release tracks so the physical device is NOT locked away from SpeechRecognition!
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        // 1. If user explicitly clicked to start, check microphone stream safely
+        if (userExplicitlyClicked && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 // Crucial fix: release tracks immediately so SpeechRecognition has uncontested hardware access!
@@ -5281,7 +5280,6 @@ document.addEventListener('alpine:init', () => {
                 hideMicBlockedWarning();
             } catch(micErr) {
                 console.warn('Microphone permission check notice:', micErr);
-                showMicBlockedWarning();
             }
         }
 
@@ -5292,7 +5290,7 @@ document.addEventListener('alpine:init', () => {
         setupDirectFormTypingSync();
 
         // 4. Setup speech recognition
-        initSpeechRecognition();
+        initSpeechRecognition(false);
 
         // 5. Ask the designated starting step (first unfilled field)
         executeVoiceStep(startIndex);
@@ -5328,7 +5326,7 @@ document.addEventListener('alpine:init', () => {
     }
 
     function showMicBlockedWarning() {
-        updateVoiceStatus('Microphone blocked. Click [Allow Mic] or lock icon in address bar.', 'text-rose-400 font-bold');
+        updateVoiceStatus('Microphone access needed. Tap [Allow Mic] or enable mic in app settings.', 'text-amber-300 font-bold');
         const unblockBtn = document.getElementById('ai-voice-unblock-mic-btn');
         if (unblockBtn) unblockBtn.style.display = 'inline-flex';
     }
@@ -5338,29 +5336,32 @@ document.addEventListener('alpine:init', () => {
         if (unblockBtn) unblockBtn.style.display = 'none';
     }
 
-    window.requestMicrophoneAccess = async function() {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            alert('Your browser does not support audio capture. Please use Chrome or Edge.');
-            return;
+    window.requestMicrophoneAccess = function() {
+        // Immediately halt any audio playback so device is released
+        if (typeof shipmentAudioPlayer !== 'undefined' && shipmentAudioPlayer) {
+            try {
+                shipmentAudioPlayer.pause();
+                shipmentAudioPlayer.currentTime = 0;
+            } catch(e) {}
+        }
+        if (window.speechSynthesis) {
+            try { window.speechSynthesis.cancel(); } catch(e) {}
         }
 
-        try {
-            updateVoiceStatus('Requesting microphone permission...', 'text-amber-300 font-bold');
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            stream.getTracks().forEach(t => t.stop());
-            hideMicBlockedWarning();
-            updateVoiceStatus('Microphone enabled! Tap [Tap to Speak] to continue.', 'text-emerald-400 font-bold');
-            if (!window.aiVoiceAutofill.recognition) {
-                initSpeechRecognition();
-            }
-            setTimeout(() => {
-                if (window.aiVoiceAutofill.isActive && window.aiVoiceAutofill.recognition) {
-                    try { window.aiVoiceAutofill.recognition.start(); } catch(e){}
-                }
-            }, 300);
-        } catch(err) {
-            console.error('Microphone request error:', err);
-            alert('Microphone is blocked by your browser settings.\n\nTo allow it:\n1. Click the lock or camera icon on the left side of the address bar at the top of the browser.\n2. Turn "Microphone" to ON / Allow.\n3. Reload the page or tap [Allow Mic].');
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            updateVoiceStatus('Please tap "Allow" on the microphone prompt...', 'text-amber-300 font-bold');
+            navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+                stream.getTracks().forEach(t => t.stop());
+                hideMicBlockedWarning();
+                updateVoiceStatus('Microphone enabled! Starting speech capture...', 'text-emerald-400 font-bold');
+                window.toggleVoiceAutofillMic();
+            }).catch(err => {
+                console.error('Microphone request error:', err);
+                updateVoiceStatus('Microphone blocked. Please allow mic in browser/app settings.', 'text-rose-400 font-bold');
+                showMicBlockedWarning();
+            });
+        } else {
+            window.toggleVoiceAutofillMic();
         }
     };
 
@@ -5382,30 +5383,64 @@ document.addEventListener('alpine:init', () => {
     }
 
     window.toggleVoiceAutofillMic = function() {
-        if (!window.aiVoiceAutofill.isActive) return;
-
-        if (!window.aiVoiceAutofill.recognition) {
-            initSpeechRecognition();
+        if (!window.aiVoiceAutofill.isActive) {
+            window.aiVoiceAutofill.isActive = true;
         }
 
+        // 1. Immediately pause and release any playing audio so mobile microphone hardware is freed
+        if (typeof shipmentAudioPlayer !== 'undefined' && shipmentAudioPlayer) {
+            try {
+                shipmentAudioPlayer.pause();
+                shipmentAudioPlayer.currentTime = 0;
+            } catch(e) {}
+        }
+        if (window.speechSynthesis) {
+            try { window.speechSynthesis.cancel(); } catch(e) {}
+        }
+
+        // 2. If listening right now, toggle off
         if (window.aiVoiceAutofill.isListening) {
-            try { window.aiVoiceAutofill.recognition.stop(); } catch(e){}
+            if (window.aiVoiceAutofill.recognition) {
+                try { window.aiVoiceAutofill.recognition.stop(); } catch(e){}
+            }
             window.aiVoiceAutofill.isListening = false;
             updateMicButton(false);
-            updateVoiceStatus('Microphone paused. Tap [Tap to Speak] to continue.', 'text-slate-300');
-        } else {
-            // Cancel TTS if speaking so user can respond immediately
-            if (window.speechSynthesis) window.speechSynthesis.cancel();
-            try {
-                window.aiVoiceAutofill.recognition.start();
-            } catch(e) {
-                console.log('Voice restart notice:', e);
-                try {
-                    window.aiVoiceAutofill.recognition.stop();
-                    setTimeout(() => {
-                        try { window.aiVoiceAutofill.recognition.start(); } catch(err){}
-                    }, 150);
-                } catch(err2){}
+            updateVoiceStatus('Microphone paused. Tap [Tap to Speak] or type below.', 'text-slate-300');
+            return;
+        }
+
+        // 3. User wants to speak - start speech recognition on direct user tap
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            updateVoiceStatus('Voice typing ready. Use keyboard microphone or type below.', 'text-teal-300');
+            const quickInput = document.getElementById('ai-voice-quick-input');
+            if (quickInput) quickInput.focus();
+            return;
+        }
+
+        // Freshly re-instantiate recognition to prevent stale InvalidStateError on mobile
+        if (window.aiVoiceAutofill.recognition) {
+            try { window.aiVoiceAutofill.recognition.abort(); } catch(e) {}
+            window.aiVoiceAutofill.recognition = null;
+        }
+
+        initSpeechRecognition(true);
+
+        try {
+            window.aiVoiceAutofill.recognition.start();
+            hideMicBlockedWarning();
+        } catch(e) {
+            console.warn('Voice restart notice:', e);
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+                    stream.getTracks().forEach(t => t.stop());
+                    hideMicBlockedWarning();
+                    updateVoiceStatus('Microphone access granted. Tap [Tap to Speak] now.', 'text-emerald-400 font-bold');
+                }).catch(err => {
+                    showMicBlockedWarning();
+                });
+            } else {
+                showMicBlockedWarning();
             }
         }
     };
@@ -5542,10 +5577,10 @@ document.addEventListener('alpine:init', () => {
         });
     }
 
-    function initSpeechRecognition() {
+    function initSpeechRecognition(userInitiated = false) {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
-            updateVoiceStatus('Speech recognition not available. Please use Chrome/Edge or type directly.', 'text-amber-300');
+            updateVoiceStatus('Voice typing ready. Use keyboard microphone or type below.', 'text-amber-300');
             return;
         }
 
@@ -5555,8 +5590,9 @@ document.addEventListener('alpine:init', () => {
             rec.interimResults = true;
             rec.maxAlternatives = 1;
             
-            const browserLang = (navigator.language || 'en-US');
-            rec.lang = (browserLang.startsWith('en') || browserLang.startsWith('ne')) ? browserLang : 'en-US';
+            // South Asian / Nepali English (en-IN) recognition is optimal for Asian & Nepalese speakers
+            const storedAccent = localStorage.getItem('chanda_voice_accent') || 'en-IN';
+            rec.lang = (storedAccent === 'ne-NP' || storedAccent === 'ne') ? 'ne-NP' : 'en-IN';
 
             rec.onstart = function() {
                 window.aiVoiceAutofill.isListening = true;
@@ -5612,14 +5648,18 @@ document.addEventListener('alpine:init', () => {
                 updateMicButton(false);
 
                 if (event.error === 'not-allowed') {
-                    showMicBlockedWarning();
+                    if (userInitiated) {
+                        showMicBlockedWarning();
+                    } else {
+                        updateVoiceStatus('Ready. Tap [Tap to Speak] to answer.', 'text-teal-300 font-semibold');
+                    }
                 } else if (event.error === 'no-speech') {
                     updateVoiceStatus('Didn’t catch your voice. Tap [Tap to Speak] or type below.', 'text-amber-300');
                 } else if (event.error === 'language-not-supported' || event.error === 'network') {
                     rec.lang = 'en-US';
                     updateVoiceStatus('Ready in English. Tap [Tap to Speak] to provide answer.', 'text-teal-300');
                 } else {
-                    updateVoiceStatus('Ready. Tap [Tap to Speak] to provide answer.', 'text-teal-300/80');
+                    updateVoiceStatus('Ready. Tap [Tap to Speak] to answer.', 'text-teal-300/80');
                 }
             };
 
@@ -5745,11 +5785,12 @@ document.addEventListener('alpine:init', () => {
             promptText = typeof step.prompt === 'function' ? step.prompt(window.aiVoiceAutofill) : step.prompt;
         }
 
-        // Whenever anyone starts the conversation, Chanda starts with the Greeting and states her name for assistance!
+        // Whenever conversation starts, greet politely
         if (!window.aiVoiceAutofill.hasIntroduced) {
             window.aiVoiceAutofill.hasIntroduced = true;
-            const clientName = window.aiVoiceAutofill.clientPreferredName ? (window.aiVoiceAutofill.clientPreferredName + ' Ji') : 'Sir or Madam';
-            promptText = `Namaste ${clientName}! My name is Chanda, your dedicated NETPACK AI Assistant. I am very eager and delighted to support and assist you today! ` + promptText;
+            const clientName = window.aiVoiceAutofill.clientPreferredName ? (window.aiVoiceAutofill.clientPreferredName + ' Ji') : '';
+            const greeting = clientName ? `Namaste ${clientName}! ` : 'Namaste! ';
+            promptText = greeting + promptText;
         }
 
         const promptEl = document.getElementById('ai-voice-current-prompt');
@@ -5784,13 +5825,22 @@ document.addEventListener('alpine:init', () => {
         // Play gentle audio chime
         playAiChime('prompt');
 
-        // Speak question out loud, then start listening
+        // Speak question out loud, then prepare listening
         speakVoicePrompt(promptText, function() {
-            if (window.aiVoiceAutofill.isActive && window.aiVoiceAutofill.recognition) {
+            if (!window.aiVoiceAutofill || !window.aiVoiceAutofill.isActive) return;
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            if (isMobile) {
+                updateMicButton(false);
+                updateVoiceStatus('Question ready! Tap [Tap to Speak] to answer.', 'text-teal-300 font-bold');
+            } else {
+                if (!window.aiVoiceAutofill.recognition) {
+                    initSpeechRecognition(false);
+                }
                 try {
                     window.aiVoiceAutofill.recognition.start();
                 } catch(e) {
-                    // Recognition already active
+                    updateMicButton(false);
+                    updateVoiceStatus('Ready. Tap [Tap to Speak] to answer.', 'text-teal-300');
                 }
             }
         });
@@ -5836,7 +5886,7 @@ document.addEventListener('alpine:init', () => {
             const appliedLabel = step.apply ? step.apply(parsedVal) : parsedVal;
 
             setTimeout(() => {
-                const politeAck = ackPhrase || `Wonderful, set to ${appliedLabel}!`;
+                const politeAck = ackPhrase || `Noted, set to ${appliedLabel}.`;
                 speakVoicePrompt(politeAck, function() {
                     advanceToNextStep();
                 });
@@ -5845,7 +5895,7 @@ document.addEventListener('alpine:init', () => {
 
         // If in verification mode and user affirmatively agreed, keep current value and move on!
         if (isVerifying && isClientAffirmative) {
-            proceedWithAck(`Splendid! Keeping ${currentVal || 'current value'}. Moving forward.`);
+            proceedWithAck(`Confirmed, keeping ${currentVal || 'current value'}.`);
             return;
         }
 
@@ -6000,7 +6050,7 @@ document.addEventListener('alpine:init', () => {
 
         const safetyTimeout = setTimeout(finishSpeaking, 12000);
 
-        const accent = localStorage.getItem('chanda_voice_accent') || 'en-GB';
+        const accent = localStorage.getItem('chanda_voice_accent') || 'en-IN';
         const streamUrl = `/ai/speech/stream?text=${encodeURIComponent(clean)}&accent=${encodeURIComponent(accent)}`;
 
         if (!shipmentAudioPlayer) {
@@ -6038,8 +6088,8 @@ document.addEventListener('alpine:init', () => {
             try {
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(clean);
-                utterance.rate = 1.05;
-                utterance.pitch = 1.18;
+                utterance.rate = 0.98;
+                utterance.pitch = 1.0;
 
                 const chosenVoice = selectBestAssistantVoice();
                 if (chosenVoice) {

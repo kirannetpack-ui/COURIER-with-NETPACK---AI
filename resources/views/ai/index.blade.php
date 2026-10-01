@@ -409,8 +409,8 @@ window.playChandaHologramVoice = function() {
         if (btn) btn.innerHTML = '<i class="fas fa-volume-high text-[10px]"></i> <span>Sample Voice</span>';
         return;
     }
-    const sample = "Namaste! I am Chanda, your global logistics copilot at NETPACK. I am highly motivated, energetic, and delighted to assist your consignments today!";
-    const accent = localStorage.getItem('chanda_voice_accent') || 'en-GB';
+    const sample = "Namaste! I am Chanda, your AI logistics assistant at NETPACK. How can I assist you with your shipments today?";
+    const accent = localStorage.getItem('chanda_voice_accent') || 'en-IN';
     const streamUrl = `/ai/speech/stream?text=${encodeURIComponent(sample)}&accent=${encodeURIComponent(accent)}`;
     
     if (!window.hologramAudio) {

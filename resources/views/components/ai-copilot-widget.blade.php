@@ -171,9 +171,10 @@
                 <select x-model="voiceAccent" 
                         @change="localStorage.setItem('chanda_voice_accent', voiceAccent); playVoiceSample()"
                         class="bg-slate-900 text-teal-300 border border-teal-700/60 rounded-lg px-2 py-0.5 text-[10px] font-semibold focus:outline-none focus:ring-1 focus:ring-teal-400">
-                    <option value="en-GB">🇬🇧 Global International (Immaculate & Motivated)</option>
-                    <option value="en-IN">🇳🇵 South Asian / Nepali English (Warm & Respectful)</option>
-                    <option value="en-US">🇺🇸 Dynamic Executive (High Energy)</option>
+                    <option value="en-IN">🇳🇵 South Asian / Nepali English (Natural & Familiar)</option>
+                    <option value="ne-NP">🇳🇵 नेपाली आवाज (Nepali Audio)</option>
+                    <option value="en-GB">🇬🇧 British International</option>
+                    <option value="en-US">🇺🇸 American English</option>
                 </select>
             </div>
             <button type="button" 
@@ -367,7 +368,7 @@ function aiCopilotWidget(config) {
         userRole: config.userRole || 'Guest',
         csrfToken: config.csrfToken,
         activeOccasion: null,
-        voiceAccent: localStorage.getItem('chanda_voice_accent') || 'en-GB',
+        voiceAccent: localStorage.getItem('chanda_voice_accent') || 'en-IN',
         audioElement: null,
         suggestionChips: [
             { label: '🚪 Door-to-Door Guide', prompt: 'Explain the door-to-door delivery workflow with secret Pickup OTP and Delivery OTP.' },
@@ -523,8 +524,8 @@ function aiCopilotWidget(config) {
                     console.log('AI Greeting fetch error:', err);
                         this.messages.push({
                             role: 'assistant',
-                            content: `Namaste ${this.firstName}! 🙏 My name is Chanda, your dedicated NETPACK AI Assistant. I am very eager and delighted to support and assist your door-to-door deliveries, cargo tariffs, and tracking today. How may I help you?`,
-                            speechText: `Namaste ${this.firstName}! My name is Chanda, your dedicated NETPACK AI Assistant. I am very eager and delighted to support and assist you today. How may I help you?`,
+                            content: `Namaste ${this.firstName}! 🙏 How can I assist you with your shipments or deliveries today?`,
+                            speechText: `Namaste ${this.firstName}! How can I assist you with your shipments or deliveries today?`,
                             gestureIcon: '👋',
                             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                         });
@@ -632,39 +633,40 @@ function aiCopilotWidget(config) {
         },
 
         async toggleSpeechRecognition() {
-            if (!this.recognition) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
                 alert('Voice speech recognition is supported in Google Chrome, Microsoft Edge, Safari, and other modern browsers.');
                 return;
             }
 
             if (this.isListening) {
-                try { this.recognition.stop(); } catch(e){}
+                if (this.recognition) {
+                    try { this.recognition.stop(); } catch(e){}
+                }
                 this.isListening = false;
                 this.statusMessage = 'Ready to assist';
             } else {
                 this.stopSpeaking();
 
-                // Explicitly request microphone stream to guarantee browser permissions
-                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                    try {
-                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                        stream.getTracks().forEach(t => t.stop());
-                    } catch(permErr) {
-                        console.warn('Microphone permission check failed:', permErr);
-                        this.statusMessage = 'Microphone access blocked. Click the lock/camera icon in address bar to Allow.';
-                        alert('Microphone access is needed for voice chat. Please click "Allow" on the microphone prompt in your browser.');
-                        return;
-                    }
+                // Stop and recreate recognition instance to ensure fresh state on mobile/PWA
+                if (this.recognition) {
+                    try { this.recognition.abort(); } catch(e){}
+                    this.recognition = null;
                 }
+                this.initSpeechRecognition();
 
                 try {
                     this.recognition.start();
                 } catch(e) {
-                    console.log('Recognition start error, attempting restart:', e);
-                    try {
-                        this.recognition.stop();
-                        setTimeout(() => this.recognition.start(), 150);
-                    } catch(err2){}
+                    console.log('Recognition start error, requesting permission directly:', e);
+                    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                        navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+                            stream.getTracks().forEach(t => t.stop());
+                            this.statusMessage = 'Microphone enabled. Tap mic icon to speak.';
+                        }).catch(permErr => {
+                            this.statusMessage = 'Microphone permission blocked. Please allow mic in browser settings.';
+                        });
+                    }
                 }
             }
         },
@@ -730,11 +732,12 @@ function aiCopilotWidget(config) {
         playVoiceSample() {
             this.stopSpeaking();
             const samples = {
-                'en-GB': "Namaste! I am Chanda, your global logistics copilot. I am highly motivated, energetic, and delighted to assist your consignments today!",
-                'en-IN': "Namaste! My name is Chanda. I am eagerly and enthusiastically ready to support all your door to door deliveries across Nepal!",
-                'en-US': "Namaste! I am Chanda. I am energized, focused, and ready to accelerate your air cargo tariffs and tracking right now!"
+                'en-IN': "Namaste! I am Chanda from NETPACK. How can I assist you with your shipments across Nepal today?",
+                'ne-NP': "नमस्ते! म चन्द्रा, नेटप्याकको एआई सहायक। तपाईंलाई डेलिभरी र कार्गो सेवामा म कसरी सहयोग गर्न सक्छु?",
+                'en-GB': "Namaste! I am Chanda from NETPACK. Ready to assist with your global consignments.",
+                'en-US': "Namaste! I am Chanda from NETPACK. Ready to assist with your delivery and tracking."
             };
-            const sampleText = samples[this.voiceAccent] || samples['en-GB'];
+            const sampleText = samples[this.voiceAccent] || samples['en-IN'];
             this.speakText(sampleText);
         },
 
@@ -757,7 +760,7 @@ function aiCopilotWidget(config) {
             }
 
             if (this.audioElement) {
-                const streamUrl = `/ai/speech/stream?text=${encodeURIComponent(cleanText)}&accent=${encodeURIComponent(this.voiceAccent || 'en-GB')}`;
+                const streamUrl = `/ai/speech/stream?text=${encodeURIComponent(cleanText)}&accent=${encodeURIComponent(this.voiceAccent || 'en-IN')}`;
                 this.audioElement.src = streamUrl;
                 this.isSpeaking = true;
                 this.statusMessage = 'Speaking (Chanda AI)...';
@@ -799,9 +802,9 @@ function aiCopilotWidget(config) {
             try {
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(cleanText);
-                // Highly motivated, energetic, and distinct female pitch
-                utterance.rate = 1.05;   // Lively, eager, attentive tempo
-                utterance.pitch = 1.18;  // Warm, enthusiastic, distinct female pitch
+                // Comfortable, human conversational tempo and grounded pitch
+                utterance.rate = 0.98;   // Natural, clear, comfortable tempo
+                utterance.pitch = 1.0;   // Grounded, warm, natural human pitch
 
                 const voice = this.getChandaFemaleVoice();
                 if (voice) {
